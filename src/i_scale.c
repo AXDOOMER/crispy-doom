@@ -42,11 +42,11 @@
 
 // Should be I_VideoBuffer
 
-static byte *src_buffer;
+static pixel_t *src_buffer;
 
 // Destination buffer, ie. screen->pixels.
 
-static byte *dest_buffer;
+static pixel_t *dest_buffer;
 
 // Pitch of destination buffer, ie. screen->pitch.
 
@@ -70,7 +70,7 @@ static byte *half_stretch_table = NULL;
 // Called to set the source and destination buffers before doing the
 // scale.
 
-void I_InitScale(byte *_src_buffer, byte *_dest_buffer, int _dest_pitch)
+void I_InitScale(pixel_t *_src_buffer, pixel_t *_dest_buffer, int _dest_pitch)
 {
     src_buffer = _src_buffer;
     dest_buffer = _dest_buffer;

@@ -303,8 +303,6 @@ typedef struct
 //  precalculating 24bpp lightmap/colormap LUT.
 //  from darkening PLAYPAL to all black.
 // Could even us emore than 32 levels.
-typedef byte	lighttable_t;	
-
 
 
 

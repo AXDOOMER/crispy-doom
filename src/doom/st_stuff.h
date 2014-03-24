@@ -32,6 +32,7 @@
 #include "doomtype.h"
 #include "d_event.h"
 #include "m_cheat.h"
+#include "i_video.h"
 
 // Size of statusbar.
 // Now sensitive for scaling.
@@ -81,7 +82,7 @@ typedef enum
 
 
 
-extern byte *st_backing_screen;
+extern pixel_t *st_backing_screen;
 extern cheatseq_t cheat_mus;
 extern cheatseq_t cheat_god;
 extern cheatseq_t cheat_ammo;

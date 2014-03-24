@@ -692,11 +692,23 @@ void R_InitSpriteLumps (void)
 void R_InitColormaps (void)
 {
     int	lump;
+    int c, i;
+    int a, r, g, b;
+    
+    byte *pal =  W_CacheLumpName("PLAYPAL", PU_CACHE);
 
-    // Load in the light tables, 
-    //  256 byte align tables.
-    lump = W_GetNumForName(DEH_String("COLORMAP"));
-    colormaps = W_CacheLumpNum(lump, PU_STATIC);
+    colormaps = (lighttable_t*) Z_Malloc ((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+
+    for (c = 0; c < NUMCOLORMAPS; ++c)
+        for (i = 0; i < 256; ++i)
+        {
+            a = 0x0f;
+            r = pal[3 * i + 0] * (1 - c / NUMCOLORMAPS);
+            g = pal[3 * i + 1] * (1 - c / NUMCOLORMAPS);
+            b = pal[3 * i + 2] * (1 - c / NUMCOLORMAPS);
+
+            colormaps[c * 256 + i] = (a << 24) + (r << 16) + (g << 8) + (b << 0);
+        }
 }
 
 

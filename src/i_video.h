@@ -50,6 +50,16 @@
 
 #define MAX_MOUSE_BUTTONS 8
 
+// Number of diminishing brightness levels.
+// There a 0-31, i.e. 32 LUT in the COLORMAP lump.
+#define NUMCOLORMAPS		32
+// Index of the special effects (INVUL inverse) map.
+#define INVERSECOLORMAP		(NUMCOLORMAPS)
+
+typedef uint32_t	lighttable_t;
+typedef uint32_t	pixel_t;
+
+
 typedef struct
 {
     // Screen width and height
@@ -120,7 +130,7 @@ int I_GetPaletteIndex(int r, int g, int b);
 void I_UpdateNoBlit (void);
 void I_FinishUpdate (void);
 
-void I_ReadScreen (byte* scr);
+void I_ReadScreen (pixel_t* scr);
 
 void I_BeginRead (void);
 void I_EndRead (void);
@@ -158,7 +168,7 @@ extern int mouse_threshold;
 extern int vanilla_keyboard_mapping;
 extern boolean screensaver_mode;
 extern int usegamma;
-extern byte *I_VideoBuffer;
+extern pixel_t *I_VideoBuffer;
 
 extern int screen_width;
 extern int screen_height;

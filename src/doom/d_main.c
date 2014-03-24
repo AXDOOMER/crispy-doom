@@ -302,12 +302,13 @@ void D_Display (void)
     if (paused || menuactive)
     {
 	static int i;
-	byte *b;
+	pixel_t *b;
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
 	    b = I_VideoBuffer + i;
-	    *b = colormaps[16 * 256 + *b];
+//	    *b = colormaps[16 * 256 + *b];
+	    *b = (0x0f << 24) + (((*b & 0x00ff) >> 1) << 16)+ (((*b & 0x0000ff) >> 1) << 8)+ (((*b & 0x000000ff) >> 1) << 0);
 	}
 
 	viewactivestate = false;

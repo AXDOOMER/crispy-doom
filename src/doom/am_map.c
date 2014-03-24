@@ -217,7 +217,7 @@ static int 	f_w;
 static int	f_h;
 
 static int 	lightlev; 		// used for funky strobing effect
-static byte*	fb; 			// pseudo-frame buffer
+static pixel_t*	fb; 			// pseudo-frame buffer
 static int 	amclock;
 
 static mpoint_t m_paninc; // how far the window pans each tic (map coords)
@@ -839,7 +839,7 @@ void AM_Ticker (void)
 //
 void AM_clearFB(int color)
 {
-    memset(fb, color, f_w*f_h);
+    memset(fb, color, f_w*f_h*sizeof(pixel_t));
 }
 
 

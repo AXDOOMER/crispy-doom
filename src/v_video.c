@@ -63,7 +63,8 @@ byte *xlatab = NULL;
 
 // The screen buffer that the v_video.c code draws to.
 
-static byte *dest_screen = NULL;
+static pixel_t *dest_screen = NULL;
+extern lighttable_t	*colormaps;
 
 int dirtybox[4]; 
 
@@ -90,12 +91,12 @@ void V_MarkRect(int x, int y, int width, int height)
 //
 // V_CopyRect 
 // 
-void V_CopyRect(int srcx, int srcy, byte *source,
+void V_CopyRect(int srcx, int srcy, pixel_t *source,
                 int width, int height,
                 int destx, int desty)
 { 
-    byte *src;
-    byte *dest; 
+    pixel_t *src;
+    pixel_t *dest; 
  
     srcx <<= hires;
     srcy <<= hires;
@@ -125,7 +126,7 @@ void V_CopyRect(int srcx, int srcy, byte *source,
 
     for ( ; height>0 ; height--) 
     { 
-        memcpy(dest, src, width); 
+        memcpy(dest, src, width*sizeof(pixel_t)); 
         src += SCREENWIDTH; 
         dest += SCREENWIDTH; 
     } 
@@ -156,8 +157,8 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     int count;
     int col;
     column_t *column;
-    byte *desttop;
-    byte *dest;
+    pixel_t *desttop;
+    pixel_t *dest;
     byte *source;
     int w, f;
 
@@ -184,7 +185,7 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     V_MarkRect(x, y, SHORT(patch->width), SHORT(patch->height));
 
     col = 0;
-    desttop = dest_screen + (y << hires) * SCREENWIDTH + x;
+    desttop = dest_screen + (y << hires) * SCREENWIDTH + x ;
 
     w = SHORT(patch->width);
 
@@ -205,10 +206,10 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             {
                 if (hires)
                 {
-                    *dest = *source;
+                    *dest = colormaps[*source];
                     dest += SCREENWIDTH;
                 }
-                *dest = *source++;
+                *dest = colormaps[*source++];
                 dest += SCREENWIDTH;
             }
           }
@@ -228,8 +229,8 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
     int count;
     int col; 
     column_t *column; 
-    byte *desttop;
-    byte *dest;
+    pixel_t *desttop;
+    pixel_t *dest;
     byte *source; 
     int w, f; 
  
@@ -277,10 +278,10 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
             {
                 if (hires)
                 {
-                    *dest = *source;
+                    *dest = colormaps[*source];
                     dest += SCREENWIDTH;
                 }
-                *dest = *source++;
+                *dest = colormaps[*source++];
                 dest += SCREENWIDTH;
             }
           }
@@ -565,9 +566,9 @@ void V_LoadXlaTable(void)
 // Draw a linear block of pixels into the view buffer.
 //
 
-void V_DrawBlock(int x, int y, int width, int height, byte *src) 
+void V_DrawBlock(int x, int y, int width, int height, pixel_t *src) 
 { 
-    byte *dest; 
+    pixel_t *dest; 
  
 #ifdef RANGECHECK 
     if (x < 0
@@ -585,15 +586,15 @@ void V_DrawBlock(int x, int y, int width, int height, byte *src)
 
     while (height--) 
     { 
-	memcpy (dest, src, width); 
+	memcpy (dest, src, width * sizeof(pixel_t)); 
 	src += width; 
 	dest += SCREENWIDTH; 
     } 
 } 
 
-void V_DrawScaledBlock(int x, int y, int width, int height, byte *src)
+void V_DrawScaledBlock(int x, int y, int width, int height, pixel_t *src)
 {
-    byte *dest;
+    pixel_t *dest;
     int i, j;
 
 #ifdef RANGECHECK
@@ -621,7 +622,7 @@ void V_DrawScaledBlock(int x, int y, int width, int height, byte *src)
 
 void V_DrawFilledBox(int x, int y, int w, int h, int c)
 {
-    uint8_t *buf, *buf1;
+    pixel_t *buf, *buf1;
     int x1, y1;
 
     buf = I_VideoBuffer + SCREENWIDTH * y + x;
@@ -641,7 +642,7 @@ void V_DrawFilledBox(int x, int y, int w, int h, int c)
 
 void V_DrawHorizLine(int x, int y, int w, int c)
 {
-    uint8_t *buf;
+    pixel_t *buf;
     int x1;
 
     buf = I_VideoBuffer + SCREENWIDTH * y + x;
@@ -719,7 +720,7 @@ void V_Init (void)
 
 // Set the buffer that the code draws to.
 
-void V_UseBuffer(byte *buffer)
+void V_UseBuffer(pixel_t *buffer)
 {
     dest_screen = buffer;
 }
