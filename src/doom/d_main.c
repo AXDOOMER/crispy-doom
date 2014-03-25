@@ -265,7 +265,10 @@ void D_Display (void)
     
     // clean up border stuff
     if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-	I_SetPalette (W_CacheLumpName (DEH_String("PLAYPAL"),PU_CACHE));
+    {
+//	I_SetPalette (W_CacheLumpName (DEH_String("PLAYPAL"),PU_CACHE));
+        R_InitColormaps (0);
+    }
 
     // see if the border needs to be initially drawn
     if (gamestate == GS_LEVEL && oldgamestate != GS_LEVEL)
@@ -308,7 +311,7 @@ void D_Display (void)
 	{
 	    b = I_VideoBuffer + i;
 //	    *b = colormaps[16 * 256 + *b];
-	    *b = (0x0f << 24) + (((*b & 0x00ff) >> 1) << 16)+ (((*b & 0x0000ff) >> 1) << 8)+ (((*b & 0x000000ff) >> 1) << 0);
+	    *b = (0xff << 24) + (((*b & 0x00ff) >> 1) << 16)+ (((*b & 0x0000ff) >> 1) << 8)+ (((*b & 0x000000ff) >> 1) << 0);
 	}
 
 	viewactivestate = false;

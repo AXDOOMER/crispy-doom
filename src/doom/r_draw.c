@@ -81,7 +81,7 @@ byte		translations[3][256];
 // Backing buffer containing the bezel drawn around the screen and 
 // surrounding background.
 
-static byte *background_buffer = NULL;
+static pixel_t *background_buffer = NULL;
 
 
 //
@@ -304,6 +304,7 @@ void R_DrawFuzzColumn (void)
 { 
     int			count; 
     pixel_t*		dest; 
+    pixel_t*		temp; 
     fixed_t		frac;
     fixed_t		fracstep;	 
 
@@ -345,7 +346,11 @@ void R_DrawFuzzColumn (void)
 	//  a pixel that is either one column
 	//  left or right of the current one.
 	// Add index from colormap to index.
-	*dest = colormaps[6*256+dest[fuzzoffset[fuzzpos]]]; 
+
+	*temp = dest[fuzzoffset[fuzzpos]];
+	*dest = ((((*temp >> 0)  & 0xff) >> 1) << 0) + 
+	        ((((*temp >> 8)  & 0xff) >> 1) << 8) + 
+	        ((((*temp >> 16) & 0xff) >> 1) << 16); 
 
 	// Clamp table lookup index.
 	if (++fuzzpos == FUZZTABLE) 
@@ -905,6 +910,11 @@ void R_FillBackScreen (void)
 	 
     for (y=0 ; y<SCREENHEIGHT-SBARHEIGHT ; y++) 
     { 
+	for (x=0 ; x<SCREENWIDTH ; x++)
+	{
+	    *dest++ = colormaps[src[64 * (y%64) + (x%64)]];
+	}
+/*
 	for (x=0 ; x<SCREENWIDTH/64 ; x++) 
 	{ 
 	    memcpy (dest, src+((y&63)<<6), 64); 
@@ -916,6 +926,7 @@ void R_FillBackScreen (void)
 	    memcpy (dest, src+((y&63)<<6), SCREENWIDTH&63); 
 	    dest += (SCREENWIDTH&63); 
 	} 
+*/
     } 
      
     // Draw screen and bezel; this is done to a separate screen buffer.
@@ -976,7 +987,7 @@ R_VideoErase
 
     if (background_buffer != NULL)
     {
-        memcpy(I_VideoBuffer + ofs, background_buffer + ofs, count); 
+        memcpy(I_VideoBuffer + ofs, background_buffer + ofs, count * sizeof(pixel_t)); 
     }
 } 
 

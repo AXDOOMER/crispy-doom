@@ -850,7 +850,7 @@ void R_SetupFrame (player_t* player)
     {
 	fixedcolormap =
 	    colormaps
-	    + player->fixedcolormap*256*sizeof(lighttable_t);
+	    + player->fixedcolormap*256;
 	
 	walllights = scalelightfixed;
 

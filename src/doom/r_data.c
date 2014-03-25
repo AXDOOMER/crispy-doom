@@ -169,7 +169,6 @@ fixed_t*	spritetopoffset;
 
 lighttable_t	*colormaps;
 
-
 //
 // MAPTEXTURE_T CACHING
 // When a texture is first needed,
@@ -689,26 +688,59 @@ void R_InitSpriteLumps (void)
 //
 // R_InitColormaps
 //
-void R_InitColormaps (void)
+void R_InitColormaps (int pal)
 {
-    int	lump;
-    int c, i;
-    int a, r, g, b;
-    
-    byte *pal =  W_CacheLumpName("PLAYPAL", PU_CACHE);
+    // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
+    static lighttable_t	colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
+    static byte *doompalette;
 
-    colormaps = (lighttable_t*) Z_Malloc ((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+    int gamma, p, c, i;
+    byte a, r, g, b;
+    float scale;
 
-    for (c = 0; c < NUMCOLORMAPS; ++c)
-        for (i = 0; i < 256; ++i)
+    if (!colormaps)
+        colormaps = (lighttable_t*) Z_Malloc ((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+
+    if (colormaptable[0][0][0][0] == 0)
+    {
+      for (gamma = 0; gamma < 5; gamma++)
+      {
+        for (p = 0; p < 14; p++)
         {
-            a = 0x0f;
-            r = pal[3 * i + 0] * (1 - c / NUMCOLORMAPS);
-            g = pal[3 * i + 1] * (1 - c / NUMCOLORMAPS);
-            b = pal[3 * i + 2] * (1 - c / NUMCOLORMAPS);
+          doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE) + 768 * p;
 
-            colormaps[c * 256 + i] = (a << 24) + (r << 16) + (g << 8) + (b << 0);
+          for (c = 0; c <= NUMCOLORMAPS - 1; c++)
+          {
+            scale = 1. - 1. * c / NUMCOLORMAPS;
+
+            for (i = 0; i < 256; i++)
+            {
+                a = 0xff;
+                r = gammatable[gamma][doompalette[3 * i + 0]] * scale;
+                g = gammatable[gamma][doompalette[3 * i + 1]] * scale;
+                b = gammatable[gamma][doompalette[3 * i + 2]] * scale;
+
+                colormaptable[gamma][p][c][i] = (a << 24) + (r << 16) + (g << 8) + (b << 0);
+            }
+          }
+
+          // Invulnerability
+          c = NUMCOLORMAPS;
+          doompalette -= 768 * p;
+          for (i = 0; i < 256; i++)
+          {
+            a = 0xff;
+            r = g = b = 255 - (doompalette[3 * i + 0] +
+                               doompalette[3 * i + 1] +
+                               doompalette[3 * i + 2]) / 3;
+
+            colormaptable[gamma][p][c][i] = (a << 24) + (r << 16) + (g << 8) + (b << 0);
+          }
         }
+      }
+    }
+    
+    memcpy(colormaps, *colormaptable[usegamma][pal], (NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t));
 }
 
 
@@ -727,7 +759,7 @@ void R_InitData (void)
     printf (".");
     R_InitSpriteLumps ();
     printf (".");
-    R_InitColormaps ();
+    R_InitColormaps (0);
 }
 
 

@@ -1008,8 +1008,10 @@ void ST_doPaletteStuff(void)
     if (palette != st_palette)
     {
 	st_palette = palette;
-	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
-	I_SetPalette (pal);
+//	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
+//	I_SetPalette (pal);
+        R_InitColormaps(palette);
+        st_firsttime = true;
     }
 
 }
@@ -1419,7 +1421,7 @@ void ST_Stop (void)
     if (st_stopped)
 	return;
 
-    I_SetPalette (W_CacheLumpNum (lu_palette, PU_CACHE));
+//    I_SetPalette (W_CacheLumpNum (lu_palette, PU_CACHE));
 
     st_stopped = true;
 }

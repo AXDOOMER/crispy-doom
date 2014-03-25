@@ -126,7 +126,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source,
 
     for ( ; height>0 ; height--) 
     { 
-        memcpy(dest, src, width*sizeof(pixel_t)); 
+        memcpy(dest, src, width * sizeof(pixel_t)); 
         src += SCREENWIDTH; 
         dest += SCREENWIDTH; 
     } 

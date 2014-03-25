@@ -57,13 +57,13 @@ wipe_shittyColMajorXform
     int		y;
     pixel_t*	dest;
 
-    dest = (pixel_t*) Z_Malloc(width*height*2*sizeof(pixel_t), PU_STATIC, 0);
+    dest = (pixel_t*) Z_Malloc(width*height*sizeof(pixel_t), PU_STATIC, 0);
 
     for(y=0;y<height;y++)
 	for(x=0;x<width;x++)
 	    dest[x*height+y] = array[y*width+x];
 
-    memcpy(array, dest, width*height*2*sizeof(pixel_t));
+    memcpy(array, dest, width*height*sizeof(pixel_t));
 
     Z_Free(dest);
 
@@ -150,8 +150,8 @@ wipe_initMelt
     
     // makes this wipe faster (in theory)
     // to have stuff in column-major format
-    wipe_shittyColMajorXform(wipe_scr_start, width/2, height);
-    wipe_shittyColMajorXform(wipe_scr_end, width/2, height);
+    wipe_shittyColMajorXform(wipe_scr_start, width, height);
+    wipe_shittyColMajorXform(wipe_scr_end, width, height);
     
     // setup initial column positions
     // (y<0 => not ready to scroll yet)
@@ -183,7 +183,7 @@ wipe_doMelt
     pixel_t*	d;
     boolean	done = true;
 
-    width/=2;
+//    width/=2;
 
     while (ticks--)
     {

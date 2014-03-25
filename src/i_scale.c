@@ -93,7 +93,7 @@ static boolean I_Scale1x(int x1, int y1, int x2, int y2)
     // Need to byte-copy from buffer into the screen buffer
 
     bufp = src_buffer + y1 * SCREENWIDTH + x1;
-    screenp = (byte *) dest_buffer + y1 * dest_pitch + x1;
+    screenp = (pixel_t *) dest_buffer + y1 * dest_pitch + x1;
 
     for (y=y1; y<y2; ++y)
     {

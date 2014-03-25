@@ -2161,11 +2161,12 @@ void I_InitGraphics(void)
                   && screen_mode == &mode_scale_1x
                   && screen->pitch == SCREENWIDTH
                   && aspect_ratio_correct;
+native_surface=1;
 
     // If not, allocate a buffer and copy from that buffer to the
     // screen when we do an update
 
-    if (native_surface || 1)
+    if (native_surface)
     {
 	I_VideoBuffer = (pixel_t *) screen->pixels;
 
