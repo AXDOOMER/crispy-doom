@@ -274,7 +274,7 @@ pixel_t                   *st_backing_screen;
 static player_t*	plyr; 
 
 // ST_Start() has just been called
-static boolean		st_firsttime;
+boolean		st_firsttime;
 
 // lump number for PLAYPAL
 static int		lu_palette;

@@ -227,7 +227,7 @@ void D_Display (void)
 	    break;
 	if (automapactive)
 	    AM_Drawer ();
-	if (wipe || (scaledviewheight != (200 << hires) && fullscreen) )
+	if (wipe || (scaledviewheight != (200 << hires) && fullscreen))
 	    redrawsbar = true;
 	if (inhelpscreensstate && !inhelpscreens)
 	    redrawsbar = true;              // just put away the help screen
@@ -305,13 +305,10 @@ void D_Display (void)
     if (paused || menuactive)
     {
 	static int i;
-	pixel_t *b;
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
-	    b = I_VideoBuffer + i;
-//	    *b = colormaps[16 * 256 + *b];
-	    *b = (0xff << 24) + (((*b & 0x00ff) >> 1) << 16)+ (((*b & 0x0000ff) >> 1) << 8)+ (((*b & 0x000000ff) >> 1) << 0);
+            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], 0x60000020);
 	}
 
 	viewactivestate = false;

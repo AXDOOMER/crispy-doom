@@ -304,7 +304,6 @@ void R_DrawFuzzColumn (void)
 { 
     int			count; 
     pixel_t*		dest; 
-    pixel_t*		temp; 
     fixed_t		frac;
     fixed_t		fracstep;	 
 
@@ -347,10 +346,7 @@ void R_DrawFuzzColumn (void)
 	//  left or right of the current one.
 	// Add index from colormap to index.
 
-	*temp = dest[fuzzoffset[fuzzpos]];
-	*dest = ((((*temp >> 0)  & 0xff) >> 1) << 0) + 
-	        ((((*temp >> 8)  & 0xff) >> 1) << 8) + 
-	        ((((*temp >> 16) & 0xff) >> 1) << 16); 
+	*dest = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], 0x40000000);
 
 	// Clamp table lookup index.
 	if (++fuzzpos == FUZZTABLE) 
@@ -420,12 +416,12 @@ void R_DrawFuzzColumnLow (void)
 	//  a pixel that is either one column
 	//  left or right of the current one.
 	// Add index from colormap to index.
-	*dest = colormaps[6*256+dest[fuzzoffset[fuzzpos]]]; 
-	*dest2 = colormaps[6*256+dest2[fuzzoffset[fuzzpos]]]; 
+	*dest = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], 0x40000000);
+	*dest2 = I_AlphaBlend(dest2[fuzzoffset[fuzzpos]], 0x40000000);
 	if (hires)
 	{
-	    *dest3 = colormaps[6*256+dest[fuzzoffset[fuzzpos]]]; 
-	    *dest4 = colormaps[6*256+dest2[fuzzoffset[fuzzpos]]]; 
+	    *dest3 = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], 0x40000000);
+	    *dest4 = I_AlphaBlend(dest2[fuzzoffset[fuzzpos]], 0x40000000);
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}

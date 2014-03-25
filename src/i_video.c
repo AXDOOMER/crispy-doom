@@ -404,7 +404,7 @@ static void SetShowCursor(boolean show)
 void I_EnableLoadingDisk(void)
 {
     patch_t *disk;
-    byte *tmpbuf;
+    pixel_t *tmpbuf;
     char *disk_name;
     int y;
     char buf[20];
@@ -2257,4 +2257,25 @@ void I_BindVideoVariables(void)
     screen_width = 800;
     screen_height = 600;
 #endif
+}
+
+pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
+{
+	byte a1, r1, r2, g1, g2, b1, b2;
+	byte rr, gr, br;
+
+	a1 = (a & 0xff000000) >> 24;
+	r1 = (a & 0x00ff0000) >> 16;
+	g1 = (a & 0x0000ff00) >> 8;
+	b1 = (a & 0x000000ff);
+
+	r2 = (b & 0x00ff0000) >> 16;
+	g2 = (b & 0x0000ff00) >> 8;
+	b2 = (b & 0x000000ff);
+
+	rr = (a1 * r1 + (255 - a1) * r2) / 0xff;
+	gr = (a1 * g1 + (255 - a1) * g2) / 0xff;
+	br = (a1 * b1 + (255 - a1) * b2) / 0xff;
+
+	return ((0xff << 24) + (rr << 16) + (gr << 8) + br);
 }

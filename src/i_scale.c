@@ -86,7 +86,7 @@ void I_InitScale(pixel_t *_src_buffer, pixel_t *_dest_buffer, int _dest_pitch)
 
 static boolean I_Scale1x(int x1, int y1, int x2, int y2)
 {
-    byte *bufp, *screenp;
+    pixel_t *bufp, *screenp;
     int y;
     int w = x2 - x1;
     
@@ -116,18 +116,18 @@ screen_mode_t mode_scale_1x = {
 
 static boolean I_Scale2x(int x1, int y1, int x2, int y2)
 {
-    byte *bufp, *screenp, *screenp2;
+    pixel_t *bufp, *screenp, *screenp2;
     int x, y;
     int multi_pitch;
 
     multi_pitch = dest_pitch * 2;
     bufp = src_buffer + y1 * SCREENWIDTH + x1;
-    screenp = (byte *) dest_buffer + (y1 * dest_pitch + x1) * 2;
+    screenp = dest_buffer + (y1 * dest_pitch + x1) * 2;
     screenp2 = screenp + dest_pitch;
 
     for (y=y1; y<y2; ++y)
     {
-        byte *sp, *sp2, *bp;
+        pixel_t *sp, *sp2, *bp;
         sp = screenp;
         sp2 = screenp2;
         bp = bufp;
@@ -157,7 +157,7 @@ screen_mode_t mode_scale_2x = {
 
 static boolean I_Scale3x(int x1, int y1, int x2, int y2)
 {
-    byte *bufp, *screenp, *screenp2, *screenp3;
+    pixel_t *bufp, *screenp, *screenp2, *screenp3;
     int x, y;
     int multi_pitch;
 
