@@ -137,6 +137,7 @@ char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 0;
 
+int             crispy_highcolor = 0;
 int             crispy_automapstats = 0;
 int             crispy_secretmessage = 0;
 int             crispy_crosshair = 0;
@@ -414,6 +415,7 @@ void D_BindVariables(void)
         M_BindVariable(buf, &chat_macros[i]);
     }
 
+    M_BindVariable("crispy_highcolor",       &crispy_highcolor);
     M_BindVariable("crispy_automapstats",    &crispy_automapstats);
     M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
     M_BindVariable("crispy_crosshair",       &crispy_crosshair);

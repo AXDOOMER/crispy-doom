@@ -693,6 +693,7 @@ void R_InitColormaps (int pal)
     // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
     static lighttable_t	colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
     static byte *doompalette, *doomcolormap;
+    extern int crispy_highcolor;
 
     int gamma, p, c, i;
     byte a, r, g, b;
@@ -706,7 +707,7 @@ void R_InitColormaps (int pal)
         {
           doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE) + 768 * p;
 
-          if (0) // crispy_highcolor
+          if (!crispy_highcolor)
           {
             doomcolormap = W_CacheLumpName("COLORMAP", PU_CACHE);
 
