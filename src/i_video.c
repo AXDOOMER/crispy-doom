@@ -2299,3 +2299,18 @@ pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
 
 	return ((0xff << 24) + (rr << 16) + (gr << 8) + br);
 }
+
+pixel_t I_Desaturate (pixel_t a)
+{
+	byte a1, r1, g1, b1;
+	byte gr;
+
+	a1 = (a & 0xff000000) >> 24;
+	r1 = (a & 0x00ff0000) >> 16;
+	g1 = (a & 0x0000ff00) >> 8;
+	b1 = (a & 0x000000ff);
+
+	gr = (r1 + g1 + b1) / 3;
+
+	return ((a1 << 24) + (gr << 16) + (gr << 8) + gr);
+}

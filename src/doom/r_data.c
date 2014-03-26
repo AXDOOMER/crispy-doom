@@ -691,7 +691,7 @@ void R_InitSpriteLumps (void)
 void R_InitColormaps (int pal)
 {
     // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
-    static lighttable_t	colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
+    static lighttable_t colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
     static byte *doompalette, *doomcolormap;
     extern int crispy_highcolor;
 

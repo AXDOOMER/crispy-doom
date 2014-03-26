@@ -66,6 +66,7 @@ byte *xlatab = NULL;
 static pixel_t *dest_screen = NULL;
 
 extern lighttable_t *colormaps;
+lighttable_t patch_tint;
 
 int dirtybox[4]; 
 
@@ -160,6 +161,7 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     column_t *column;
     pixel_t *desttop;
     pixel_t *dest;
+    pixel_t *sourcergb;
     byte *source;
     int w, f;
 
@@ -205,12 +207,17 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
             while (count--)
             {
+                if (patch_tint)
+                    sourcergb = I_AlphaBlend(*dest, (I_Desaturate(colormaps[*source++]) & patch_tint));
+                else
+                    sourcergb = colormaps[*source++];
+
                 if (hires)
                 {
-                    *dest = colormaps[*source];
+                    *dest = sourcergb;
                     dest += SCREENWIDTH;
                 }
-                *dest = colormaps[*source++];
+                *dest = sourcergb;
                 dest += SCREENWIDTH;
             }
           }

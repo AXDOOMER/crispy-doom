@@ -311,7 +311,7 @@ void D_Display (void)
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
-            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], 0x60000020);
+            I_VideoBuffer[i] = I_Desaturate(I_VideoBuffer[i]);
 	}
 
 	viewactivestate = false;
