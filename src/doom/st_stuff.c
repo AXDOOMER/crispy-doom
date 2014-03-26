@@ -274,7 +274,7 @@ pixel_t                   *st_backing_screen;
 static player_t*	plyr; 
 
 // ST_Start() has just been called
-boolean		st_firsttime;
+static boolean		st_firsttime;
 
 // lump number for PLAYPAL
 static int		lu_palette;
@@ -953,7 +953,6 @@ void ST_doPaletteStuff(void)
 {
 
     int		palette;
-    byte*	pal;
     int		cnt;
     int		bzc;
 
@@ -1008,10 +1007,8 @@ void ST_doPaletteStuff(void)
     if (palette != st_palette)
     {
 	st_palette = palette;
-//	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
-//	I_SetPalette (pal);
-        R_InitColormaps(palette);
-        st_firsttime = true;
+	R_InitColormaps(palette);
+	st_firsttime = true;
     }
 
 }
@@ -1421,7 +1418,7 @@ void ST_Stop (void)
     if (st_stopped)
 	return;
 
-//    I_SetPalette (W_CacheLumpNum (lu_palette, PU_CACHE));
+    R_InitColormaps(0);
 
     st_stopped = true;
 }

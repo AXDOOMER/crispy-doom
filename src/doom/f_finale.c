@@ -257,7 +257,7 @@ void F_TextWrite (void)
     {
 	for (x=0 ; x<SCREENWIDTH ; x++)
 	{
-	    *dest++ = colormaps[src[64 * (y%64) + (x%64)]];
+	    *dest++ = colormaps[src[((y&63)<<6) + (x&63)]];
 	}
 /*
 	    memcpy (dest, src+((y&63)<<6), 64);

@@ -34,7 +34,6 @@
 
 // Needed because we are refering to patches.
 #include "v_patch.h"
-#include "i_video.h"
 
 //
 // VIDEO

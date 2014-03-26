@@ -1800,7 +1800,6 @@ boolean M_Responder (event_t* ev)
 	    if (usegamma > 4)
 		usegamma = 0;
 	    players[consoleplayer].message = DEH_String(gammamsg[usegamma]);
-//            I_SetPalette (W_CacheLumpName (DEH_String("PLAYPAL"),PU_CACHE));
             R_InitColormaps(0);
 	    return true;
 	}

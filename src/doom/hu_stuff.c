@@ -494,9 +494,9 @@ void HU_Drawer(void)
         !(plr->readyweapon == wp_fist) && !(plr->readyweapon == wp_chainsaw))
     {
         extern int screenblocks, detailshift;
-        byte *b = I_VideoBuffer;
+        pixel_t *b = I_VideoBuffer;
 
-        byte c = 180;
+        pixel_t c = 0x80ff0000;
         int h = 100 << hires;
 
         if (screenblocks <= 10)
@@ -511,16 +511,18 @@ void HU_Drawer(void)
 
             if (linetarget && !(linetarget->flags & MF_SHADOW))
             {
-                c = 160;
+                c = 0x80ffff00;
             }
         }
 
         b += h * SCREENWIDTH + SCREENWIDTH / 2;
-        *b++ = c;
-        *b = c;
+        *b = I_AlphaBlend(*b, c);
+        b++;
+        *b = I_AlphaBlend(*b, c);
         b += SCREENWIDTH - 1;
-        *b++ = c;
-        *b = c;
+        *b = I_AlphaBlend(*b, c);
+        b++;
+        *b = I_AlphaBlend(*b, c);
     }
 
 }

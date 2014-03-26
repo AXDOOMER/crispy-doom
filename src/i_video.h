@@ -50,16 +50,6 @@
 
 #define MAX_MOUSE_BUTTONS 8
 
-// Number of diminishing brightness levels.
-// There a 0-31, i.e. 32 LUT in the COLORMAP lump.
-#define NUMCOLORMAPS		32
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP		(NUMCOLORMAPS)
-
-typedef uint32_t	lighttable_t;
-typedef uint32_t	pixel_t;
-
-
 typedef struct
 {
     // Screen width and height

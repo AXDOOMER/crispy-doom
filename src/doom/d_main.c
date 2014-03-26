@@ -232,7 +232,7 @@ void D_Display (void)
 	    break;
 	if (automapactive)
 	    AM_Drawer ();
-	if (wipe || (scaledviewheight != (200 << hires) && fullscreen))
+	if (wipe || (scaledviewheight != (200 << hires) && fullscreen) )
 	    redrawsbar = true;
 	if (inhelpscreensstate && !inhelpscreens)
 	    redrawsbar = true;              // just put away the help screen
@@ -270,10 +270,7 @@ void D_Display (void)
     
     // clean up border stuff
     if (gamestate != oldgamestate && gamestate != GS_LEVEL)
-    {
-//	I_SetPalette (W_CacheLumpName (DEH_String("PLAYPAL"),PU_CACHE));
-        R_InitColormaps (0);
-    }
+	R_InitColormaps (0);
 
     // see if the border needs to be initially drawn
     if (gamestate == GS_LEVEL && oldgamestate != GS_LEVEL)

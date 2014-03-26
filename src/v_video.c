@@ -64,7 +64,8 @@ byte *xlatab = NULL;
 // The screen buffer that the v_video.c code draws to.
 
 static pixel_t *dest_screen = NULL;
-extern lighttable_t	*colormaps;
+
+extern lighttable_t *colormaps;
 
 int dirtybox[4]; 
 

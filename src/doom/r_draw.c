@@ -908,7 +908,7 @@ void R_FillBackScreen (void)
     { 
 	for (x=0 ; x<SCREENWIDTH ; x++)
 	{
-	    *dest++ = colormaps[src[64 * (y%64) + (x%64)]];
+	    *dest++ = colormaps[src[((y&63)<<6) + (x&63)]];
 	}
 /*
 	for (x=0 ; x<SCREENWIDTH/64 ; x++) 

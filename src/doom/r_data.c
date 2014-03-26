@@ -693,7 +693,6 @@ void R_InitColormaps (int pal)
     // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
     static lighttable_t	colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
     static byte *doompalette, *doomcolormap;
-    extern boolean st_firsttime;
 
     int gamma, p, c, i;
     byte a, r, g, b;
@@ -762,7 +761,6 @@ void R_InitColormaps (int pal)
     }
 
     memcpy(colormaps, *colormaptable[usegamma][pal], (NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t));
-    st_firsttime = true;
 }
 
 
