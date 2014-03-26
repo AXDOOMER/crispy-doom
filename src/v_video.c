@@ -868,9 +868,10 @@ void WritePNGfile(char *filename, byte *data,
     png_init_io(ppng, handle);
 
     png_set_IHDR(ppng, pinfo, width, height,
-                 8, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+                 8, PNG_COLOR_TYPE_RGB_ALPHA /*PNG_COLOR_TYPE_PALETTE*/, PNG_INTERLACE_NONE,
                  PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
+/*
     pcolor = malloc(sizeof(*pcolor) * 256);
     if (!pcolor)
     {
@@ -887,12 +888,15 @@ void WritePNGfile(char *filename, byte *data,
 
     png_set_PLTE(ppng, pinfo, pcolor, 256);
     free(pcolor);
+*/
+
+    png_set_bgr(ppng); // hicol
 
     png_write_info(ppng, pinfo);
 
     for (i = 0; i < SCREENHEIGHT; i++)
     {
-        png_write_row(ppng, data + i*SCREENWIDTH);
+        png_write_row(ppng, data + i*SCREENWIDTH*sizeof(pixel_t)); // hicol
     }
 
     png_write_end(ppng, pinfo);
