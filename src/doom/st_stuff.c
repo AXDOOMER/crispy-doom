@@ -268,13 +268,13 @@
 #define ST_MAPHEIGHT		1
 
 // graphics are drawn to a backing screen and blitted to the real screen
-byte                   *st_backing_screen;
+pixel_t                   *st_backing_screen;
 	    
 // main player in game
 static player_t*	plyr; 
 
 // ST_Start() has just been called
-static boolean		st_firsttime;
+boolean		st_firsttime;
 
 // lump number for PLAYPAL
 static int		lu_palette;
@@ -1008,8 +1008,10 @@ void ST_doPaletteStuff(void)
     if (palette != st_palette)
     {
 	st_palette = palette;
-	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
-	I_SetPalette (pal);
+//	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
+//	I_SetPalette (pal);
+        R_InitColormaps(palette);
+        st_firsttime = true;
     }
 
 }
@@ -1419,7 +1421,7 @@ void ST_Stop (void)
     if (st_stopped)
 	return;
 
-    I_SetPalette (W_CacheLumpNum (lu_palette, PU_CACHE));
+//    I_SetPalette (W_CacheLumpNum (lu_palette, PU_CACHE));
 
     st_stopped = true;
 }
@@ -1427,6 +1429,6 @@ void ST_Stop (void)
 void ST_Init (void)
 {
     ST_loadData();
-    st_backing_screen = (byte *) Z_Malloc((ST_WIDTH << hires) * (ST_HEIGHT << hires), PU_STATIC, 0);
+    st_backing_screen = (pixel_t *) Z_Malloc((ST_WIDTH << hires) * (ST_HEIGHT << hires) * sizeof(pixel_t), PU_STATIC, 0);
 }
 

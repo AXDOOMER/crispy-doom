@@ -240,7 +240,7 @@ extern	patch_t *hu_font[HU_FONTSIZE];
 void F_TextWrite (void)
 {
     byte*	src;
-    byte*	dest;
+    pixel_t*	dest;
     
     int		x,y,w;
     signed int	count;
@@ -255,8 +255,11 @@ void F_TextWrite (void)
 	
     for (y=0 ; y<SCREENHEIGHT ; y++)
     {
-	for (x=0 ; x<SCREENWIDTH/64 ; x++)
+	for (x=0 ; x<SCREENWIDTH ; x++)
 	{
+	    *dest++ = colormaps[src[64 * (y%64) + (x%64)]];
+	}
+/*
 	    memcpy (dest, src+((y&63)<<6), 64);
 	    dest += 64;
 	}
@@ -265,6 +268,7 @@ void F_TextWrite (void)
 	    memcpy (dest, src+((y&63)<<6), SCREENWIDTH&63);
 	    dest += (SCREENWIDTH&63);
 	}
+*/
     }
 
     V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);
@@ -589,8 +593,8 @@ F_DrawPatchCol
 {
     column_t*	column;
     byte*	source;
-    byte*	dest;
-    byte*	desttop;
+    pixel_t*	dest;
+    pixel_t*	desttop;
     int		count, f;
 	
     column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
@@ -609,10 +613,10 @@ F_DrawPatchCol
 	{
 	    if (hires)
 	    {
-	        *dest = *source;
+	        *dest = colormaps[*source];
 	        dest += SCREENWIDTH;
 	    }
-	    *dest = *source++;
+	    *dest = colormaps[*source++];
 	    dest += SCREENWIDTH;
 	}
       }

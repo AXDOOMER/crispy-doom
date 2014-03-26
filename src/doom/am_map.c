@@ -217,7 +217,7 @@ static int 	f_w;
 static int	f_h;
 
 static int 	lightlev; 		// used for funky strobing effect
-static byte*	fb; 			// pseudo-frame buffer
+static pixel_t*	fb; 			// pseudo-frame buffer
 static int 	amclock;
 
 static mpoint_t m_paninc; // how far the window pans each tic (map coords)
@@ -839,7 +839,7 @@ void AM_Ticker (void)
 //
 void AM_clearFB(int color)
 {
-    memset(fb, color, f_w*f_h);
+    memset(fb, colormaps[color], f_w*f_h*sizeof(pixel_t));
 }
 
 
@@ -1031,7 +1031,7 @@ AM_drawFline
 	d = ay - ax/2;
 	while (1)
 	{
-	    PUTDOT(x,y,color);
+	    PUTDOT(x,y,colormaps[color]);
 	    if (x == fl->b.x) return;
 	    if (d>=0)
 	    {
@@ -1047,7 +1047,7 @@ AM_drawFline
 	d = ax - ay/2;
 	while (1)
 	{
-	    PUTDOT(x, y, color);
+	    PUTDOT(x, y, colormaps[color]);
 	    if (y == fl->b.y) return;
 	    if (d >= 0)
 	    {
@@ -1337,7 +1337,7 @@ void AM_drawMarks(void)
 
 void AM_drawCrosshair(int color)
 {
-    fb[(f_w*(f_h+1))/2] = color; // single point for now
+    fb[(f_w*(f_h+1))/2] = colormaps[color]; // single point for now
 
 }
 

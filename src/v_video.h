@@ -34,6 +34,7 @@
 
 // Needed because we are refering to patches.
 #include "v_patch.h"
+#include "i_video.h"
 
 //
 // VIDEO
@@ -58,7 +59,7 @@ void V_Init (void);
 
 // Draw a block from the specified source screen to the screen.
 
-void V_CopyRect(int srcx, int srcy, byte *source,
+void V_CopyRect(int srcx, int srcy, pixel_t *source,
                 int width, int height,
                 int destx, int desty);
 
@@ -72,8 +73,8 @@ void V_DrawPatchDirect(int x, int y, patch_t *patch);
 
 // Draw a linear block of pixels into the view buffer.
 
-void V_DrawBlock(int x, int y, int width, int height, byte *src);
-void V_DrawScaledBlock(int x, int y, int width, int height, byte *src);
+void V_DrawBlock(int x, int y, int width, int height, pixel_t *src);
+void V_DrawScaledBlock(int x, int y, int width, int height, pixel_t *src);
 
 void V_MarkRect(int x, int y, int width, int height);
 
@@ -89,7 +90,7 @@ void V_DrawRawScreen(byte *raw);
 
 // Temporarily switch to using a different buffer to draw graphics, etc.
 
-void V_UseBuffer(byte *buffer);
+void V_UseBuffer(pixel_t *buffer);
 
 // Return to using the normal screen buffer to draw graphics.
 

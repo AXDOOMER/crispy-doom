@@ -1,5 +1,5 @@
 
-SUBDIRS = doom heretic hexen strife setup
+SUBDIRS = doom 
 
 execgamesdir = ${exec_prefix}/games
 

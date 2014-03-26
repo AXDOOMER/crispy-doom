@@ -194,7 +194,7 @@ int screen_height = SCREENHEIGHT;
 
 // Color depth.
 
-int screen_bpp = 8;
+int screen_bpp = 32;
 
 // Automatically adjust video settings if the selected mode is 
 // not a valid video mode.
@@ -220,7 +220,7 @@ static int grabmouse = true;
 
 // The screen buffer; this is modified to draw things to the screen
 
-byte *I_VideoBuffer = NULL;
+pixel_t *I_VideoBuffer = NULL;
 
 // If true, game is running as a screensaver
 
@@ -407,7 +407,7 @@ static void SetShowCursor(boolean show)
 void I_EnableLoadingDisk(void)
 {
     patch_t *disk;
-    byte *tmpbuf;
+    pixel_t *tmpbuf;
     char *disk_name;
     int y;
     char buf[20];
@@ -432,15 +432,15 @@ void I_EnableLoadingDisk(void)
 
     // Draw the patch into a temporary buffer
 
-    tmpbuf = Z_Malloc(SCREENWIDTH * ((disk->height + 1) << hires), PU_STATIC, NULL);
+    tmpbuf = Z_Malloc(SCREENWIDTH * ((disk->height + 1) << hires) * sizeof(pixel_t), PU_STATIC, NULL);
     V_UseBuffer(tmpbuf);
 
     // Draw the disk to the screen:
 
     V_DrawPatch(0, 0, disk);
 
-    disk_image = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H, PU_STATIC, NULL);
-    saved_background = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H, PU_STATIC, NULL);
+    disk_image = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H * sizeof(pixel_t), PU_STATIC, NULL);
+    saved_background = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H * sizeof(pixel_t), PU_STATIC, NULL);
 
     for (y=0; y<LOADING_DISK_H; ++y) 
     {
@@ -992,7 +992,7 @@ static boolean BlitArea(int x1, int y1, int x2, int y2)
     if (SDL_LockSurface(screenbuffer) >= 0)
     {
         I_InitScale(I_VideoBuffer,
-                    (byte *) screenbuffer->pixels
+                    (pixel_t *) screenbuffer->pixels
                                 + (y_offset * screenbuffer->pitch)
                                 + x_offset,
                     screenbuffer->pitch);
@@ -1031,12 +1031,12 @@ static void UpdateRect(int x1, int y1, int x2, int y2)
 
 void I_BeginRead(void)
 {
-    byte *screenloc = I_VideoBuffer
+    pixel_t *screenloc = I_VideoBuffer
                     + (SCREENHEIGHT - LOADING_DISK_H) * SCREENWIDTH
                     + (SCREENWIDTH - LOADING_DISK_W);
     int y;
 
-    if (!initialized || disk_image == NULL)
+    if (!initialized || disk_image == NULL || 1)
         return;
 
     // save background and copy the disk image in
@@ -1059,12 +1059,12 @@ void I_BeginRead(void)
 
 void I_EndRead(void)
 {
-    byte *screenloc = I_VideoBuffer
+    pixel_t *screenloc = I_VideoBuffer
                     + (SCREENHEIGHT - LOADING_DISK_H) * SCREENWIDTH
                     + (SCREENWIDTH - LOADING_DISK_W);
     int y;
 
-    if (!initialized || disk_image == NULL)
+    if (!initialized || disk_image == NULL || 1)
         return;
 
     // save background and copy the disk image in
@@ -1134,7 +1134,7 @@ void I_FinishUpdate (void)
 
     if (palette_to_set)
     {
-        SDL_SetColors(screenbuffer, palette, 0, 256);
+//        SDL_SetColors(screenbuffer, palette, 0, 256);
         palette_to_set = false;
 
         // In native 8-bit mode, if we have a palette to set, the act
@@ -1168,9 +1168,9 @@ void I_FinishUpdate (void)
 //
 // I_ReadScreen
 //
-void I_ReadScreen (byte* scr)
+void I_ReadScreen (pixel_t* scr)
 {
-    memcpy(scr, I_VideoBuffer, SCREENWIDTH*SCREENHEIGHT);
+    memcpy(scr, I_VideoBuffer, SCREENWIDTH*SCREENHEIGHT*sizeof(pixel_t));
 }
 
 
@@ -1191,7 +1191,7 @@ void I_SetPalette (byte *doompalette)
         palette[i].b = gammatable[usegamma][*doompalette++] & ~3;
     }
 
-    palette_to_set = true;
+//    palette_to_set = true;
 }
 
 // Given an RGB value, find the closest matching palette index.
@@ -2010,7 +2010,7 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     // Create the screenbuffer surface; if we have a real 8-bit palettized
     // screen, then we can use the screen as the screenbuffer.
 
-    if (screen->format->BitsPerPixel == 8)
+    if (screen->format->BitsPerPixel == 32)
     {
         screenbuffer = screen;
     }
@@ -2179,19 +2179,20 @@ void I_InitGraphics(void)
                   && screen_mode == &mode_scale_1x
                   && screen->pitch == SCREENWIDTH
                   && aspect_ratio_correct;
+native_surface=1;
 
     // If not, allocate a buffer and copy from that buffer to the
     // screen when we do an update
 
     if (native_surface)
     {
-	I_VideoBuffer = (unsigned char *) screen->pixels;
+	I_VideoBuffer = (pixel_t *) screen->pixels;
 
-        I_VideoBuffer += (screen->h - SCREENHEIGHT) / 2;
+//        I_VideoBuffer += (screen->h - SCREENHEIGHT) / 2;
     }
     else
     {
-	I_VideoBuffer = (unsigned char *) Z_Malloc (SCREENWIDTH * SCREENHEIGHT, 
+	I_VideoBuffer = (pixel_t *) Z_Malloc (SCREENWIDTH * SCREENHEIGHT * sizeof(pixel_t), 
                                                     PU_STATIC, NULL);
     }
 
@@ -2276,4 +2277,25 @@ void I_BindVideoVariables(void)
     screen_width = 800;
     screen_height = 600;
 #endif
+}
+
+pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
+{
+	byte a1, r1, r2, g1, g2, b1, b2;
+	byte rr, gr, br;
+
+	a1 = (a & 0xff000000) >> 24;
+	r1 = (a & 0x00ff0000) >> 16;
+	g1 = (a & 0x0000ff00) >> 8;
+	b1 = (a & 0x000000ff);
+
+	r2 = (b & 0x00ff0000) >> 16;
+	g2 = (b & 0x0000ff00) >> 8;
+	b2 = (b & 0x000000ff);
+
+	rr = (a1 * r1 + (255 - a1) * r2) / 0xff;
+	gr = (a1 * g1 + (255 - a1) * g2) / 0xff;
+	br = (a1 * b1 + (255 - a1) * b2) / 0xff;
+
+	return ((0xff << 24) + (rr << 16) + (gr << 8) + br);
 }

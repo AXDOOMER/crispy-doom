@@ -82,9 +82,6 @@ extern int		extralight;
 extern lighttable_t*	fixedcolormap;
 
 
-// Number of diminishing brightness levels.
-// There a 0-31, i.e. 32 LUT in the COLORMAP lump.
-#define NUMCOLORMAPS		32
 
 
 // Blocky/low detail mode.
