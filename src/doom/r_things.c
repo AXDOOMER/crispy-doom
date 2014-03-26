@@ -403,11 +403,13 @@ R_DrawVisSprite
     int			texturecolumn;
     fixed_t		frac;
     patch_t*		patch;
+    extern int		crispy_translucency;
 	
 	
     patch = W_CacheLumpNum (vis->patch+firstspritelump, PU_CACHE);
 
     dc_colormap = vis->colormap;
+    dc_translucency = 0;
     
     if (!dc_colormap)
     {
@@ -419,6 +421,10 @@ R_DrawVisSprite
 	colfunc = transcolfunc;
 	dc_translation = translationtables - 256 +
 	    ( (vis->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
+    }
+    else if (crispy_translucency && (vis->mobjflags & MF_TRANSLUCENT))
+    {
+	dc_translucency = 0xa0ffffff;
     }
 	
     dc_iscale = abs(vis->xiscale)>>(detailshift && !hires);

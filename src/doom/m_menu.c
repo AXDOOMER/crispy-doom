@@ -571,12 +571,13 @@ void M_DrawLoad(void)
     for (i = 0;i < load_end; i++)
     {
 	M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
+
 	if (!strncmp(savegamestrings[i], EMPTYSTRING, strlen(EMPTYSTRING)))
-	    patch_tint = 0xffffffff;
-	else
-	    patch_tint = 0;
+	    dp_color = CM_DARK50;
+
 	M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
-	patch_tint = 0;
+
+	dp_color = 0;
     }
 }
 
@@ -2078,12 +2079,11 @@ void M_Drawer (void)
 	    if ((currentMenu == &MainDef && i == savegame && !usergame) ||
 	        (currentMenu == &OptionsDef && i == endgame && !usergame) ||
 	        (currentMenu == &MainDef && i == loadgame && netgame))
-	        patch_tint = 0xffffffff;
-	    else
-	        patch_tint = 0;
+	        dp_color = CM_DARK50;
 
 	    V_DrawPatchDirect (x, y, W_CacheLumpName(name, PU_CACHE));
-	    patch_tint = 0;
+
+	    dp_color = 0;
 	}
 	y += LINEHEIGHT;
     }

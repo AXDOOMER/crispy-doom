@@ -138,6 +138,7 @@ char		mapdir[1024];           // directory of development maps
 int             show_endoom = 0;
 
 int             crispy_highcolor = 0;
+int             crispy_translucency = 0;
 int             crispy_automapstats = 0;
 int             crispy_secretmessage = 0;
 int             crispy_crosshair = 0;
@@ -311,7 +312,7 @@ void D_Display (void)
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
-            I_VideoBuffer[i] = I_Desaturate(I_VideoBuffer[i]);
+            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CM_DARK50);
 	}
 
 	viewactivestate = false;
@@ -416,6 +417,7 @@ void D_BindVariables(void)
     }
 
     M_BindVariable("crispy_highcolor",       &crispy_highcolor);
+    M_BindVariable("crispy_translucency",    &crispy_translucency);
     M_BindVariable("crispy_automapstats",    &crispy_automapstats);
     M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
     M_BindVariable("crispy_crosshair",       &crispy_crosshair);

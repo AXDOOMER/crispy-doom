@@ -32,7 +32,8 @@
 int vanilla_savegame_limit = 0;
 int vanilla_demo_limit = 0;
 
-int crispy_highcolor = 1;
+int crispy_highcolor = 0;
+int crispy_translucency = 0;
 int crispy_automapstats = 0;
 int crispy_secretmessage = 0;
 int crispy_crosshair = 0;
@@ -58,6 +59,8 @@ void CompatibilitySettings(void)
     TXT_AddWidgets(window, 
                    TXT_NewCheckBox("Enable high color rendering",
                                    &crispy_highcolor),
+                   TXT_NewCheckBox("Enable translucency",
+                                   &crispy_translucency),
                    TXT_NewCheckBox("Show level stats in automap",
                                    &crispy_automapstats),
                    TXT_NewCheckBox("Show secrets revealed message",
@@ -82,6 +85,7 @@ void BindCompatibilityVariables(void)
         M_BindVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
         M_BindVariable("vanilla_demo_limit",     &vanilla_demo_limit);
         M_BindVariable("crispy_highcolor",       &crispy_highcolor);
+        M_BindVariable("crispy_translucency",    &crispy_translucency);
         M_BindVariable("crispy_automapstats",    &crispy_automapstats);
         M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
         M_BindVariable("crispy_crosshair",       &crispy_crosshair);

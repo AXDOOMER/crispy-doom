@@ -94,6 +94,7 @@ int			dc_yl;
 int			dc_yh; 
 fixed_t			dc_iscale; 
 fixed_t			dc_texturemid;
+lighttable_t		dc_translucency;
 
 // first pixel in a column (possibly virtual) 
 byte*			dc_source;		
@@ -112,6 +113,7 @@ void R_DrawColumn (void)
 { 
     int			count; 
     pixel_t*		dest; 
+    pixel_t		destrgb; 
     fixed_t		frac;
     fixed_t		fracstep;	 
  
@@ -145,7 +147,11 @@ void R_DrawColumn (void)
     {
 	// Re-map color indices from wall texture column
 	//  using a lighting/special effects LUT.
-	*dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	if (dc_translucency)
+	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+
+	*dest = destrgb;
 	
 	dest += SCREENWIDTH; 
 	frac += fracstep;
@@ -221,6 +227,8 @@ void R_DrawColumnLow (void)
     pixel_t*		dest2;
     pixel_t*		dest3; 
     pixel_t*		dest4;
+    pixel_t		destrgb;
+    pixel_t		dest3rgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int                 x;
@@ -255,12 +263,22 @@ void R_DrawColumnLow (void)
     do 
     {
 	// Hack. Does not work corretly.
-	*dest2 = *dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	if (dc_translucency)
+	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+
+	*dest2 = *dest = destrgb;
+
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
-	    *dest4 = *dest3 = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	    dest3rgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	    if (dc_translucency)
+	        dest3rgb = I_AlphaBlend(*dest3, (dest3rgb & dc_translucency));
+
+	    *dest4 = *dest3 = dest3rgb;
+
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
@@ -346,7 +364,7 @@ void R_DrawFuzzColumn (void)
 	//  left or right of the current one.
 	// Add index from colormap to index.
 
-	*dest = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], 0x40000000);
+	*dest = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], CM_DARK25);
 
 	// Clamp table lookup index.
 	if (++fuzzpos == FUZZTABLE) 
@@ -416,12 +434,12 @@ void R_DrawFuzzColumnLow (void)
 	//  a pixel that is either one column
 	//  left or right of the current one.
 	// Add index from colormap to index.
-	*dest = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], 0x40000000);
-	*dest2 = I_AlphaBlend(dest2[fuzzoffset[fuzzpos]], 0x40000000);
+	*dest = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], CM_DARK25);
+	*dest2 = I_AlphaBlend(dest2[fuzzoffset[fuzzpos]], CM_DARK25);
 	if (hires)
 	{
-	    *dest3 = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], 0x40000000);
-	    *dest4 = I_AlphaBlend(dest2[fuzzoffset[fuzzpos]], 0x40000000);
+	    *dest3 = I_AlphaBlend(dest[fuzzoffset[fuzzpos]], CM_DARK25);
+	    *dest4 = I_AlphaBlend(dest2[fuzzoffset[fuzzpos]], CM_DARK25);
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
