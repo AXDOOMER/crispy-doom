@@ -312,7 +312,7 @@ void D_Display (void)
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
-            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CM_DARK50);
+            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50);
 	}
 
 	viewactivestate = false;

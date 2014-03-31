@@ -2281,36 +2281,47 @@ void I_BindVideoVariables(void)
 
 pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
 {
-	byte a1, r1, r2, g1, g2, b1, b2;
-	byte rr, gr, br;
+    byte a1, r1, r2, g1, g2, b1, b2;
+    byte rr, gr, br;
 
-	a1 = (a & 0xff000000) >> 24;
-	r1 = (a & 0x00ff0000) >> 16;
-	g1 = (a & 0x0000ff00) >> 8;
-	b1 = (a & 0x000000ff);
+    a1 = (a & 0xff000000) >> 24;
+    r1 = (a & 0x00ff0000) >> 16;
+    g1 = (a & 0x0000ff00) >> 8;
+    b1 = (a & 0x000000ff);
 
-	r2 = (b & 0x00ff0000) >> 16;
-	g2 = (b & 0x0000ff00) >> 8;
-	b2 = (b & 0x000000ff);
+    r2 = (b & 0x00ff0000) >> 16;
+    g2 = (b & 0x0000ff00) >> 8;
+    b2 = (b & 0x000000ff);
 
-	rr = (a1 * r1 + (255 - a1) * r2) / 0xff;
-	gr = (a1 * g1 + (255 - a1) * g2) / 0xff;
-	br = (a1 * b1 + (255 - a1) * b2) / 0xff;
+    rr = (a1 * r1 + (255 - a1) * r2) / 0xff;
+    gr = (a1 * g1 + (255 - a1) * g2) / 0xff;
+    br = (a1 * b1 + (255 - a1) * b2) / 0xff;
 
-	return ((0xff << 24) + (rr << 16) + (gr << 8) + br);
+    return ((0xff << 24) + (rr << 16) + (gr << 8) + br);
 }
 
-pixel_t I_Desaturate (pixel_t a)
+pixel_t I_ColorMatrix (pixel_t a, lighttable_t *b)
 {
-	byte a1, r1, g1, b1;
-	byte gr;
+    byte ac[4], bc[4][4], rc[4] = {0, 0, 0, 0};
+    int i, j;
 
-	a1 = (a & 0xff000000) >> 24;
-	r1 = (a & 0x00ff0000) >> 16;
-	g1 = (a & 0x0000ff00) >> 8;
-	b1 = (a & 0x000000ff);
+    ac[0] = (a & 0xff000000) >> 24;
+    ac[1] = (a & 0x00ff0000) >> 16;
+    ac[2] = (a & 0x0000ff00) >> 8;
+    ac[3] = (a & 0x000000ff);
 
-	gr = (r1 + g1 + b1) / 3;
+    for (i = 0; i < 4; i++)
+    {
+        bc[i][0] = (b[i] & 0xff000000) >> 24;
+	bc[i][1] = (b[i] & 0x00ff0000) >> 16;
+	bc[i][2] = (b[i] & 0x0000ff00) >> 8;
+	bc[i][3] = (b[i] & 0x000000ff);
 
-	return ((a1 << 24) + (gr << 16) + (gr << 8) + gr);
+        for (j = 0; j < 4; j++)
+        {
+            rc[i] += ac[j] * bc[i][j] / 255.;
+        }
+    }
+
+    return ((rc[0] << 24) + (rc[1] << 16) + (rc[2] << 8) + rc[3]);
 }

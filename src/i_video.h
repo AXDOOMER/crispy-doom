@@ -151,7 +151,7 @@ void I_StartTic (void);
 void I_EnableLoadingDisk(void);
 
 pixel_t I_AlphaBlend (pixel_t a, pixel_t b);
-pixel_t I_Desaturate (pixel_t a);
+pixel_t I_ColorMatrix (pixel_t a, lighttable_t *b);
 
 extern char *video_driver;
 extern boolean screenvisible;

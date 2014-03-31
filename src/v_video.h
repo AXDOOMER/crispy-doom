@@ -45,12 +45,12 @@
 extern int dirtybox[4];
 
 extern byte *tinttable;
-extern lighttable_t dp_color;
+extern lighttable_t *dp_color;
 
-#define CM_DARK25	0x40000000
-#define CM_DARK50	0x80000000
-#define CM_DARK62	0xa0000000
-#define CM_DARK75	0xC0000000
+#define CB_DARK25      0x40000000
+#define CB_DARK50      0x80000000
+#define CB_DARK62      0xa0000000
+#define CB_DARK75      0xC0000000
 
 // haleyjd 08/28/10: implemented for Strife support
 // haleyjd 08/28/10: Patch clipping callback, implemented to support Choco
