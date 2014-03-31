@@ -153,6 +153,12 @@ void I_EnableLoadingDisk(void);
 pixel_t I_AlphaBlend (pixel_t a, pixel_t b);
 pixel_t I_ColorMatrix (pixel_t a, lighttable_t *b);
 
+extern lighttable_t *dp_color;
+extern lighttable_t CM_BLUE[4];
+extern lighttable_t CM_GOLD[4];
+extern lighttable_t CM_GRAY[4];
+extern lighttable_t CM_WHIT[4];
+
 extern char *video_driver;
 extern boolean screenvisible;
 

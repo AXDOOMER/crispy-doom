@@ -68,12 +68,6 @@
 #define HU_INPUTWIDTH	64
 #define HU_INPUTHEIGHT	1
 
-extern lighttable_t *dp_color;
-lighttable_t CM_BLUE[4] = {0xff000000, 0x00600000, 0x00600000, 0x00ff0000};
-lighttable_t CM_GOLD[4] = {0xff000000, 0x00ff0000, 0x00C00000, 0x00400000};
-lighttable_t CM_WHITE[4] = {0xff000000, 0x00f00000, 0x00f00000, 0x00f00000};
-
-
 char *chat_macros[10] =
 {
     HUSTR_CHATMACRO0,
@@ -496,7 +490,7 @@ void HU_Drawer(void)
 	s = str;
 	while (*s)
 	    HUlib_addCharToTextLine(&w_ltime, *(s++));
-	dp_color = (lighttable_t*) &CM_WHITE;
+	dp_color = (lighttable_t*) &CM_WHIT;
 	HUlib_drawTextLine(&w_ltime, false);
 	dp_color = NULL;
 	}

@@ -115,8 +115,6 @@ char gammamsg[5][26] =
     GAMMALVL4
 };
 
-lighttable_t CM_GRAY[4] = {0xff000000, 0x00800000, 0x00800000, 0x00800000};
-
 // we are going to be entering a savegame string
 int			saveStringEnter;              
 int             	saveSlot;	// which slot to save in
@@ -576,7 +574,7 @@ void M_DrawLoad(void)
 	M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
 
 	if (!strncmp(savegamestrings[i], EMPTYSTRING, strlen(EMPTYSTRING)))
-	    dp_color = &CM_GRAY;
+	    dp_color = (lighttable_t *) &CM_GRAY;
 
 	M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
 
@@ -2089,7 +2087,7 @@ void M_Drawer (void)
 	    if ((currentMenu == &MainDef && i == savegame && !usergame) ||
 	        (currentMenu == &OptionsDef && i == endgame && !usergame) ||
 	        (currentMenu == &MainDef && i == loadgame && netgame))
-	        dp_color = &CM_GRAY;
+	        dp_color = (lighttable_t *) &CM_GRAY;
 
 	    V_DrawPatchDirect (x, y, W_CacheLumpName(name, PU_CACHE));
 

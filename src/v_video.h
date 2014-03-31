@@ -45,7 +45,6 @@
 extern int dirtybox[4];
 
 extern byte *tinttable;
-extern lighttable_t *dp_color;
 
 #define CB_DARK25      0x40000000
 #define CB_DARK50      0x80000000
