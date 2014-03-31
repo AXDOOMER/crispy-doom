@@ -95,6 +95,7 @@ int			dc_yh;
 fixed_t			dc_iscale; 
 fixed_t			dc_texturemid;
 lighttable_t		dc_translucency;
+lighttable_t*		dc_colormatrix;
 
 // first pixel in a column (possibly virtual) 
 byte*			dc_source;		
@@ -148,6 +149,8 @@ void R_DrawColumn (void)
 	// Re-map color indices from wall texture column
 	//  using a lighting/special effects LUT.
 	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	if (dc_colormatrix)
+	    destrgb = I_ColorMatrix(destrgb, dc_colormatrix);
 	if (dc_translucency)
 	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
 
@@ -264,6 +267,8 @@ void R_DrawColumnLow (void)
     {
 	// Hack. Does not work corretly.
 	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	if (dc_colormatrix)
+	    destrgb = I_ColorMatrix(destrgb, dc_colormatrix);
 	if (dc_translucency)
 	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
 
@@ -274,6 +279,8 @@ void R_DrawColumnLow (void)
 	if (hires)
 	{
 	    dest3rgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	    if (dc_colormatrix)
+	        dest3rgb = I_ColorMatrix(dest3rgb, dc_colormatrix);
 	    if (dc_translucency)
 	        dest3rgb = I_AlphaBlend(*dest3, (dest3rgb & dc_translucency));
 

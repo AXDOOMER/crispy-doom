@@ -2262,3 +2262,9 @@ pixel_t I_ColorMatrix (pixel_t a, lighttable_t *b)
 
     return ((rc[0] << 24) + (rc[1] << 16) + (rc[2] << 8) + rc[3]);
 }
+
+lighttable_t CM_BLUE[4] = {0xff000000, 0x00600000, 0x00600000, 0x00ff0000};
+lighttable_t CM_GOLD[4] = {0xff000000, 0x00ff0000, 0x00C00000, 0x00400000};
+lighttable_t CM_GRAY[4] = {0xff000000, 0x00800000, 0x00800000, 0x00800000};
+lighttable_t CM_GREE[4] = {0xff000000, 0x00600000, 0x00ff0000, 0x00600000};
+lighttable_t CM_WHIT[4] = {0xff000000, 0x00f00000, 0x00f00000, 0x00f00000};

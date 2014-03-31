@@ -66,7 +66,7 @@ byte *xlatab = NULL;
 static pixel_t *dest_screen = NULL;
 
 extern lighttable_t *colormaps;
-lighttable_t *dp_color = NULL;
+lighttable_t *dp_colormatrix = NULL;
 
 int dirtybox[4]; 
 
@@ -208,8 +208,8 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             while (count--)
             {
                 sourcergb = colormaps[*source++];
-                if (dp_color)
-                    sourcergb = I_ColorMatrix(sourcergb, dp_color);
+                if (dp_colormatrix)
+                    sourcergb = I_ColorMatrix(sourcergb, dp_colormatrix);
 
                 if (hires)
                 {
@@ -285,8 +285,8 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
             while (count--)
             {
                 sourcergb = colormaps[*source++];
-                if (dp_color)
-                    sourcergb = I_ColorMatrix(sourcergb, dp_color);
+                if (dp_colormatrix)
+                    sourcergb = I_ColorMatrix(sourcergb, dp_colormatrix);
 
                 if (hires)
                 {

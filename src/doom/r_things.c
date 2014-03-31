@@ -410,6 +410,7 @@ R_DrawVisSprite
 
     dc_colormap = vis->colormap;
     dc_translucency = 0;
+    dc_colormatrix = NULL;
     
     if (!dc_colormap)
     {
@@ -425,6 +426,16 @@ R_DrawVisSprite
     else if (crispy_translucency && (vis->mobjflags & MF_TRANSLUCENT))
     {
 	dc_translucency = 0xa0ffffff;
+    }
+
+    if (vis->mobjflags & 0x10000000)
+    {
+	dc_colormatrix = (lighttable_t*) CM_BLUE;
+    }
+    else
+    if (vis->mobjflags & 0x20000000)
+    {
+	dc_colormatrix = (lighttable_t*) CM_GREE;
     }
 	
     dc_iscale = abs(vis->xiscale)>>(detailshift && !hires);
@@ -607,6 +618,16 @@ void R_ProjectSprite (mobj_t* thing)
 
 	vis->colormap = spritelights[index];
     }	
+
+    if (thing->type == MT_BLOOD && thing->target)
+    {
+        if (thing->target->type == MT_HEAD)
+            vis->mobjflags |= 0x10000000;
+        else
+        if (thing->target->type == MT_BRUISER ||
+            thing->target->type == MT_KNIGHT)
+            vis->mobjflags |= 0x20000000;
+    }
 }
 
 
