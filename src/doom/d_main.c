@@ -1127,7 +1127,7 @@ static void LoadNerveWad(void)
     int i;
     char *sep;
     char lumpname[9];
-    
+
     if (!bfgedition || gamemode != commercial)
         return;
 
@@ -1159,8 +1159,8 @@ static void LoadNerveWad(void)
         }
 
         D_AddFile(nervewadfile);
-        
-        // Rename level name patch lumps out of the way        
+
+        // Rename level name patch lumps out of the way
         for (i = 0; i < 9; i++)
         {
             snprintf (lumpname, 9, "CWILV%2.2d", i);

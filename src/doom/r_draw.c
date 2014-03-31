@@ -113,8 +113,8 @@ int			dccount;
 void R_DrawColumn (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
-    pixel_t		destrgb; 
+    pixel_t*		dest;
+    pixel_t		destrgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
  
@@ -226,9 +226,9 @@ void R_DrawColumn (void)
 void R_DrawColumnLow (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
+    pixel_t*		dest;
     pixel_t*		dest2;
-    pixel_t*		dest3; 
+    pixel_t*		dest3;
     pixel_t*		dest4;
     pixel_t		destrgb;
     pixel_t		dest3rgb;
@@ -328,7 +328,7 @@ int	fuzzpos = 0;
 void R_DrawFuzzColumn (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
+    pixel_t*		dest;
     fixed_t		frac;
     fixed_t		fracstep;	 
 
@@ -388,10 +388,10 @@ void R_DrawFuzzColumn (void)
 void R_DrawFuzzColumnLow (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
-    pixel_t*		dest2; 
-    pixel_t*		dest3; 
-    pixel_t*		dest4; 
+    pixel_t*		dest;
+    pixel_t*		dest2;
+    pixel_t*		dest3;
+    pixel_t*		dest4;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int x;
@@ -525,10 +525,10 @@ void R_DrawTranslatedColumn (void)
 void R_DrawTranslatedColumnLow (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
-    pixel_t*		dest2; 
-    pixel_t*		dest3; 
-    pixel_t*		dest4; 
+    pixel_t*		dest;
+    pixel_t*		dest2;
+    pixel_t*		dest3;
+    pixel_t*		dest4;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int                 x;
@@ -552,10 +552,10 @@ void R_DrawTranslatedColumnLow (void)
 #endif 
 
 
-    dest = ylookup[(dc_yl << hires)] + columnofs[x]; 
-    dest2 = ylookup[(dc_yl << hires)] + columnofs[x+1]; 
-    dest3 = ylookup[(dc_yl << hires) + 1] + columnofs[x]; 
-    dest4 = ylookup[(dc_yl << hires) + 1] + columnofs[x+1]; 
+    dest = ylookup[(dc_yl << hires)] + columnofs[x];
+    dest2 = ylookup[(dc_yl << hires)] + columnofs[x+1];
+    dest3 = ylookup[(dc_yl << hires) + 1] + columnofs[x];
+    dest4 = ylookup[(dc_yl << hires) + 1] + columnofs[x+1];
 
     // Looks familiar.
     fracstep = dc_iscale; 
@@ -1028,21 +1028,21 @@ void R_DrawViewBorder (void)
     if (scaledviewwidth == SCREENWIDTH) 
 	return; 
   
-    top = ((SCREENHEIGHT-SBARHEIGHT)-scaledviewheight)/2; 
+    top = ((SCREENHEIGHT-SBARHEIGHT)-scaledviewheight)/2;
     side = (SCREENWIDTH-scaledviewwidth)/2; 
  
     // copy top and one line of left side 
     R_VideoErase (0, top*SCREENWIDTH+side); 
  
     // copy one line of right side and bottom 
-    ofs = (scaledviewheight+top)*SCREENWIDTH-side; 
+    ofs = (scaledviewheight+top)*SCREENWIDTH-side;
     R_VideoErase (ofs, top*SCREENWIDTH+side); 
  
     // copy sides using wraparound 
     ofs = top*SCREENWIDTH + SCREENWIDTH-side; 
     side <<= 1;
     
-    for (i=1 ; i<scaledviewheight ; i++) 
+    for (i=1 ; i<scaledviewheight ; i++)
     { 
 	R_VideoErase (ofs, side); 
 	ofs += SCREENWIDTH; 
