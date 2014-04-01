@@ -57,6 +57,7 @@
 // Only used in Heretic/Hexen
 
 byte *tinttable = NULL;
+byte *dp_translation = NULL;
 
 // villsa [STRIFE] Blending table used for Strife
 byte *xlatab = NULL;
@@ -66,7 +67,6 @@ byte *xlatab = NULL;
 static pixel_t *dest_screen = NULL;
 
 extern lighttable_t *colormaps;
-lighttable_t *dp_colormatrix = NULL;
 
 int dirtybox[4]; 
 
@@ -207,9 +207,10 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                sourcergb = colormaps[*source++];
-                if (dp_colormatrix)
-                    sourcergb = I_ColorMatrix(sourcergb, dp_colormatrix);
+                if (dp_translation)
+                    sourcergb = colormaps[dp_translation[*source++]];
+                else
+                    sourcergb = colormaps[*source++];
 
                 if (hires)
                 {
@@ -284,9 +285,10 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                sourcergb = colormaps[*source++];
-                if (dp_colormatrix)
-                    sourcergb = I_ColorMatrix(sourcergb, dp_colormatrix);
+                if (dp_translation)
+                    sourcergb = colormaps[dp_translation[*source++]];
+                else
+                    sourcergb = colormaps[*source++];
 
                 if (hires)
                 {
@@ -848,12 +850,10 @@ static void warning_fn(png_structp p, png_const_charp s)
 }
 
 void WritePNGfile(char *filename, byte *data,
-                  int width, int height,
-                  byte *palette)
+                  int width, int height)
 {
     png_structp ppng;
     png_infop pinfo;
-    png_colorp pcolor;
     FILE *handle;
     int i;
 
@@ -880,35 +880,16 @@ void WritePNGfile(char *filename, byte *data,
     png_init_io(ppng, handle);
 
     png_set_IHDR(ppng, pinfo, width, height,
-                 8, PNG_COLOR_TYPE_RGB_ALPHA /*PNG_COLOR_TYPE_PALETTE*/, PNG_INTERLACE_NONE,
+                 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
                  PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
-/*
-    pcolor = malloc(sizeof(*pcolor) * 256);
-    if (!pcolor)
-    {
-        png_destroy_write_struct(&ppng, &pinfo);
-        return;
-    }
-
-    for (i = 0; i < 256; i++)
-    {
-        pcolor[i].red   = *(palette + 3 * i);
-        pcolor[i].green = *(palette + 3 * i + 1);
-        pcolor[i].blue  = *(palette + 3 * i + 2);
-    }
-
-    png_set_PLTE(ppng, pinfo, pcolor, 256);
-    free(pcolor);
-*/
-
-    png_set_bgr(ppng); // hicol
+    png_set_bgr(ppng);
 
     png_write_info(ppng, pinfo);
 
     for (i = 0; i < SCREENHEIGHT; i++)
     {
-        png_write_row(ppng, data + i*SCREENWIDTH*sizeof(pixel_t)); // hicol
+        png_write_row(ppng, data + i*SCREENWIDTH*sizeof(pixel_t));
     }
 
     png_write_end(ppng, pinfo);
@@ -960,8 +941,7 @@ void V_ScreenShot(char *format)
     if (png_screenshots)
     {
     WritePNGfile(lbmname, I_VideoBuffer,
-                 SCREENWIDTH, SCREENHEIGHT,
-                 W_CacheLumpName (DEH_String("PLAYPAL"), PU_CACHE));
+                 SCREENWIDTH, SCREENHEIGHT);
     }
     else
 #endif

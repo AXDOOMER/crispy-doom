@@ -43,6 +43,7 @@
 
 #include "doomstat.h"
 
+#include "v_trans.h"
 
 
 #define MINZ				(FRACUNIT*4)
@@ -410,7 +411,6 @@ R_DrawVisSprite
 
     dc_colormap = vis->colormap;
     dc_translucency = 0;
-    dc_colormatrix = NULL;
     
     if (!dc_colormap)
     {
@@ -423,19 +423,15 @@ R_DrawVisSprite
 	dc_translation = translationtables - 256 +
 	    ( (vis->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
     }
-    else if (crispy_translucency && (vis->mobjflags & MF_TRANSLUCENT))
+    else if (vis->translation)
+    {
+	colfunc = transcolfunc;
+	dc_translation = vis->translation;
+    }
+    // [crispy] translucent sprites
+    if (crispy_translucency && (vis->mobjflags & MF_TRANSLUCENT))
     {
 	dc_translucency = 0xa0ffffff;
-    }
-
-    if (vis->mobjflags & 0x10000000)
-    {
-	dc_colormatrix = (lighttable_t*) CM_BLUE;
-    }
-    else
-    if (vis->mobjflags & 0x20000000)
-    {
-	dc_colormatrix = (lighttable_t*) CM_GREE;
     }
 	
     dc_iscale = abs(vis->xiscale)>>(detailshift && !hires);
@@ -565,6 +561,7 @@ void R_ProjectSprite (mobj_t* thing)
     
     // store information in a vissprite
     vis = R_NewVisSprite ();
+    vis->translation = NULL;
     vis->mobjflags = thing->flags;
     vis->scale = xscale<<(detailshift && !hires);
     vis->gx = thing->x;
@@ -622,11 +619,11 @@ void R_ProjectSprite (mobj_t* thing)
     if (thing->type == MT_BLOOD && thing->target)
     {
         if (thing->target->type == MT_HEAD)
-            vis->mobjflags |= 0x10000000;
+            vis->translation = (byte *) &cr_blue2;
         else
         if (thing->target->type == MT_BRUISER ||
             thing->target->type == MT_KNIGHT)
-            vis->mobjflags |= 0x20000000;
+            vis->translation = (byte *) &cr_green;
     }
 }
 
@@ -718,7 +715,9 @@ void R_DrawPSprite (pspdef_t* psp)
     
     // store information in a vissprite
     vis = &avis;
+    vis->translation = NULL;
     vis->mobjflags = 0;
+    // [crispy] weapons drawn 1 pixel too high when player is idle
     vis->texturemid = (BASEYCENTER<<FRACBITS) /* +FRACUNIT/2 */ -(psp->sy-spritetopoffset[lump]);
     vis->x1 = x1 < 0 ? 0 : x1;
     vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;	
@@ -735,6 +734,7 @@ void R_DrawPSprite (pspdef_t* psp)
 	vis->startfrac = 0;
     }
     
+    // [crispy] free look
     vis->texturemid += FixedMul(((centery - viewheight / 2) << FRACBITS), vis->xiscale);
 
     if (vis->x1 > x1)

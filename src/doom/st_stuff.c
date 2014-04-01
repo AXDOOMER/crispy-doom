@@ -66,6 +66,8 @@
 #include "dstrings.h"
 #include "sounds.h"
 
+#include "v_trans.h"
+
 //
 // STATUS BAR DATA
 //
@@ -351,7 +353,6 @@ static st_percent_t	w_health;
 // arms background
 static st_binicon_t	w_armsbg; 
 
-
 // weapon ownership widgets
 static st_multicon_t	w_arms[6];
 
@@ -551,6 +552,7 @@ ST_Responder (event_t* ev)
 	    S_ChangeMusic(musnum, 1);
 	}
       }
+      // [crispy] allow both idspispopd and idclip cheats in all gamemissions
       else if ( ( /* logical_gamemission == doom
                  && */ cht_CheckCheat(&cheat_noclip, ev->data2))
              || ( /* logical_gamemission != doom
@@ -756,6 +758,7 @@ void ST_updateFaceWidget(void)
 	    // being attacked
 	    priority = 7;
 	    
+	    // [crispy] show "Ouch Face" as intended
 	    if (st_oldhealth - plyr->health > ST_MUCHPAIN)
 	    {
 		st_facecount = ST_TURNCOUNT;
@@ -809,6 +812,7 @@ void ST_updateFaceWidget(void)
 	// getting hurt because of your own damn stupidity
 	if (plyr->damagecount)
 	{
+	    // [crispy] show "Ouch Face" as intended
 	    if (st_oldhealth - plyr->health > ST_MUCHPAIN)
 	    {
 		priority = 7;
@@ -1013,6 +1017,71 @@ void ST_doPaletteStuff(void)
 
 }
 
+byte* ST_WidgetColor(int i)
+{
+    extern int crispy_coloredhud;
+
+    if (!crispy_coloredhud)
+        return NULL;
+
+    switch (i)
+    {
+        case 0:
+        {
+            if (weaponinfo[plyr->readyweapon].ammo == am_noammo)
+            {
+                return NULL;
+            }
+            else
+            {
+                int ammo =  plyr->ammo[weaponinfo[plyr->readyweapon].ammo];
+                int fullammo = maxammo[weaponinfo[plyr->readyweapon].ammo];
+                int ammopct = 100 * ammo / fullammo;
+
+                if (ammopct < 25)
+                    return (byte *) &cr_red;
+                else if (ammopct < 50)
+                    return (byte *) &cr_gold;
+                else
+                    return (byte *) &cr_green;
+            }
+            break;
+        }
+        case 1:
+        {
+            int health = plyr->health;
+
+            if (health < 25)
+                return (byte *) &cr_red;
+            else if (health < 50)
+                return (byte *) &cr_gold;
+            else if (health <= 100)
+                return (byte *) &cr_green;
+            else
+                return (byte *) &cr_blue2;
+
+            break;
+        }
+        case 2:
+        {
+            int armor = plyr->armorpoints;
+
+            if (armor < 25)
+                return (byte *) &cr_red;
+            else if (armor < 50)
+                return (byte *) &cr_gold;
+            else if (armor <= 100)
+                return (byte *) &cr_green;
+            else
+                return (byte *) &cr_blue2;
+
+            break;
+        }
+    }
+
+    return NULL;
+}
+
 void ST_drawWidgets(boolean refresh)
 {
     int		i;
@@ -1023,7 +1092,9 @@ void ST_drawWidgets(boolean refresh)
     // used by w_frags widget
     st_fragson = deathmatch && st_statusbaron; 
 
+    dp_translation = ST_WidgetColor(0);
     STlib_updateNum(&w_ready, refresh);
+    dp_translation = NULL;
 
     for (i=0;i<4;i++)
     {
@@ -1031,8 +1102,11 @@ void ST_drawWidgets(boolean refresh)
 	STlib_updateNum(&w_maxammo[i], refresh);
     }
 
+    dp_translation = ST_WidgetColor(1);
     STlib_updatePercent(&w_health, refresh || screenblocks == 12);
+    dp_translation = ST_WidgetColor(2);
     STlib_updatePercent(&w_armor, refresh || screenblocks == 12);
+    dp_translation = NULL;
 
     STlib_updateBinIcon(&w_armsbg, refresh);
 

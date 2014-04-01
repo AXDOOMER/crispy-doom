@@ -69,7 +69,7 @@ int		viewheight;
 int		scaledviewheight;
 int		viewwindowx;
 int		viewwindowy; 
-pixel_t*		ylookup[MAXHEIGHT]; 
+pixel_t*		ylookup[MAXHEIGHT];
 int		columnofs[MAXWIDTH]; 
 
 // Color tables for different players,
@@ -95,7 +95,6 @@ int			dc_yh;
 fixed_t			dc_iscale; 
 fixed_t			dc_texturemid;
 lighttable_t		dc_translucency;
-lighttable_t*		dc_colormatrix;
 
 // first pixel in a column (possibly virtual) 
 byte*			dc_source;		
@@ -149,8 +148,6 @@ void R_DrawColumn (void)
 	// Re-map color indices from wall texture column
 	//  using a lighting/special effects LUT.
 	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	if (dc_colormatrix)
-	    destrgb = I_ColorMatrix(destrgb, dc_colormatrix);
 	if (dc_translucency)
 	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
 
@@ -267,8 +264,6 @@ void R_DrawColumnLow (void)
     {
 	// Hack. Does not work corretly.
 	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	if (dc_colormatrix)
-	    destrgb = I_ColorMatrix(destrgb, dc_colormatrix);
 	if (dc_translucency)
 	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
 
@@ -279,8 +274,6 @@ void R_DrawColumnLow (void)
 	if (hires)
 	{
 	    dest3rgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	    if (dc_colormatrix)
-	        dest3rgb = I_ColorMatrix(dest3rgb, dc_colormatrix);
 	    if (dc_translucency)
 	        dest3rgb = I_AlphaBlend(*dest3, (dest3rgb & dc_translucency));
 
@@ -481,7 +474,8 @@ byte*	translationtables;
 void R_DrawTranslatedColumn (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
+    pixel_t*		dest;
+    pixel_t		destrgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
  
@@ -515,7 +509,10 @@ void R_DrawTranslatedColumn (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	*dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	destrgb = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	if (dc_translucency)
+	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	*dest = destrgb;
 	dest += SCREENWIDTH;
 	
 	frac += fracstep; 
@@ -529,6 +526,8 @@ void R_DrawTranslatedColumnLow (void)
     pixel_t*		dest2;
     pixel_t*		dest3;
     pixel_t*		dest4;
+    pixel_t		destrgb;
+    pixel_t		dest3rgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int                 x;
@@ -569,14 +568,20 @@ void R_DrawTranslatedColumnLow (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	*dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
-	*dest2 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	destrgb = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	if (dc_translucency)
+	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	*dest = destrgb;
+	*dest2 = destrgb;
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
-	    *dest3 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
-	    *dest4 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	    dest3rgb = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	    if (dc_translucency)
+	        dest3rgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	    *dest3 = dest3rgb;
+	    *dest4 = dest3rgb;
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}

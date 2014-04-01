@@ -34,6 +34,7 @@ int vanilla_demo_limit = 0;
 
 int crispy_highcolor = 0;
 int crispy_translucency = 0;
+int crispy_coloredhud = 0;
 int crispy_automapstats = 0;
 int crispy_secretmessage = 0;
 int crispy_crosshair = 0;
@@ -46,21 +47,17 @@ void CompatibilitySettings(void)
 {
     txt_window_t *window;
 
+    if (gamemission == doom)
+    {
     window = TXT_NewWindow("Crispness");
 
-/*
-    TXT_AddWidgets(window, 
-                   TXT_NewCheckBox("Vanilla savegame limit",
-                                   &vanilla_savegame_limit),
-                   TXT_NewCheckBox("Vanilla demo limit",
-                                   &vanilla_demo_limit),
-                   NULL);
-*/
     TXT_AddWidgets(window, 
                    TXT_NewCheckBox("Enable high color rendering",
                                    &crispy_highcolor),
                    TXT_NewCheckBox("Enable translucency",
                                    &crispy_translucency),
+                   TXT_NewCheckBox("Show colored numbers in status bar",
+                                   &crispy_coloredhud),
                    TXT_NewCheckBox("Show level stats in automap",
                                    &crispy_automapstats),
                    TXT_NewCheckBox("Show secrets revealed message",
@@ -76,6 +73,18 @@ void CompatibilitySettings(void)
                    TXT_NewCheckBox("Enable permanent mouse look",
                                    &crispy_mouselook),
                    NULL);
+    }
+    else
+    {
+    window = TXT_NewWindow("Compatibility");
+
+    TXT_AddWidgets(window,
+                   TXT_NewCheckBox("Vanilla savegame limit",
+                                   &vanilla_savegame_limit),
+                   TXT_NewCheckBox("Vanilla demo limit",
+                                   &vanilla_demo_limit),
+                   NULL);
+    }
 }
 
 void BindCompatibilityVariables(void)
@@ -84,8 +93,11 @@ void BindCompatibilityVariables(void)
     {
         M_BindVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
         M_BindVariable("vanilla_demo_limit",     &vanilla_demo_limit);
+        if (gamemission == doom)
+        {
         M_BindVariable("crispy_highcolor",       &crispy_highcolor);
         M_BindVariable("crispy_translucency",    &crispy_translucency);
+        M_BindVariable("crispy_coloredhud",      &crispy_coloredhud);
         M_BindVariable("crispy_automapstats",    &crispy_automapstats);
         M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
         M_BindVariable("crispy_crosshair",       &crispy_crosshair);
@@ -93,6 +105,7 @@ void BindCompatibilityVariables(void)
         M_BindVariable("crispy_jump",            &crispy_jump);
         M_BindVariable("crispy_freelook",        &crispy_freelook);
         M_BindVariable("crispy_mouselook",       &crispy_mouselook);
+        }
     }
 }
 

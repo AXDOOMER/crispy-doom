@@ -139,6 +139,7 @@ int             show_endoom = 0;
 
 int             crispy_highcolor = 0;
 int             crispy_translucency = 0;
+int             crispy_coloredhud = 0;
 int             crispy_automapstats = 0;
 int             crispy_secretmessage = 0;
 int             crispy_crosshair = 0;
@@ -263,6 +264,7 @@ void D_Display (void)
     {
 	R_RenderPlayerView (&players[displayplayer]);
 
+        // [crispy] simple HUD
         if (screenblocks == 12)
             ST_Drawer(0, 0);
     }
@@ -306,6 +308,7 @@ void D_Display (void)
     inhelpscreensstate = inhelpscreens;
     oldgamestate = wipegamestate = gamestate;
     
+    // [crispy] shade background when a menu is active or the game is paused
     if (paused || menuactive)
     {
 	static int i;
@@ -315,6 +318,7 @@ void D_Display (void)
             I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50);
 	}
 
+	// force redraw of status bar and border
 	viewactivestate = false;
 	inhelpscreensstate = true;
     }
@@ -418,6 +422,7 @@ void D_BindVariables(void)
 
     M_BindVariable("crispy_highcolor",       &crispy_highcolor);
     M_BindVariable("crispy_translucency",    &crispy_translucency);
+    M_BindVariable("crispy_coloredhud",      &crispy_coloredhud);
     M_BindVariable("crispy_automapstats",    &crispy_automapstats);
     M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
     M_BindVariable("crispy_crosshair",       &crispy_crosshair);
