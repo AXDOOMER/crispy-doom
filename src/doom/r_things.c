@@ -410,7 +410,6 @@ R_DrawVisSprite
     patch = W_CacheLumpNum (vis->patch+firstspritelump, PU_CACHE);
 
     dc_colormap = vis->colormap;
-    dc_translucency = 0;
     
     if (!dc_colormap)
     {
@@ -431,7 +430,7 @@ R_DrawVisSprite
     // [crispy] translucent sprites
     if (crispy_translucency && (vis->mobjflags & MF_TRANSLUCENT))
     {
-	dc_translucency = 0xa0ffffff;
+	colfunc = tlcolfunc;
     }
 	
     dc_iscale = abs(vis->xiscale)>>(detailshift && !hires);

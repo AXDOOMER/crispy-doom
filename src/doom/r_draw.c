@@ -40,6 +40,7 @@
 
 // Needs access to LFB (guess what).
 #include "v_video.h"
+#include "v_trans.h"
 
 // State.
 #include "doomstat.h"
@@ -94,7 +95,6 @@ int			dc_yl;
 int			dc_yh; 
 fixed_t			dc_iscale; 
 fixed_t			dc_texturemid;
-lighttable_t		dc_translucency;
 
 // first pixel in a column (possibly virtual) 
 byte*			dc_source;		
@@ -113,7 +113,6 @@ void R_DrawColumn (void)
 { 
     int			count; 
     pixel_t*		dest;
-    pixel_t		destrgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
  
@@ -147,11 +146,7 @@ void R_DrawColumn (void)
     {
 	// Re-map color indices from wall texture column
 	//  using a lighting/special effects LUT.
-	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	if (dc_translucency)
-	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-
-	*dest = destrgb;
+	*dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
 	
 	dest += SCREENWIDTH; 
 	frac += fracstep;
@@ -227,8 +222,6 @@ void R_DrawColumnLow (void)
     pixel_t*		dest2;
     pixel_t*		dest3;
     pixel_t*		dest4;
-    pixel_t		destrgb;
-    pixel_t		dest3rgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int                 x;
@@ -263,21 +256,13 @@ void R_DrawColumnLow (void)
     do 
     {
 	// Hack. Does not work corretly.
-	destrgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	if (dc_translucency)
-	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-
-	*dest2 = *dest = destrgb;
+	*dest2 = *dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
 
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
-	    dest3rgb = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	    if (dc_translucency)
-	        dest3rgb = I_AlphaBlend(*dest3, (dest3rgb & dc_translucency));
-
-	    *dest4 = *dest3 = dest3rgb;
+	    *dest4 = *dest3 = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
 
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
@@ -475,7 +460,6 @@ void R_DrawTranslatedColumn (void)
 { 
     int			count; 
     pixel_t*		dest;
-    pixel_t		destrgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
  
@@ -509,10 +493,7 @@ void R_DrawTranslatedColumn (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	destrgb = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
-	if (dc_translucency)
-	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-	*dest = destrgb;
+	*dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
 	dest += SCREENWIDTH;
 	
 	frac += fracstep; 
@@ -526,8 +507,6 @@ void R_DrawTranslatedColumnLow (void)
     pixel_t*		dest2;
     pixel_t*		dest3;
     pixel_t*		dest4;
-    pixel_t		destrgb;
-    pixel_t		dest3rgb;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int                 x;
@@ -568,20 +547,14 @@ void R_DrawTranslatedColumnLow (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	destrgb = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
-	if (dc_translucency)
-	    destrgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-	*dest = destrgb;
-	*dest2 = destrgb;
+	*dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	*dest2 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
-	    dest3rgb = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
-	    if (dc_translucency)
-	        dest3rgb = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-	    *dest3 = dest3rgb;
-	    *dest4 = dest3rgb;
+	    *dest3 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	    *dest4 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
@@ -590,8 +563,100 @@ void R_DrawTranslatedColumnLow (void)
     } while (count--); 
 } 
 
+lighttable_t dc_translucency = 0xa9ffffff;
 
+void R_DrawTLColumn (void)
+{
+    int			count;
+    pixel_t*		dest;
+    pixel_t		destrgb;
+    fixed_t		frac;
+    fixed_t		fracstep;
 
+    count = dc_yh - dc_yl;
+    if (count < 0)
+	return;
+
+#ifdef RANGECHECK
+    if ((unsigned)dc_x >= SCREENWIDTH
+	|| dc_yl < 0
+	|| dc_yh >= SCREENHEIGHT)
+    {
+	I_Error ( "R_DrawColumn: %i to %i at %i",
+		  dc_yl, dc_yh, dc_x);
+    }
+#endif
+
+    dest = ylookup[dc_yl] + columnofs[dc_x];
+
+    fracstep = dc_iscale;
+    frac = dc_texturemid + (dc_yl-centery)*fracstep;
+
+    do
+    {
+	destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
+	*dest = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	dest += SCREENWIDTH;
+
+	frac += fracstep;
+    } while (count--);
+}
+
+void R_DrawTLColumnLow (void)
+{
+    int			count;
+    pixel_t*		dest;
+    pixel_t*		dest2;
+    pixel_t*		dest3;
+    pixel_t*		dest4;
+    pixel_t		destrgb;
+    fixed_t		frac;
+    fixed_t		fracstep;
+    int                 x;
+
+    count = dc_yh - dc_yl;
+    if (count < 0)
+	return;
+
+    x = dc_x << 1;
+
+#ifdef RANGECHECK
+    if ((unsigned)x >= SCREENWIDTH
+	|| dc_yl < 0
+	|| dc_yh >= SCREENHEIGHT)
+    {
+	I_Error ( "R_DrawColumn: %i to %i at %i",
+		  dc_yl, dc_yh, x);
+    }
+#endif
+
+    dest = ylookup[(dc_yl << hires)] + columnofs[x];
+    dest2 = ylookup[(dc_yl << hires)] + columnofs[x+1];
+    dest3 = ylookup[(dc_yl << hires) + 1] + columnofs[x];
+    dest4 = ylookup[(dc_yl << hires) + 1] + columnofs[x+1];
+
+    fracstep = dc_iscale;
+    frac = dc_texturemid + (dc_yl-centery)*fracstep;
+
+    do
+    {
+	destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
+	*dest = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	*dest2 = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	dest += SCREENWIDTH << hires;
+	dest2 += SCREENWIDTH << hires;
+	if (hires)
+	{
+	    destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
+	    *dest3 = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	    *dest4 = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	    dest3 += SCREENWIDTH << hires;
+	    dest4 += SCREENWIDTH << hires;
+	}
+
+	frac += fracstep;
+    } while (count--);
+}
 
 //
 // R_InitTranslationTables

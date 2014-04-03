@@ -37,7 +37,6 @@ extern int		dc_yl;
 extern int		dc_yh;
 extern fixed_t		dc_iscale;
 extern fixed_t		dc_texturemid;
-extern lighttable_t	dc_translucency;
 
 // first pixel in a column
 extern byte*		dc_source;		
@@ -58,6 +57,9 @@ void 	R_DrawFuzzColumnLow (void);
 //  Green/Red/Blue/Indigo shirts.
 void	R_DrawTranslatedColumn (void);
 void	R_DrawTranslatedColumnLow (void);
+
+void	R_DrawTLColumn (void);
+void	R_DrawTLColumnLow (void);
 
 void
 R_VideoErase

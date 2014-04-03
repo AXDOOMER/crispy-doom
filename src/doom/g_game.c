@@ -1008,8 +1008,8 @@ void G_Ticker (void)
             {
                 static char turbomessage[80];
                 extern char *player_names[4];
-                snprintf(turbomessage, sizeof(turbomessage),
-                         "%s is turbo!", player_names[i]);
+                M_snprintf(turbomessage, sizeof(turbomessage),
+                           "%s is turbo!", player_names[i]);
                 players[consoleplayer].message = turbomessage;
                 turbodetected[i] = false;
             }
@@ -1396,7 +1396,13 @@ int cpars[32] =
     120,30					// 31-32
 };
  
-// No Rest For The Living Par Times
+// [crispy] Episode 4 par times from the BFG Edition
+int e4pars[10] =
+{
+    0,165,255,135,150,180,390,135,360,180
+};
+
+// [crispy] No Rest For The Living par times from the BFG Edition
 int npars[9] =
 {
     75,105,120,105,210,105,165,105,135
@@ -1562,6 +1568,10 @@ void G_DoCompleted (void)
     // Set par time. Doom episode 4 doesn't have a par time, so this
     // overflows into the cpars array. It's necessary to emulate this
     // for statcheck regression testing.
+    if (gamemap == 33)
+        // [crispy] map 33 par time sucks
+	wminfo.partime = INT_MAX;
+    else
     if (gamemission == pack_nerve)
 	wminfo.partime = TICRATE*npars[gamemap-1];
     else
@@ -1569,6 +1579,8 @@ void G_DoCompleted (void)
 	wminfo.partime = TICRATE*cpars[gamemap-1];
     else if (gameepisode < 4)
 	wminfo.partime = TICRATE*pars[gameepisode][gamemap];
+    else if (gameepisode == 4 && singleplayer)
+	wminfo.partime = TICRATE*e4pars[gamemap];
     else
         wminfo.partime = TICRATE*cpars[gamemap];
 
@@ -2087,7 +2099,7 @@ void G_RecordDemo (char *name)
     usergame = false;
     demoname_size = strlen(name) + 5;
     demoname = Z_Malloc(demoname_size, PU_STATIC, NULL);
-    snprintf(demoname, demoname_size, "%s.lmp", name);
+    M_snprintf(demoname, demoname_size, "%s.lmp", name);
     maxsize = 0x20000;
 
     //!
@@ -2214,8 +2226,8 @@ static char *DemoVersionDescription(int version)
     }
     else
     {
-        snprintf(resultbuf, sizeof(resultbuf),
-                 "%i.%i (unknown)", version / 100, version % 100);
+        M_snprintf(resultbuf, sizeof(resultbuf),
+                   "%i.%i (unknown)", version / 100, version % 100);
         return resultbuf;
     }
 }

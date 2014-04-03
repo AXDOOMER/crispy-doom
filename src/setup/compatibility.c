@@ -51,7 +51,7 @@ void CompatibilitySettings(void)
     {
     window = TXT_NewWindow("Crispness");
 
-    TXT_AddWidgets(window, 
+    TXT_AddWidgets(window,
                    TXT_NewCheckBox("Enable high color rendering",
                                    &crispy_highcolor),
                    TXT_NewCheckBox("Enable translucency",
@@ -78,7 +78,7 @@ void CompatibilitySettings(void)
     {
     window = TXT_NewWindow("Compatibility");
 
-    TXT_AddWidgets(window,
+    TXT_AddWidgets(window, 
                    TXT_NewCheckBox("Vanilla savegame limit",
                                    &vanilla_savegame_limit),
                    TXT_NewCheckBox("Vanilla demo limit",

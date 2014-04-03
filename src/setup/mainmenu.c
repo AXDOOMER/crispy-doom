@@ -244,7 +244,7 @@ void MainMenu(void)
     {
         txt_button_t *button;
 
-        button = TXT_NewButton2("Compatibility",
+        button = TXT_NewButton2("Compatibility", 
                                 (TxtWidgetSignalFunc) CompatibilitySettings,
                                 NULL);
 
