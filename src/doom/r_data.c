@@ -839,7 +839,7 @@ void R_InitColormaps (int pal)
           {
             for (c = 0; c <= NUMCOLORMAPS - 1; c++)
             {
-              scale = 1. - 1. * c / (NUMCOLORMAPS + 2);
+              scale = 1. - 1. * c / (NUMCOLORMAPS + 1 + gamma);
 
               for (i = 0; i < 256; i++)
               {
