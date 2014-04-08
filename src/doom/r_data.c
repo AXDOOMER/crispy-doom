@@ -869,13 +869,13 @@ void R_InitColormaps (int pal)
           {
             for (c = 0; c <= NUMCOLORMAPS - 1; c++)
             {
-              scale = 1. - 1. * c / (NUMCOLORMAPS + 1 + gamma);
+              scale = 1. - 1. * c / NUMCOLORMAPS;
 
               for (i = 0; i < 256; i++)
               {
-                r = gammatable[gamma][doompalette[3 * i + 0]] * scale;
-                g = gammatable[gamma][doompalette[3 * i + 1]] * scale;
-                b = gammatable[gamma][doompalette[3 * i + 2]] * scale;
+                r = gammatable[gamma][doompalette[3 * i + 0]] * scale + (1. * gamma * c / NUMCOLORMAPS);
+                g = gammatable[gamma][doompalette[3 * i + 1]] * scale + (1. * gamma * c / NUMCOLORMAPS);
+                b = gammatable[gamma][doompalette[3 * i + 2]] * scale + (1. * gamma * c / NUMCOLORMAPS);
 
                 colormaptable[gamma][p][c][i] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0);
               }
