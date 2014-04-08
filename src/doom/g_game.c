@@ -590,23 +590,23 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
         } 
     }
 
+    // [crispy] mouse look
     if ((crispy_freelook && mousebuttons[mousebmouselook]) ||
          crispy_mouselook)
     {
-        if (mousey)
-        {
-            look += mousey / 8;
+        players2[consoleplayer].lookdir += mousey / 8;
 
-            if (look >  7)
-                look =  7;
-            else
-            if (look < -7)
-                look = -7;
-        }
+        if (players2[consoleplayer].lookdir > 90)
+            players2[consoleplayer].lookdir = 90;
+        else
+        if (players2[consoleplayer].lookdir < -110)
+            players2[consoleplayer].lookdir = -110;
     }
     else
     if (!novert)
+    {
         forward += mousey;
+    }
 
     // [crispy] single click on mouse look button centers view
     if (mousebuttons[mousebmouselook] && !mbmlookctrl)
@@ -900,7 +900,7 @@ boolean G_Responder (event_t* ev)
       case ev_mouse: 
         SetMouseButtons(ev->data1);
 	mousex = ev->data2*(mouseSensitivity+5)/10; 
-	mousey = ev->data3*(mouseSensitivity+5)/10; 
+	mousey = ev->data3*(mouseSensitivity_y+5)/10; 
 	return true;    // eat events 
  
       case ev_joystick: 
