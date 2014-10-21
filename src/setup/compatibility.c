@@ -1,7 +1,5 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
-// Copyright(C) 2006 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -12,11 +10,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
 //
 
 // Sound control menu
@@ -38,10 +31,12 @@ int crispy_coloredhud = 0;
 int crispy_automapstats = 0;
 int crispy_secretmessage = 0;
 int crispy_crosshair = 0;
-int crispy_crosshair_highlight = 0;
 int crispy_jump = 0;
 int crispy_freelook = 0;
 int crispy_mouselook = 0;
+int crispy_freeaim = 0;
+int crispy_overunder = 0;
+int crispy_recoil = 0;
 
 void CompatibilitySettings(void)
 {
@@ -56,22 +51,26 @@ void CompatibilitySettings(void)
                                    &crispy_highcolor),
                    TXT_NewCheckBox("Enable translucency",
                                    &crispy_translucency),
-                   TXT_NewCheckBox("Show colored numbers in status bar",
+                   TXT_NewCheckBox("Colorize status bar numbers and messages",
                                    &crispy_coloredhud),
                    TXT_NewCheckBox("Show level stats in automap",
                                    &crispy_automapstats),
-                   TXT_NewCheckBox("Show secrets revealed message",
+                   TXT_NewCheckBox("Show \"secret revealed\" message",
                                    &crispy_secretmessage),
                    TXT_NewCheckBox("Show laser pointer",
                                    &crispy_crosshair),
-                   TXT_NewCheckBox("Change laser pointer color on target",
-                                   &crispy_crosshair_highlight),
                    TXT_NewCheckBox("Enable jumping [*]",
                                    &crispy_jump),
                    TXT_NewCheckBox("Enable free look [*]",
                                    &crispy_freelook),
                    TXT_NewCheckBox("Enable permanent mouse look",
                                    &crispy_mouselook),
+                   TXT_NewCheckBox("Enable vertical aiming",
+                                   &crispy_freeaim),
+                   TXT_NewCheckBox("Players may walk over/under monsters",
+                                   &crispy_overunder),
+                   TXT_NewCheckBox("Enable weapon recoil",
+                                   &crispy_recoil),
                    NULL);
     }
     else
@@ -101,10 +100,12 @@ void BindCompatibilityVariables(void)
         M_BindVariable("crispy_automapstats",    &crispy_automapstats);
         M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
         M_BindVariable("crispy_crosshair",       &crispy_crosshair);
-        M_BindVariable("crispy_crosshair_highlight", &crispy_crosshair_highlight);
         M_BindVariable("crispy_jump",            &crispy_jump);
         M_BindVariable("crispy_freelook",        &crispy_freelook);
         M_BindVariable("crispy_mouselook",       &crispy_mouselook);
+        M_BindVariable("crispy_freeaim",         &crispy_freeaim);
+        M_BindVariable("crispy_overunder",       &crispy_overunder);
+        M_BindVariable("crispy_recoil",          &crispy_recoil);
         }
     }
 }

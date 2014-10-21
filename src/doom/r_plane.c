@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,17 +12,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Here is a core component: drawing the floors and ceilings,
 //	 while maintaining a per column clipping list only.
 //	Moreover, the sky areas have to be determined.
 //
-//-----------------------------------------------------------------------------
 
 
 #include <stdio.h>
@@ -50,11 +42,12 @@ planefunction_t		ceilingfunc;
 //
 
 // Here comes the obnoxious "visplane".
-#define MAXVISPLANES	128*8
-visplane_t		visplanes[MAXVISPLANES];
+#define MAXVISPLANES	128
+visplane_t*		visplanes = NULL;
 visplane_t*		lastvisplane;
 visplane_t*		floorplane;
 visplane_t*		ceilingplane;
+static int		numvisplanes;
 
 // ?
 #define MAXOPENINGS	SCREENWIDTH*64*4
@@ -83,7 +76,8 @@ int			spanstop[SCREENHEIGHT];
 lighttable_t**		planezlight;
 fixed_t			planeheight;
 
-fixed_t			yslope[SCREENHEIGHT];
+fixed_t*			yslope;
+fixed_t			yslopes[LOOKDIRS][SCREENHEIGHT];
 fixed_t			distscale[SCREENWIDTH];
 fixed_t			basexscale;
 fixed_t			baseyscale;
@@ -211,6 +205,30 @@ void R_ClearPlanes (void)
 
 
 
+// [crispy] remove MAXVISPLANES Vanilla limit
+static void R_RaiseVisplanes (visplane_t** vp)
+{
+    if (lastvisplane - visplanes == numvisplanes)
+    {
+	int numvisplanes_old = numvisplanes;
+	visplane_t* visplanes_old = visplanes;
+
+	numvisplanes = numvisplanes ? 2 * numvisplanes : MAXVISPLANES;
+	visplanes = realloc(visplanes, numvisplanes * sizeof(*visplanes));
+	memset(visplanes + numvisplanes_old, 0, (numvisplanes - numvisplanes_old) * sizeof(*visplanes));
+
+	lastvisplane = visplanes + numvisplanes_old;
+	floorplane = visplanes + (floorplane - visplanes_old);
+	ceilingplane = visplanes + (ceilingplane - visplanes_old);
+
+	if (numvisplanes_old)
+	    printf("R_FindPlane: Hit MAXVISPLANES limit at %d, raised to %d.\n", numvisplanes_old, numvisplanes);
+
+	// keep the pointer passed as argument in relation to the visplanes pointer
+	if (vp)
+	    *vp = visplanes + (*vp - visplanes_old);
+    }
+}
 
 //
 // R_FindPlane
@@ -243,8 +261,7 @@ R_FindPlane
     if (check < lastvisplane)
 	return check;
 		
-    if (lastvisplane - visplanes == MAXVISPLANES)
-	I_Error ("R_FindPlane: no more visplanes");
+    R_RaiseVisplanes(&check);
 		
     lastvisplane++;
 
@@ -298,9 +315,13 @@ R_CheckPlane
     }
 
     for (x=intrl ; x<= intrh ; x++)
-	if (pl->top[x] != 0xffff)
+	if (pl->top[x] != 0xffff) // [crispy] hires
 	    break;
 
+  // [crispy] fix HOM if ceilingplane and floorplane are the same
+  // visplane (e.g. both are skies)
+  if (!(pl == floorplane && markceiling && floorplane == ceilingplane))
+  {
     if (x > intrh)
     {
 	pl->minx = unionl;
@@ -309,8 +330,10 @@ R_CheckPlane
 	// use the same one
 	return pl;		
     }
+  }
 	
     // make a new visplane
+    R_RaiseVisplanes(&pl);
     lastvisplane->height = pl->height;
     lastvisplane->picnum = pl->picnum;
     lastvisplane->lightlevel = pl->lightlevel;
@@ -373,15 +396,13 @@ void R_DrawPlanes (void)
     int			stop;
     int			angle;
     int                 lumpnum;
-    extern int                 crispy_freelook;
-    extern int                 crispy_mouselook;
 				
 #ifdef RANGECHECK
-    if (ds_p - drawsegs > MAXDRAWSEGS)
+    if (ds_p - drawsegs > numdrawsegs)
 	I_Error ("R_DrawPlanes: drawsegs overflow (%i)",
 		 ds_p - drawsegs);
     
-    if (lastvisplane - visplanes > MAXVISPLANES)
+    if (lastvisplane - visplanes > numvisplanes)
 	I_Error ("R_DrawPlanes: visplane overflow (%i)",
 		 lastvisplane - visplanes);
     
@@ -410,6 +431,7 @@ void R_DrawPlanes (void)
 	    //  by INVUL inverse mapping.
 	    dc_colormap = colormaps;
 	    dc_texturemid = skytexturemid;
+	    dc_texheight = textureheight[skytexture]>>FRACBITS; // [crispy] Tutti-Frutti fix
 	    for (x=pl->minx ; x <= pl->maxx ; x++)
 	    {
 		dc_yl = pl->top[x];
@@ -441,8 +463,8 @@ void R_DrawPlanes (void)
 
 	planezlight = zlight[light];
 
-	pl->top[pl->maxx+1] = 0xffff;
-	pl->top[pl->minx-1] = 0xffff;
+	pl->top[pl->maxx+1] = 0xffff; // [crispy] hires
+	pl->top[pl->minx-1] = 0xffff; // [crispy] hires
 		
 	stop = pl->maxx + 1;
 

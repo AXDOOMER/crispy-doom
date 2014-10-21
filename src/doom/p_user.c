@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,21 +12,16 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Player related stuff.
 //	Bobbing POV/weapon, movement.
 //	Pending weapon.
 //
-//-----------------------------------------------------------------------------
 
 
 
 
+#include <stdlib.h> // [crispy] abs()
 #include "doomdef.h"
 #include "d_event.h"
 
@@ -151,7 +144,6 @@ void P_MovePlayer (player_t* player)
     ticcmd_t*		cmd;
     int		look;
     player2_t*		player2 = p2fromp(player);
-    extern int		crispy_jump;
 	
     cmd = &player->cmd;
 	
@@ -164,12 +156,14 @@ void P_MovePlayer (player_t* player)
     if (cmd->forwardmove && onground)
 	P_Thrust (player, player->mo->angle, cmd->forwardmove*2048);
     else
+    // [crispy] in-air movement is only possible with jumping enabled
     if (cmd->forwardmove && singleplayer && crispy_jump)
         P_Thrust (player, player->mo->angle, FRACUNIT >> 8);
     
     if (cmd->sidemove && onground)
 	P_Thrust (player, player->mo->angle-ANG90, cmd->sidemove*2048);
     else
+    // [crispy] in-air movement is only possible with jumping enabled
     if (cmd->sidemove && singleplayer && crispy_jump)
             P_Thrust(player, player->mo->angle, FRACUNIT >> 8);
 
@@ -179,6 +173,7 @@ void P_MovePlayer (player_t* player)
 	P_SetMobjState (player->mo, S_PLAY_RUN1);
     }
 
+    // [crispy] apply lookdir delta
     look = cmd->lookfly & 15;
     if (look > 7)
     {
@@ -192,27 +187,12 @@ void P_MovePlayer (player_t* player)
         }
         else
         {
-            player2->lookdir += 5 * look;
-            if (player2->lookdir > 90 || player2->lookdir < -110)
+            player2->lookdir += MLOOKUNIT * 5 * look;
+            if (player2->lookdir > LOOKDIRMAX * MLOOKUNIT ||
+                player2->lookdir < -LOOKDIRMIN * MLOOKUNIT)
             {
-                player2->lookdir -= 5 * look;
+                player2->lookdir -= MLOOKUNIT * 5 * look;
             }
-        }
-    }
-    if (player2->centering)
-    {
-        if (player2->lookdir > 0)
-        {
-            player2->lookdir -= 8;
-        }
-        else if (player2->lookdir < 0)
-        {
-            player2->lookdir += 8;
-        }
-        if (abs(player2->lookdir) < 8)
-        {
-            player2->lookdir = 0;
-            player2->centering = false;
         }
     }
 }	
@@ -303,11 +283,32 @@ void P_PlayerThink (player_t* player)
     }
 			
 	
+    // [crispy] center view
+    // e.g. after teleporting, dying, jumping and on demand
+    if (player2->centering)
+    {
+        if (player2->lookdir > 0)
+        {
+            player2->lookdir -= 8 * MLOOKUNIT;
+        }
+        else if (player2->lookdir < 0)
+        {
+            player2->lookdir += 8 * MLOOKUNIT;
+        }
+        if (abs(player2->lookdir) < 8 * MLOOKUNIT)
+        {
+            player2->lookdir = 0;
+            player2->centering = false;
+        }
+    }
+
     if (player->playerstate == PST_DEAD)
     {
 	P_DeathThink (player);
 	return;
     }
+
+    // [crispy] delay next possible jump
     if (player2->jumpTics)
     {
         player2->jumpTics--;
@@ -326,10 +327,12 @@ void P_PlayerThink (player_t* player)
     if (player->mo->subsector->sector->special)
 	P_PlayerInSpecialSector (player);
     
+    // [crispy] jumping: apply vertical momentum
     if (cmd->arti)
     {
         if ((cmd->arti & AFLAG_JUMP) && onground && !player2->jumpTics)
         {
+            // [crispy] Hexen sets 9; Strife adds 8
             player->mo->momz = 9 * FRACUNIT;
             player2->jumpTics = 18;
         }
@@ -356,7 +359,7 @@ void P_PlayerThink (player_t* player)
 	    newweapon = wp_chainsaw;
 	}
 	
-	if ( (gamemode == commercial)
+	if ( (crispy_havessg)
 	    && newweapon == wp_shotgun 
 	    && player->weaponowned[wp_supershotgun]
 	    && player->readyweapon != wp_supershotgun)
@@ -444,6 +447,7 @@ void P_PlayerThink (player_t* player)
 	player->fixedcolormap = 0;
 }
 
+// [crispy] return the corresponding player2_t for a given player_t
 player2_t* p2fromp (player_t* player)
 {
     int p;

@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,17 +12,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Gamma correction LUT.
 //	Functions to draw patches (by post) directly to screen.
 //	Functions to blit a block to the screen.
 //
-//-----------------------------------------------------------------------------
 
 
 #ifndef __V_VIDEO__
@@ -46,6 +38,7 @@ extern int dirtybox[4];
 
 extern byte *tinttable;
 extern byte *dp_translation;
+extern boolean dp_translucent;
 
 #define CB_DARK25      0x40000000
 #define CB_DARK50      0x80000000
@@ -117,6 +110,12 @@ void V_LoadTintTable(void);
 void V_LoadXlaTable(void);
 
 void V_DrawMouseSpeedBox(int speed);
+
+static inline void V_ClearDPTranslation(void)
+{
+    if (dp_translation)
+	dp_translation = NULL;
+}
 
 #endif
 

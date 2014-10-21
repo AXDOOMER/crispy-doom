@@ -1,9 +1,7 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 1993-2008 Raven Software
-// Copyright(C) 2005-8 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,12 +13,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
-//-----------------------------------------------------------------------------
 
 #include <stdio.h>
 
@@ -36,15 +28,21 @@
 
 int key_right = KEY_RIGHTARROW;
 int key_left = KEY_LEFTARROW;
+int key_reverse = 0;
 
-int key_up = 'w';
-int key_down = 's';
-int key_strafeleft = 'a';
-int key_straferight = 'd';
+int key_up = KEY_UPARROW;
+int key_alt_up = 'w';
+int key_down = KEY_DOWNARROW; 
+int key_alt_down = 's';
+int key_strafeleft = ',';
+int key_alt_strafeleft = 'a';
+int key_straferight = '.';
+int key_alt_straferight = 'd';
 int key_fire = KEY_RCTRL;
 int key_use = ' ';
 int key_strafe = KEY_RALT;
 int key_speed = KEY_RSHIFT; 
+int key_toggleautorun = KEY_CAPSLOCK;
 
 // 
 // Heretic keyboard controls
@@ -182,14 +180,17 @@ int key_menu_gamma     = KEY_F11;
 int key_menu_incscreen = KEY_EQUALS;
 int key_menu_decscreen = KEY_MINUS;
 int key_menu_screenshot = 0;
+int key_menu_nextlevel = 0;
+int key_menu_reloadlevel = 0;
+
 
 //
 // Joystick controls
 //
 
-int joybfire = 0; 
-int joybstrafe = 1; 
-int joybuse = 3; 
+int joybfire = 0;
+int joybstrafe = 1;
+int joybuse = 3;
 int joybspeed = 29;
 
 int joybstrafeleft = -1;
@@ -199,6 +200,8 @@ int joybjump = -1;
 
 int joybprevweapon = -1;
 int joybnextweapon = -1;
+
+int joybmenu = -1;
 
 // Control whether if a mouse button is double clicked, it acts like 
 // "use" has been pressed
@@ -211,25 +214,31 @@ int dclick_use = 1;
 
 void M_BindBaseControls(void)
 {
-    M_BindVariable("key_right",          &key_right),
-    M_BindVariable("key_left",           &key_left),
-    M_BindVariable("key_up",             &key_up),
-    M_BindVariable("key_down",           &key_down),
-    M_BindVariable("key_strafeleft",     &key_strafeleft),
-    M_BindVariable("key_straferight",    &key_straferight),
-    M_BindVariable("key_fire",           &key_fire),
-    M_BindVariable("key_use",            &key_use),
-    M_BindVariable("key_strafe",         &key_strafe),
-    M_BindVariable("key_speed",          &key_speed),
+    M_BindVariable("key_right",          &key_right);
+    M_BindVariable("key_left",           &key_left);
+    M_BindVariable("key_up",             &key_up);
+    M_BindVariable("key_alt_up",         &key_alt_up);
+    M_BindVariable("key_down",           &key_down);
+    M_BindVariable("key_alt_down",       &key_alt_down);
+    M_BindVariable("key_strafeleft",     &key_strafeleft);
+    M_BindVariable("key_alt_strafeleft",     &key_alt_strafeleft);
+    M_BindVariable("key_straferight",    &key_straferight);
+    M_BindVariable("key_alt_straferight",    &key_alt_straferight);
+    M_BindVariable("key_fire",           &key_fire);
+    M_BindVariable("key_use",            &key_use);
+    M_BindVariable("key_strafe",         &key_strafe);
+    M_BindVariable("key_speed",          &key_speed);
 
-    M_BindVariable("mouseb_fire",        &mousebfire),
-    M_BindVariable("mouseb_strafe",      &mousebstrafe),
-    M_BindVariable("mouseb_forward",     &mousebforward),
+    M_BindVariable("mouseb_fire",        &mousebfire);
+    M_BindVariable("mouseb_strafe",      &mousebstrafe);
+    M_BindVariable("mouseb_forward",     &mousebforward);
 
-    M_BindVariable("joyb_fire",          &joybfire),
-    M_BindVariable("joyb_strafe",        &joybstrafe),
-    M_BindVariable("joyb_use",           &joybuse),
-    M_BindVariable("joyb_speed",         &joybspeed),
+    M_BindVariable("joyb_fire",          &joybfire);
+    M_BindVariable("joyb_strafe",        &joybstrafe);
+    M_BindVariable("joyb_use",           &joybuse);
+    M_BindVariable("joyb_speed",         &joybspeed);
+
+    M_BindVariable("joyb_menu_activate", &joybmenu);
 
     // Extra controls that are not in the Vanilla versions:
 
@@ -252,6 +261,8 @@ void M_BindBaseControls(void)
     M_BindVariable("joyb_jump",          &joybjump);
 
     M_BindVariable("mouseb_mouselook",   &mousebmouselook);
+    M_BindVariable("key_reverse",        &key_reverse);
+    M_BindVariable("key_toggleautorun",  &key_toggleautorun);
 }
 
 void M_BindHereticControls(void)
@@ -380,6 +391,8 @@ void M_BindMenuControls(void)
     M_BindVariable("key_menu_incscreen", &key_menu_incscreen);
     M_BindVariable("key_menu_decscreen", &key_menu_decscreen);
     M_BindVariable("key_menu_screenshot",&key_menu_screenshot);
+    M_BindVariable("key_menu_nextlevel", &key_menu_nextlevel);
+    M_BindVariable("key_menu_reloadlevel", &key_menu_reloadlevel);
     M_BindVariable("key_demo_quit",      &key_demo_quit);
     M_BindVariable("key_spy",            &key_spy);
 }

@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,14 +12,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:  heads-up text and input code
 //
-//-----------------------------------------------------------------------------
 
 
 #include <ctype.h>
@@ -35,6 +27,7 @@
 #include "hu_lib.h"
 #include "r_local.h"
 #include "r_draw.h"
+#include "v_trans.h" // [crispy] colored HUlib_drawTextLine()
 
 // boolean : whether the screen is always erased
 #define noterased viewwindowx
@@ -114,12 +107,24 @@ HUlib_drawTextLine
     for (i=0;i<l->len;i++)
     {
 	c = toupper(l->l[i]);
+	// [crispy] support multi-colored text lines
+	if (c == '\x1b')
+	{
+	    if (++i < l->len)
+	    {
+		if (l->l[i] >= '0' && l->l[i] <= '0' + CRMAX - 1)
+		{
+		    dp_translation = (crispy_coloredhud) ? cr[(int) (l->l[i] - '0')] : NULL;
+		}
+	    }
+	}
+	else
 	if (c != ' '
 	    && c >= l->sc
 	    && c <= '_')
 	{
 	    w = SHORT(l->f[c - l->sc]->width);
-	    if (x+w > SCREENWIDTH)
+	    if (x+w > ORIGWIDTH)
 		break;
 	    V_DrawPatchDirect(x, l->y, l->f[c - l->sc]);
 	    x += w;
@@ -127,14 +132,14 @@ HUlib_drawTextLine
 	else
 	{
 	    x += 4;
-	    if (x >= SCREENWIDTH)
+	    if (x >= ORIGWIDTH)
 		break;
 	}
     }
 
     // draw the cursor if requested
     if (drawcursor
-	&& x + SHORT(l->f['_' - l->sc]->width) <= SCREENWIDTH)
+	&& x + SHORT(l->f['_' - l->sc]->width) <= ORIGWIDTH)
     {
 	V_DrawPatchDirect(x, l->y, l->f['_' - l->sc]);
     }
@@ -153,7 +158,7 @@ void HUlib_eraseTextLine(hu_textline_t* l)
     // (because of a recent change back from the automap)
 
     if (!automapactive &&
-	viewwindowx && l->needsupdate)
+	viewwindowx && (l->needsupdate || crispy_cleanscreenshot))
     {
 	lh = (SHORT(l->f[0]->height) + 1) << hires;
 	for (y=(l->y << hires),yoffset=y*SCREENWIDTH ; y<(l->y << hires)+lh ; y++,yoffset+=SCREENWIDTH)

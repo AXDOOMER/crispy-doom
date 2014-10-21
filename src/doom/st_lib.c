@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,15 +12,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	The status bar widget code.
 //
-//-----------------------------------------------------------------------------
 
 
 #include <stdio.h>
@@ -42,12 +34,12 @@
 #include "st_stuff.h"
 #include "st_lib.h"
 #include "r_local.h"
-#include "m_menu.h"
 
-#include "v_trans.h"
+#include "v_trans.h" // [crispy] colored status bar widgets
 
 // in AM_map.c
 extern boolean		automapactive; 
+extern int screenblocks;
 
 
 
@@ -125,7 +117,7 @@ STlib_drawNum
     if (n->y - ST_Y < 0)
 	I_Error("drawNum: n->y - ST_Y < 0");
 
-    if (screenblocks < 12 || automapactive)
+    if (screenblocks < CRISPY_HUD || automapactive)
     V_CopyRect(x, n->y - ST_Y, st_backing_screen, w*numdigits, h, x, n->y);
 
     // if non-number, do not draw it
@@ -185,17 +177,16 @@ STlib_updatePercent
 ( st_percent_t*		per,
   int			refresh )
 {
-    extern int crispy_coloredhud;
 
-    STlib_updateNum(&per->n, refresh);
+    STlib_updateNum(&per->n, refresh); // [crispy] moved here
 
     if (crispy_coloredhud)
-        dp_translation = (byte *) &cr_gray;
+        dp_translation = cr[CR_GRAY];
 
     if (refresh && *per->n.on)
 	V_DrawPatch(per->n.x, per->n.y, per->p);
 
-    dp_translation = NULL;
+    V_ClearDPTranslation();
 }
 
 
@@ -243,7 +234,7 @@ STlib_updateMultIcon
 	    if (y - ST_Y < 0)
 		I_Error("updateMultIcon: y - ST_Y < 0");
 
-	    if (screenblocks < 12 || automapactive)
+	    if (screenblocks < CRISPY_HUD || automapactive)
 	    V_CopyRect(x, y-ST_Y, st_backing_screen, w, h, x, y);
 	}
 	V_DrawPatch(mi->x, mi->y, mi->p[*mi->inum]);
@@ -296,7 +287,7 @@ STlib_updateBinIcon
 	if (*bi->val)
 	    V_DrawPatch(bi->x, bi->y, bi->p);
 	else
-	    if (screenblocks < 12 || automapactive)
+	    if (screenblocks < CRISPY_HUD || automapactive)
 	    V_CopyRect(x, y-ST_Y, st_backing_screen, w, h, x, y);
 
 	bi->oldval = *bi->val;

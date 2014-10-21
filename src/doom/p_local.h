@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,15 +12,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Play functions, animation, global header.
 //
-//-----------------------------------------------------------------------------
 
 
 #ifndef __P_LOCAL__
@@ -93,6 +85,7 @@ void P_DropWeapon (player_t* player);
 //
 // P_USER
 //
+#define MLOOKUNIT	8
 void	P_PlayerThink (player_t* player);
 player2_t* p2fromp (player_t* player);
 
@@ -219,6 +212,20 @@ extern fixed_t		tmceilingz;
 
 extern	line_t*		ceilingline;
 
+// fraggle: I have increased the size of this buffer.  In the original Doom,
+// overrunning past this limit caused other bits of memory to be overwritten,
+// affecting demo playback.  However, in doing so, the limit was still
+// exceeded.  So we have to support more than 8 specials.
+//
+// We keep the original limit, to detect what variables in memory were
+// overwritten (see SpechitOverrun())
+
+#define MAXSPECIALCROSS 		20
+#define MAXSPECIALCROSS_ORIGINAL	8
+
+extern	line_t*	spechit[MAXSPECIALCROSS];
+extern	int	numspechit;
+
 boolean P_CheckPosition (mobj_t *thing, fixed_t x, fixed_t y);
 boolean P_TryMove (mobj_t* thing, fixed_t x, fixed_t y);
 boolean P_TeleportMove (mobj_t* thing, fixed_t x, fixed_t y);
@@ -256,8 +263,8 @@ P_RadiusAttack
 // P_SETUP
 //
 extern byte*		rejectmatrix;	// for fast sight rejection
-extern short*		blockmaplump;	// offsets in blockmap are from here
-extern short*		blockmap;
+extern long*		blockmaplump;	// offsets in blockmap are from here // [crispy] BLOCKMAP limit
+extern long*		blockmap; // [crispy] BLOCKMAP limit
 extern int		bmapwidth;
 extern int		bmapheight;	// in mapblocks
 extern fixed_t		bmaporgx;

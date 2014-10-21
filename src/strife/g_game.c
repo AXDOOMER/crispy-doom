@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,14 +12,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:  none
 //
-//-----------------------------------------------------------------------------
 
 #include <string.h>
 #include <stdlib.h>
@@ -226,6 +218,7 @@ static int      dclicks2;
 // joystick values are repeated 
 static int      joyxmove;
 static int      joyymove;
+static int      joystrafemove;
 static boolean  joyarray[MAX_JOY_BUTTONS + 1]; 
 static boolean *joybuttons = &joyarray[1];		// allow [-1] 
  
@@ -468,14 +461,16 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 
     if (gamekeydown[key_strafeleft]
      || joybuttons[joybstrafeleft]
-     || mousebuttons[mousebstrafeleft]) 
+     || mousebuttons[mousebstrafeleft]
+     || joystrafemove < 0)
     {
         side -= sidemove[speed];
     }
 
     if (gamekeydown[key_straferight]
      || joybuttons[joybstraferight]
-     || mousebuttons[mousebstraferight])
+     || mousebuttons[mousebstraferight]
+     || joystrafemove > 0)
     {
         side += sidemove[speed]; 
     }
@@ -484,7 +479,8 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     cmd->chatchar = HU_dequeueChatChar(); 
 
     // villsa [STRIFE] - add mouse button support for jump
-    if(gamekeydown[key_jump] || mousebuttons[mousebjump])
+    if (gamekeydown[key_jump] || mousebuttons[mousebjump]
+     || joybuttons[joybjump])
         cmd->buttons2 |= BT2_JUMP;
  
     // villsa [STRIFE]: Moved mousebuttons[mousebfire] to below
@@ -700,12 +696,12 @@ void G_DoLoadLevel (void)
 
     // clear cmd building stuff
 
-    memset (gamekeydown, 0, sizeof(gamekeydown)); 
-    joyxmove = joyymove = 0; 
-    mousex = mousey = 0; 
-    sendpause = sendsave = paused = false; 
-    memset(mousearray, 0, sizeof(mousearray)); 
-    memset(joyarray, 0, sizeof(joyarray)); 
+    memset (gamekeydown, 0, sizeof(gamekeydown));
+    joyxmove = joyymove = joystrafemove = 0;
+    mousex = mousey = 0;
+    sendpause = sendsave = paused = false;
+    memset(mousearray, 0, sizeof(mousearray));
+    memset(joyarray, 0, sizeof(joyarray));
 
     if (testcontrols)
     {
@@ -881,6 +877,7 @@ boolean G_Responder (event_t* ev)
         SetJoyButtons(ev->data1);
         joyxmove = ev->data2; 
         joyymove = ev->data3; 
+        joystrafemove = ev->data4;
         return true;    // eat events 
 
     default: 

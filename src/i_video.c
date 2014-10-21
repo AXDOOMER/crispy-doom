@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,15 +12,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	DOOM graphics stuff for SDL.
 //
-//-----------------------------------------------------------------------------
 
 
 #include "SDL.h"
@@ -292,6 +284,7 @@ int mouse_threshold = 10;
 
 float mouse_acceleration_y = 1.0;
 int mouse_threshold_y = 0;
+int mouse_y_invert = 0;
 
 // Gamma correction level to use
 
@@ -1481,6 +1474,19 @@ static void AutoAdjustColorDepth(void)
     const SDL_VideoInfo *info;
     int flags;
 
+    // If screen_bpp=0, we should use the current (default) pixel depth.
+    // Fetch it from SDL.
+
+    if (screen_bpp == 0)
+    {
+        info = SDL_GetVideoInfo();
+
+        if (info != NULL && info->vfmt != NULL)
+        {
+            screen_bpp = info->vfmt->BitsPerPixel;
+        }
+    }
+
     if (fullscreen)
     {
         flags = SDL_FULLSCREEN;
@@ -1997,6 +2003,9 @@ void I_InitGraphics(void)
     byte *doompal;
     char *env;
 
+    // [crispy] disable special lock-key behavior
+    putenv("SDL_DISABLE_LOCK_KEYS=1");
+
     // Pass through the XSCREENSAVER_WINDOW environment variable to 
     // SDL_WINDOWID, to embed the SDL window into the Xscreensaver
     // window.
@@ -2147,7 +2156,8 @@ native_surface=1;
     // Not sure about repeat rate - probably dependent on which DOS
     // driver is used.  This is good enough though.
 
-    SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+    // [crispy] fix "holding ESC causes the menu to flicker on and off repeatedly"
+    //SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
     // clear out any events waiting at the start and center the mouse
   
@@ -2178,6 +2188,7 @@ void I_BindVideoVariables(void)
     M_BindVariable("mouse_threshold",           &mouse_threshold);
     M_BindVariable("mouse_acceleration_y",      &mouse_acceleration_y);
     M_BindVariable("mouse_threshold_y",         &mouse_threshold_y);
+    M_BindVariable("mouse_y_invert",            &mouse_threshold_y);
     M_BindVariable("video_driver",              &video_driver);
     M_BindVariable("window_position",           &window_position);
     M_BindVariable("usegamma",                  &usegamma);

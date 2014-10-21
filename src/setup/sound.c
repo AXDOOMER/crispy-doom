@@ -1,7 +1,5 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
-// Copyright(C) 2006 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -12,11 +10,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
 //
 
 // Sound control menu
@@ -82,6 +75,9 @@ static int sfxVolume = 8;
 static int musicVolume = 8;
 static int voiceVolume = 15;
 static int show_talk = 0;
+// [crispy] values 3 and higher might reproduce DOOM.EXE more accurately,
+// but 1 is closer to "use_libsamplerate = 0" which is the default in Choco
+// and causes only a short delay at startup
 static int use_libsamplerate = 1;
 static float libsamplerate_scale = 0.65;
 

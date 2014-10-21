@@ -35,19 +35,21 @@
 
 #include "doomtype.h"
 
-extern byte *cr_brick;
-extern byte *cr_tan;
-extern byte *cr_gray;
-extern byte *cr_green;
-extern byte *cr_brown;
-extern byte *cr_gold;
-extern byte *cr_red;
-extern byte *cr_blue;
-extern byte *cr_blue2;
-extern byte *cr_orange;
-extern byte *cr_yellow;
+enum
+{
+    CR_NONE,
+    CR_DARK,
+    CR_GRAY,
+    CR_GREEN,
+    CR_GOLD,
+    CR_RED,
+    CR_BLUE2,
+    CRMAX
+} cr_t;
+
+extern byte *cr[CRMAX];
+extern char **crstr;
 
 extern byte *tranmap;
 
 #endif // __V_TRANS__
-

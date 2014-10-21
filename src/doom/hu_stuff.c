@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,14 +12,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:  Heads-up displays
 //
-//-----------------------------------------------------------------------------
 
 
 #include <ctype.h>
@@ -49,8 +41,8 @@
 #include "dstrings.h"
 #include "sounds.h"
 
-#include "v_trans.h"
-#include "v_video.h"
+#include "v_video.h" // [crispy] V_ClearDPTranslation()
+#include "v_trans.h" // [crispy] colored kills/items/secret/etc. messages
 
 //
 // Locally used constants, shortcuts.
@@ -70,6 +62,9 @@
 #define HU_INPUTY	(HU_MSGY + HU_MSGHEIGHT*(SHORT(hu_font[0]->height) +1))
 #define HU_INPUTWIDTH	64
 #define HU_INPUTHEIGHT	1
+
+#define HU_COORDX	(320 - 8 * hu_font['A'-HU_FONTSTART]->width)
+
 
 char *chat_macros[10] =
 {
@@ -98,10 +93,14 @@ static player_t*	plr;
 static player2_t*	plr2;
 patch_t*		hu_font[HU_FONTSIZE];
 static hu_textline_t	w_title;
+static hu_textline_t	w_map;
 static hu_textline_t	w_kills;
 static hu_textline_t	w_items;
 static hu_textline_t	w_scrts;
 static hu_textline_t	w_ltime;
+static hu_textline_t	w_coordx;
+static hu_textline_t	w_coordy;
+static hu_textline_t	w_coorda;
 boolean			chat_on;
 static hu_itext_t	w_chat;
 static boolean		always_off = false;
@@ -117,6 +116,9 @@ static hu_stext_t	w_message;
 static int		message_counter;
 static hu_stext_t	w_secret;
 static int		secret_counter;
+
+static boolean		coord_on;
+static int		coord_counter;
 
 extern int		showMessages;
 
@@ -349,6 +351,7 @@ void HU_Start(void)
     message_nottobefuckedwith = false;
     secret_on = false;
     chat_on = false;
+    coord_on = false;
 
     // create the message widget
     HUlib_initSText(&w_message,
@@ -356,7 +359,7 @@ void HU_Start(void)
 		    hu_font,
 		    HU_FONTSTART, &message_on);
 
-    // create the secret message widget
+    // [crispy] create the secret message widget
     HUlib_initSText(&w_secret,
 		    88, 86, HU_MSGHEIGHT,
 		    hu_font,
@@ -365,6 +368,12 @@ void HU_Start(void)
     // create the map title widget
     HUlib_initTextLine(&w_title,
 		       HU_TITLEX, HU_TITLEY,
+		       hu_font,
+		       HU_FONTSTART);
+
+    // [crispy] create the generic map title, kills, items, secrets and level time widgets
+    HUlib_initTextLine(&w_map,
+		       HU_TITLEX, HU_TITLEY - SHORT(hu_font[0]->height + 1),
 		       hu_font,
 		       HU_FONTSTART);
 
@@ -387,6 +396,22 @@ void HU_Start(void)
 		       HU_TITLEX, HU_MSGY + 5 * 8,
 		       hu_font,
 		       HU_FONTSTART);
+
+    HUlib_initTextLine(&w_coordx,
+		       HU_COORDX, HU_MSGY + 1 * 8,
+		       hu_font,
+		       HU_FONTSTART);
+
+    HUlib_initTextLine(&w_coordy,
+		       HU_COORDX, HU_MSGY + 2 * 8,
+		       hu_font,
+		       HU_FONTSTART);
+
+    HUlib_initTextLine(&w_coorda,
+		       HU_COORDX, HU_MSGY + 3 * 8,
+		       hu_font,
+		       HU_FONTSTART);
+
     
     switch ( logical_gamemission )
     {
@@ -421,6 +446,33 @@ void HU_Start(void)
         s = HU_TITLE_CHEX;
     }
 
+    // [crispy] explicitely display (episode and) map if the
+    // map is from a PWAD of if the map title string has been dehacked
+    {
+	char map[6], *wad;
+	extern char *iwadfile;
+
+	if (gamemode == commercial)
+	    M_snprintf(map, sizeof(map), "map%02d", gamemap);
+	else
+	    M_snprintf(map, sizeof(map), "e%dm%d", gameepisode, gamemap);
+
+	wad = lumpinfo[W_GetNumForName(map)].wad_file->path;
+
+	if (strcmp(s, DEH_String(s)) || (strcmp(wad, M_BaseName(iwadfile)) && !nervewadfile))
+	{
+	    char *m;
+
+	    m = M_StringJoin(wad, ": ", crstr[CR_GRAY], map, NULL);
+	    wad = m; // [crispy] free() that, else *m leaks memory
+
+	    while (*m)
+		HUlib_addCharToTextLine(&w_map, *(m++));
+
+	    free(wad);
+	}
+    }
+
     // dehacked substitution to get modified level name
 
     s = DEH_String(s);
@@ -444,97 +496,113 @@ void HU_Start(void)
 
 void HU_Drawer(void)
 {
-    extern int crispy_automapstats;
-    extern int crispy_crosshair;
-    extern int crispy_crosshair_highlight;
 
-    dp_translation = NULL;
+    extern int screenblocks;
+    static char str[32], *s;
+
+    if (crispy_cleanscreenshot)
+    {
+        HU_Erase();
+        return;
+    }
+
+    // [crispy] translucent messages for translucent HUD
+    if (crispy_translucency && screenblocks > CRISPY_HUD && !automapactive)
+	dp_translucent = true;
+
+    V_ClearDPTranslation();
     HUlib_drawSText(&w_message);
-    dp_translation = (byte *) &cr_gold;
+    dp_translation = cr[CR_GOLD];
     HUlib_drawSText(&w_secret);
-    dp_translation = NULL;
+    V_ClearDPTranslation();
     HUlib_drawIText(&w_chat);
+
+    if (dp_translucent)
+	dp_translucent = false;
+
     if (automapactive)
     {
-	if (crispy_automapstats)
-	    dp_translation = (byte *) &cr_gold;
+	if (crispy_coloredhud)
+	    dp_translation = cr[CR_GOLD];
 	HUlib_drawTextLine(&w_title, false);
 
 	if (crispy_automapstats)
 	{
-	static char str[32], *s;
 	int time = leveltime / TICRATE;
 
-	dp_translation = (byte *) &cr_blue2;
-	sprintf(str, "Kills: %d/%d", players[consoleplayer].killcount, totalkills);
+	HUlib_drawTextLine(&w_map, false);
+
+	M_snprintf(str, sizeof(str), "%sKills: %s%d/%d", crstr[CR_RED], crstr[CR_GRAY],
+	        players[consoleplayer].killcount, totalkills);
 	HUlib_clearTextLine(&w_kills);
 	s = str;
 	while (*s)
 	    HUlib_addCharToTextLine(&w_kills, *(s++));
 	HUlib_drawTextLine(&w_kills, false);
 
-	sprintf(str, "Items: %d/%d", players[consoleplayer].itemcount, totalitems);
+	M_snprintf(str, sizeof(str), "%sItems: %s%d/%d", crstr[CR_RED], crstr[CR_GRAY],
+	        players[consoleplayer].itemcount, totalitems);
 	HUlib_clearTextLine(&w_items);
 	s = str;
 	while (*s)
 	    HUlib_addCharToTextLine(&w_items, *(s++));
 	HUlib_drawTextLine(&w_items, false);
 
-	sprintf(str, "Secret: %d/%d", players[consoleplayer].secretcount, totalsecret);
+	M_snprintf(str, sizeof(str), "%sSecret: %s%d/%d", crstr[CR_RED], crstr[CR_GRAY],
+	        players[consoleplayer].secretcount, totalsecret);
 	HUlib_clearTextLine(&w_scrts);
 	s = str;
 	while (*s)
 	    HUlib_addCharToTextLine(&w_scrts, *(s++));
 	HUlib_drawTextLine(&w_scrts, false);
 
-	dp_translation = (byte *) &cr_gray;
-	sprintf(str, "%02d:%02d:%02d", time/3600, (time%3600)/60, time%60);
+	M_snprintf(str, sizeof(str), "%s%02d:%02d:%02d", crstr[CR_GRAY],
+	        time/3600, (time%3600)/60, time%60);
 	HUlib_clearTextLine(&w_ltime);
 	s = str;
 	while (*s)
 	    HUlib_addCharToTextLine(&w_ltime, *(s++));
 	HUlib_drawTextLine(&w_ltime, false);
 	}
-
-    dp_translation = NULL;
+    V_ClearDPTranslation();
     }
 
-    if (crispy_crosshair &&
-        plr->readyweapon != wp_fist && plr->readyweapon != wp_chainsaw &&
-        !automapactive && !menuactive && !paused && !secret_on)
+    // [crispy] show map coordinates in upper right corner
+    // if either automap stats or IDMYPOS cheat are enabled
+    if ((automapactive && crispy_automapstats) || coord_on)
     {
-        extern int screenblocks;
-        pixel_t *b = I_VideoBuffer;
+	if (crispy_translucency && screenblocks > CRISPY_HUD && !automapactive)
+	    dp_translucent = true;
 
-        pixel_t c = 0x80ff0000;
-        int h = 100 << hires;
+	M_snprintf(str, sizeof(str), "%sX: %s%-5d", crstr[CR_GREEN], crstr[CR_GRAY],
+	        (players[consoleplayer].mo->x)>>FRACBITS);
+	HUlib_clearTextLine(&w_coordx);
+	s = str;
+	while (*s)
+	    HUlib_addCharToTextLine(&w_coordx, *(s++));
+	HUlib_drawTextLine(&w_coordx, false);
 
-        if (screenblocks <= 10)
-            h -= (32 << hires) / 2;
+	M_snprintf(str, sizeof(str), "%sY: %s%-5d", crstr[CR_GREEN], crstr[CR_GRAY],
+	        (players[consoleplayer].mo->y)>>FRACBITS);
+	HUlib_clearTextLine(&w_coordy);
+	s = str;
+	while (*s)
+	    HUlib_addCharToTextLine(&w_coordy, *(s++));
+	HUlib_drawTextLine(&w_coordy, false);
 
-        if (crispy_crosshair_highlight)
-        {
-            extern fixed_t P_AimLineAttack (mobj_t* t1, angle_t angle, fixed_t distance);
-            extern mobj_t *linetarget;
+	M_snprintf(str, sizeof(str), "%sA: %s%-5d", crstr[CR_GREEN], crstr[CR_GRAY],
+	        (players[consoleplayer].mo->angle)*(uint64_t)360/UINT32_MAX);
+	HUlib_clearTextLine(&w_coorda);
+	s = str;
+	while (*s)
+	    HUlib_addCharToTextLine(&w_coorda, *(s++));
+	HUlib_drawTextLine(&w_coorda, false);
 
-            fixed_t slope = P_AimLineAttack(plr->mo, plr->mo->angle, 16*64*FRACUNIT);
+	if (dp_translucent)
+	    dp_translucent = false;
 
-            if (linetarget && !(linetarget->flags & MF_SHADOW))
-            {
-                c = 0x80ffff00;
-            }
-        }
-
-        b += h * SCREENWIDTH + SCREENWIDTH / 2;
-        *b = I_AlphaBlend(*b, c);
-        b++;
-        *b = I_AlphaBlend(*b, c);
-        b += SCREENWIDTH - 1;
-        *b = I_AlphaBlend(*b, c);
-        b++;
-        *b = I_AlphaBlend(*b, c);
+    V_ClearDPTranslation();
     }
-
 }
 
 void HU_Erase(void)
@@ -544,6 +612,9 @@ void HU_Erase(void)
     HUlib_eraseSText(&w_secret);
     HUlib_eraseIText(&w_chat);
     HUlib_eraseTextLine(&w_title);
+    HUlib_eraseTextLine(&w_coordx);
+    HUlib_eraseTextLine(&w_coordy);
+    HUlib_eraseTextLine(&w_coorda);
 
 }
 
@@ -565,15 +636,29 @@ void HU_Ticker(void)
 	secret_on = false;
     }
 
+    if (coord_counter && !--coord_counter)
+    {
+	coord_on = false;
+    }
+
     if (showMessages || message_dontfuckwithme)
     {
 
+	// [crispy] display centered message
 	if (plr2->centermessage)
 	{
 	    HUlib_addMessageToSText(&w_secret, 0, plr2->centermessage);
 	    plr2->centermessage = 0;
 	    secret_on = true;
 	    secret_counter = HU_MSGTIMEOUT >> 1;
+	}
+
+	// [crispy] display map coordinates
+	if (plr2->mapcoords)
+	{
+	    plr2->mapcoords = 0;
+	    coord_on = true;
+	    coord_counter = HU_MSGTIMEOUT << 1;
 	}
 
 	// display message if necessary

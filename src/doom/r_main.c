@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,17 +12,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Rendering main loop and setup functions,
 //	 utility functions (BSP, geometry, trigonometry).
 //	See tables.c, too.
 //
-//-----------------------------------------------------------------------------
 
 
 
@@ -40,7 +32,7 @@
 #include "m_bbox.h"
 #include "m_menu.h"
 
-#include "p_local.h"
+#include "p_local.h" // [crispy] p2fromp(), MLOOKUNIT
 #include "r_local.h"
 #include "r_sky.h"
 
@@ -449,6 +441,9 @@ void R_InitPointToAngle (void)
 }
 
 
+// [crispy] WiggleFix: move R_ScaleFromGlobalAngle function to r_segs.c,
+// above R_StoreWallRange
+#if 0
 //
 // R_ScaleFromGlobalAngle
 // Returns the texture mapping scale
@@ -506,6 +501,7 @@ fixed_t R_ScaleFromGlobalAngle (angle_t visangle)
 	
     return scale;
 }
+#endif
 
 
 
@@ -685,7 +681,7 @@ void R_ExecuteSetViewSize (void)
 
     setsizeneeded = false;
 
-    if (setblocks == 11 || setblocks == 12)
+    if (setblocks >= 11) // [crispy] Crispy HUD
     {
 	scaledviewwidth = SCREENWIDTH;
 	scaledviewheight = SCREENHEIGHT;
@@ -738,10 +734,17 @@ void R_ExecuteSetViewSize (void)
     // planes
     for (i=0 ; i<viewheight ; i++)
     {
-	dy = ((i-viewheight/2)<<FRACBITS)+FRACUNIT/2;
+	// [crispy] re-generate lookup-table for yslope[] (free look)
+	// whenever "detailshift" or "screenblocks" change
+	const fixed_t num = (viewwidth<<(detailshift && !hires))/2*FRACUNIT;
+	for (j = 0; j < LOOKDIRS; j++)
+	{
+	dy = ((i-(viewheight/2 + ((j-LOOKDIRMIN) << (hires && !detailshift)) * (screenblocks < 11 ? screenblocks : 11) / 10))<<FRACBITS)+FRACUNIT/2;
 	dy = abs(dy);
-	yslope[i] = FixedDiv ( (viewwidth<<(detailshift && !hires))/2*FRACUNIT, dy);
+	yslopes[j][i] = FixedDiv (num, dy);
+	}
     }
+    yslope = yslopes[LOOKDIRMIN];
 	
     for (i=0 ; i<viewwidth ; i++)
     {
@@ -847,17 +850,13 @@ void R_SetupFrame (player_t* player)
 
     viewz = player->viewz;
 
-    tempCentery = viewheight / 2 + ((player2->lookdir) << (hires && !detailshift)) * (screenblocks < 11 ? screenblocks : 11) / 10;
+    // apply new yslope[] whenever "lookdir", "detailshift" or "screenblocks" change
+    tempCentery = viewheight/2 + ((player2->lookdir/MLOOKUNIT) << (hires && !detailshift)) * (screenblocks < 11 ? screenblocks : 11) / 10;
     if (centery != tempCentery)
     {
         centery = tempCentery;
         centeryfrac = centery << FRACBITS;
-        for (i = 0; i < viewheight; i++)
-        {
-            yslope[i] = FixedDiv((viewwidth << (detailshift && !hires)) / 2 * FRACUNIT,
-                                 abs(((i - centery) << FRACBITS) +
-                                     FRACUNIT / 2));
-        }
+        yslope = yslopes[LOOKDIRMIN + player2->lookdir/MLOOKUNIT];
     }
     
     viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
@@ -890,6 +889,9 @@ void R_SetupFrame (player_t* player)
 //
 void R_RenderPlayerView (player_t* player)
 {	
+    extern boolean automapactive;
+    extern void V_DrawFilledBox (int x, int y, int w, int h, int c);
+
     R_SetupFrame (player);
 
     // Clear buffers.
@@ -897,7 +899,18 @@ void R_RenderPlayerView (player_t* player)
     R_ClearDrawSegs ();
     R_ClearPlanes ();
     R_ClearSprites ();
+    if (automapactive)
+    {
+        R_RenderBSPNode (numnodes-1);
+        return;
+    }
     
+    // [crispy] flashing HOM indicator
+    V_DrawFilledBox(viewwindowx, viewwindowy,
+        scaledviewwidth, scaledviewheight,
+        crispy_flashinghom &&
+        (gametic % 20) < 9 ? 0xb0 : 0);
+
     // check for new console commands.
     NetUpdate ();
 

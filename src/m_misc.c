@@ -1,9 +1,7 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 1993-2008 Raven Software
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,15 +13,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //      Miscellaneous.
 //
-//-----------------------------------------------------------------------------
 
 
 #include <stdio.h>
@@ -240,6 +232,47 @@ void M_ExtractFileBase(char *path, char *dest)
     }
 }
 
+// [crispy] portable pendant to libgen.h's basename()
+char *M_BaseName(char *path)
+{
+    char *src;
+
+    src = path + strlen(path) - 1;
+
+    // back up until a \ or the start
+    while (src != path && *(src - 1) != DIR_SEPARATOR)
+    {
+	src--;
+    }
+
+    return src;
+}
+
+// [crispy] portable pendant to libgen.h's dirname()
+// does not modify its argument
+char *M_DirName(char *path)
+{
+    char *src, *res;
+
+    res = strdup(path);
+    src = res + strlen(res) - 1;
+
+    while (src != res)
+    {
+	if (*src == DIR_SEPARATOR)
+	{
+	    *src = '\0';
+	    return res;
+	}
+
+	src--;
+    }
+
+    // path string does not contain a directory separator
+    free(res);
+    return strdup(".");
+}
+
 //---------------------------------------------------------------------------
 //
 // PROC M_ForceUppercase
@@ -349,6 +382,8 @@ char *M_StringReplace(const char *haystack, const char *needle,
             ++p;
         }
     }
+
+    *dst = '\0';
 
     return result;
 }

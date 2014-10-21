@@ -1,9 +1,7 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 1993-2008 Raven Software
-// Copyright(C) 2005-8 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,29 +13,29 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
-//-----------------------------------------------------------------------------
 
 #ifndef __M_CONTROLS_H__
 #define __M_CONTROLS_H__
  
 extern int key_right;
 extern int key_left;
+extern int key_reverse;
 
 extern int key_up;
+extern int key_alt_up;
 extern int key_down;
+extern int key_alt_down;
 extern int key_strafeleft;
+extern int key_alt_strafeleft;
 extern int key_straferight;
+extern int key_alt_straferight;
 extern int key_fire;
 extern int key_use;
 extern int key_strafe;
 extern int key_speed;
 
 extern int key_jump;
+extern int key_toggleautorun;
  
 extern int key_flyup;
 extern int key_flydown;
@@ -129,6 +127,8 @@ extern int key_menu_gamma;
 extern int key_menu_incscreen;
 extern int key_menu_decscreen;
 extern int key_menu_screenshot;
+extern int key_menu_nextlevel;
+extern int key_menu_reloadlevel;
 
 extern int mousebfire;
 extern int mousebstrafe;
@@ -157,6 +157,8 @@ extern int joybstraferight;
 
 extern int joybprevweapon;
 extern int joybnextweapon;
+
+extern int joybmenu;
 
 extern int dclick_use;
 

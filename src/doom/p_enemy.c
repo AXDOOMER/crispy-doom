@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,17 +12,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Enemy thinking, AI.
 //	Action Pointer Functions
 //	that are associated with states/frames. 
 //
-//-----------------------------------------------------------------------------
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -161,6 +153,10 @@ P_NoiseAlert
 ( mobj_t*	target,
   mobj_t*	emmiter )
 {
+    // [crispy] monsters are deaf with NOTARGET cheat
+    if (target && target->player && (target->player->cheats & CF_NOTARGET))
+        return;
+
     soundtarget = target;
     validcount++;
     P_RecursiveSound (emmiter->subsector->sector, 0);
@@ -264,11 +260,6 @@ boolean P_CheckMissileRange (mobj_t* actor)
 //
 fixed_t	xspeed[8] = {FRACUNIT,47000,0,-47000,-FRACUNIT,-47000,0,47000};
 fixed_t yspeed[8] = {0,47000,FRACUNIT,47000,0,-47000,-FRACUNIT,-47000};
-
-#define MAXSPECIALCROSS	8
-
-extern	line_t*	spechit[MAXSPECIALCROSS];
-extern	int	numspechit;
 
 boolean P_Move (mobj_t*	actor)
 {
@@ -524,6 +515,10 @@ P_LookForPlayers
 	
 	player = &players[actor->lastlook];
 
+	// [crispy] monsters don't look for players with NOTARGET cheat
+	if (player->cheats & CF_NOTARGET)
+	    continue;
+
 	if (player->health <= 0)
 	    continue;		// dead
 
@@ -587,7 +582,7 @@ void A_KeenDie (mobj_t* mo)
     }
 
     junk.tag = 666;
-    EV_DoDoor(&junk,open);
+    EV_DoDoor(&junk, vld_open);
 }
 
 
@@ -605,6 +600,10 @@ void A_Look (mobj_t* actor)
 	
     actor->threshold = 0;	// any shot will wake up
     targ = actor->subsector->sector->soundtarget;
+
+    // [crispy] monsters don't look for players with NOTARGET cheat
+    if (targ && targ->player && (targ->player->cheats & CF_NOTARGET))
+        return;
 
     if (targ
 	&& (targ->flags & MF_SHOOTABLE) )
@@ -1513,6 +1512,10 @@ A_PainShootSkull
 	return;
     }
 		
+    // [crispy] Lost Souls bleed Puffs
+    if (crispy_coloredblood & (1 << 3))
+	newmobj->flags |= MF_NOBLOOD;
+
     newmobj->target = actor->target;
     A_SkullAttack (newmobj);
 }
@@ -1754,7 +1757,7 @@ void A_BossDeath (mobj_t* mo)
 	    {
 	      case 6:
 		junk.tag = 666;
-		EV_DoDoor (&junk, blazeOpen);
+		EV_DoDoor (&junk, vld_blazeOpen);
 		return;
 		break;
 		
@@ -1822,7 +1825,7 @@ A_CloseShotgun2
 
 
 mobj_t*		braintargets[32];
-int		numbraintargets;
+int		numbraintargets = 0; // [crispy] initialize
 int		braintargeton = 0;
 
 void A_BrainAwake (mobj_t* mo)
@@ -1906,6 +1909,7 @@ void A_BrainExplode (mobj_t* mo)
     if (th->tics < 1)
 	th->tics = 1;
 
+    // [crispy] brain explosions are translucent
     th->flags |= MF_TRANSLUCENT;
 }
 
@@ -1926,6 +1930,10 @@ void A_BrainSpit (mobj_t*	mo)
     if (gameskill <= sk_easy && (!easy))
 	return;
 		
+    // [crispy] avoid division by zero by recalculating the number of spawn spots
+    if (!numbraintargets)
+	A_BrainAwake(NULL);
+
     // shoot a cube at current target
     targ = braintargets[braintargeton];
     braintargeton = (braintargeton+1)%numbraintargets;

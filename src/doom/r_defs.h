@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,15 +12,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //      Refresh/rendering module, shared data struct definitions.
 //
-//-----------------------------------------------------------------------------
 
 
 #ifndef __R_DEFS__
@@ -56,7 +48,7 @@
 #define SIL_TOP			2
 #define SIL_BOTH		3
 
-#define MAXDRAWSEGS		256*8
+#define MAXDRAWSEGS		256
 
 
 
@@ -136,6 +128,9 @@ typedef	struct
     int			linecount;
     struct line_s**	lines;	// [linecount] size
     
+    // [crispy] WiggleFix: [kb] for R_FixWiggle()
+    int		cachedheight;
+    int		scaleindex;
 } sector_t;
 
 
@@ -191,13 +186,13 @@ typedef struct line_s
     fixed_t	dy;
 
     // Animation related.
-    short	flags;
+    unsigned short	flags; // [crispy] extended nodes
     short	special;
     short	tag;
 
     // Visual appearance: SideDefs.
-    //  sidenum[1] will be -1 if one sided
-    short	sidenum[2];			
+    //  sidenum[1] will be -1 (NO_INDEX) if one sided
+    unsigned short	sidenum[2]; // [crispy] extended nodes
 
     // Neat. Another bounding box, for the extent
     //  of the LineDef.
@@ -231,8 +226,8 @@ typedef struct line_s
 typedef struct subsector_s
 {
     sector_t*	sector;
-    short	numlines;
-    short	firstline;
+    int	numlines; // [crispy] extended nodes
+    int	firstline; // [crispy] extended nodes
     
 } subsector_t;
 
@@ -278,7 +273,7 @@ typedef struct
     fixed_t	bbox[2][4];
 
     // If NF_SUBSECTOR its a subsector.
-    unsigned short children[2];
+    int children[2]; // [crispy] extended nodes
     
 } node_t;
 
@@ -440,19 +435,24 @@ typedef struct
   
   // leave pads for [minx-1]/[maxx+1]
   
-  unsigned short		pad1;
+  unsigned short		pad1; // [crispy] hires
   // Here lies the rub for all
   //  dynamic resize/change of resolution.
-  unsigned short		top[SCREENWIDTH];
-  unsigned short		pad2;
-  unsigned short		pad3;
+  unsigned short		top[SCREENWIDTH]; // [crispy] hires
+  unsigned short		pad2; // [crispy] hires
+  unsigned short		pad3; // [crispy] hires
   // See above.
-  unsigned short		bottom[SCREENWIDTH];
-  unsigned short		pad4;
+  unsigned short		bottom[SCREENWIDTH]; // [crispy] hires
+  unsigned short		pad4; // [crispy] hires
 
 } visplane_t;
 
 
+// [crispy] map-coordinates of the laser vision spot
+typedef struct
+{
+    fixed_t x, y, z;
+} laserspot_t;
 
 
 #endif

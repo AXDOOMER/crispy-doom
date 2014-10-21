@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,15 +12,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Handling interactions (i.e., collisions).
 //
-//-----------------------------------------------------------------------------
 
 
 
@@ -502,7 +494,11 @@ P_TouchSpecialThing
 	    return;
 	player->message = DEH_String(GOTBERSERK);
 	if (player->readyweapon != wp_fist)
+	{
 	    player->pendingweapon = wp_fist;
+	    // [crispy] suppress second "power up" sound
+	    p2fromp(player)->berserkpow = true;
+	}
 	sound = sfx_getpow;
 	break;
 	
@@ -710,6 +706,8 @@ P_KillMobj
 	target->flags &= ~MF_SOLID;
 	target->player->playerstate = PST_DEAD;
 	P_DropWeapon (target->player);
+	// [crispy] center view when dying
+	p2fromp(target->player)->centering = true;
 
 	if (target->player == &players[consoleplayer]
 	    && automapactive)
@@ -721,7 +719,7 @@ P_KillMobj
 	
     }
 
-    // [crispy] Make Lost Soul and Pain Elemental explosions translucent
+    // [crispy] Lost Soul, Pain Elemental and Barrel explosions are translucent
     if (target->type == MT_SKULL ||
         target->type == MT_PAIN ||
         target->type == MT_BARREL)
@@ -735,6 +733,9 @@ P_KillMobj
     else
 	P_SetMobjState (target, target->info->deathstate);
     target->tics -= P_Random()&3;
+
+    // [crispy] randomize corpse health
+    target->health -= target->tics & 1;
 
     if (target->tics < 1)
 	target->tics = 1;
@@ -771,9 +772,6 @@ P_KillMobj
     }
 
     mo = P_SpawnMobj (target->x,target->y,ONFLOORZ, item);
-    // [crispy] ammo released by enemies will slightly bob vertically
-    if (singleplayer)
-        mo->momz += 5*FRACUNIT;
     mo->flags |= MF_DROPPED;	// special versions of items
 }
 

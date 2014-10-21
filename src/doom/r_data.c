@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,16 +12,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Preparation of data for rendering,
 //	generation of lookups, caching, retrieval by name.
 //
-//-----------------------------------------------------------------------------
 
 #include <stdio.h>
 
@@ -45,6 +37,7 @@
 
 
 #include "r_data.h"
+#include "v_trans.h" // [crispy] tranmap, CRMAX
 
 //
 // Graphics.
@@ -156,7 +149,7 @@ int*			texturewidthmask;
 fixed_t*		textureheight;		
 int*			texturecompositesize;
 short**			texturecolumnlump;
-unsigned short**	texturecolumnofs;
+unsigned**	texturecolumnofs; // [crispy] fix Medusa bug
 byte**			texturecomposite;
 
 // for global animation
@@ -170,8 +163,6 @@ fixed_t*	spritetopoffset;
 
 lighttable_t	*colormaps;
 
-extern int      crispy_translucency;
-extern int      crispy_highcolor;
 
 //
 // MAPTEXTURE_T CACHING
@@ -187,45 +178,77 @@ extern int      crispy_highcolor;
 
 
 
+// [crispy] replace R_DrawColumnInCache(), R_GenerateComposite() and R_GenerateLookup()
+// with Lee Killough's implementations found in MBF to fix Medusa bug
+// taken from mbfsrc/R_DATA.C:136-425
+
+// Emacs style mode select   -*- C++ -*-
+//-----------------------------------------------------------------------------
 //
+// $Id: r_data.c,v 1.23 1998/05/23 08:05:57 killough Exp $
+//
+//  Copyright (C) 1999 by
+//  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
+//
+//  This program is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License
+//  as published by the Free Software Foundation; either version 2
+//  of the License, or (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+//  02111-1307, USA.
+//
+// DESCRIPTION:
+//      Preparation of data for rendering,
+//      generation of lookups, caching, retrieval by name.
+//
+//-----------------------------------------------------------------------------
+
 // R_DrawColumnInCache
 // Clip and draw a column
 //  from a patch into a cached post.
 //
-void
-R_DrawColumnInCache
-( column_t*	patch,
-  byte*		cache,
-  int		originy,
-  int		cacheheight )
+// Rewritten by Lee Killough for performance and to fix Medusa bug
+//
+
+static void R_DrawColumnInCache(const column_t *patch, byte *cache,
+				int originy, int cacheheight, byte *marks)
 {
-    int		count;
-    int		position;
-    byte*	source;
-
-    while (patch->topdelta != 0xff)
+  while (patch->topdelta != 0xff)
     {
-	source = (byte *)patch + 3;
-	count = patch->length;
-	position = originy + patch->topdelta;
+      int count = patch->length;
+      int position = originy + patch->topdelta;
 
-	if (position < 0)
-	{
-	    count += position;
-	    position = 0;
-	}
+      if (position < 0)
+        {
+          count += position;
+          position = 0;
+        }
 
-	if (position + count > cacheheight)
-	    count = cacheheight - position;
+      if (position + count > cacheheight)
+        count = cacheheight - position;
 
-	if (count > 0)
-	    memcpy (cache + position, source, count);
-		
-	patch = (column_t *)(  (byte *)patch + patch->length + 4); 
+      if (count > 0)
+        {
+          memcpy (cache + position, (byte *)patch + 3, count);
+
+          // killough 4/9/98: remember which cells in column have been drawn,
+          // so that column can later be converted into a series of posts, to
+          // fix the Medusa bug.
+
+          memset (marks + position, 0xff, count);
+        }
+
+      patch = (column_t *)((byte *) patch + patch->length + 4);
     }
 }
-
-
 
 //
 // R_GenerateComposite
@@ -233,154 +256,248 @@ R_DrawColumnInCache
 //  the composite texture is created from the patches,
 //  and each column is cached.
 //
-void R_GenerateComposite (int texnum)
+// Rewritten by Lee Killough for performance and to fix Medusa bug
+
+static void R_GenerateComposite(int texnum)
 {
-    byte*		block;
-    texture_t*		texture;
-    texpatch_t*		patch;	
-    patch_t*		realpatch;
-    int			x;
-    int			x1;
-    int			x2;
-    int			i;
-    column_t*		patchcol;
-    short*		collump;
-    unsigned short*	colofs;
-	
-    texture = textures[texnum];
+  byte *block = Z_Malloc(texturecompositesize[texnum], PU_STATIC,
+                         (void **) &texturecomposite[texnum]);
+  texture_t *texture = textures[texnum];
+  // Composite the columns together.
+  texpatch_t *patch = texture->patches;
+  short *collump = texturecolumnlump[texnum];
+  unsigned *colofs = texturecolumnofs[texnum]; // killough 4/9/98: make 32-bit
+  int i = texture->patchcount;
+  // killough 4/9/98: marks to identify transparent regions in merged textures
+  byte *marks = calloc(texture->width, texture->height), *source;
 
-    block = Z_Malloc (texturecompositesize[texnum],
-		      PU_STATIC, 
-		      &texturecomposite[texnum]);	
-
-    collump = texturecolumnlump[texnum];
-    colofs = texturecolumnofs[texnum];
-    
-    // Composite the columns together.
-    patch = texture->patches;
-		
-    for (i=0 , patch = texture->patches;
-	 i<texture->patchcount;
-	 i++, patch++)
+  for (; --i >=0; patch++)
     {
-	realpatch = W_CacheLumpNum (patch->patch, PU_CACHE);
-	x1 = patch->originx;
-	x2 = x1 + SHORT(realpatch->width);
+      patch_t *realpatch = W_CacheLumpNum(patch->patch, PU_CACHE);
+      int x, x1 = patch->originx, x2 = x1 + SHORT(realpatch->width);
+      const int *cofs = realpatch->columnofs - x1;
 
-	if (x1<0)
-	    x = 0;
-	else
-	    x = x1;
-	
-	if (x2 > texture->width)
-	    x2 = texture->width;
-
-	for ( ; x<x2 ; x++)
-	{
-	    // Column does not have multiple patches?
-	    if (collump[x] >= 0)
-		continue;
-	    
-	    patchcol = (column_t *)((byte *)realpatch
-				    + LONG(realpatch->columnofs[x-x1]));
-	    R_DrawColumnInCache (patchcol,
-				 block + colofs[x],
-				 patch->originy,
-				 texture->height);
-	}
-						
+      if (x1 < 0)
+        x1 = 0;
+      if (x2 > texture->width)
+        x2 = texture->width;
+      for (x = x1; x < x2 ; x++)
+        if (collump[x] == -1)      // Column has multiple patches?
+          // killough 1/25/98, 4/9/98: Fix medusa bug.
+          R_DrawColumnInCache((column_t*)((byte*) realpatch + LONG(cofs[x])),
+                              block + colofs[x], patch->originy,
+			      texture->height, marks + x*texture->height);
     }
 
-    // Now that the texture has been built in column cache,
-    //  it is purgable from zone memory.
-    Z_ChangeTag (block, PU_CACHE);
+  // killough 4/9/98: Next, convert multipatched columns into true columns,
+  // to fix Medusa bug while still allowing for transparent regions.
+
+  source = malloc(texture->height);       // temporary column
+  for (i=0; i < texture->width; i++)
+    if (collump[i] == -1)                 // process only multipatched columns
+      {
+        column_t *col = (column_t *)(block + colofs[i] - 3);  // cached column
+        const byte *mark = marks + i * texture->height;
+        int j = 0;
+
+        // save column in temporary so we can shuffle it around
+        memcpy(source, (byte *) col + 3, texture->height);
+
+        for (;;)  // reconstruct the column by scanning transparency marks
+          {
+	    unsigned len;        // killough 12/98
+
+            while (j < texture->height && !mark[j]) // skip transparent cells
+              j++;
+
+            if (j >= texture->height)           // if at end of column
+              {
+                col->topdelta = -1;             // end-of-column marker
+                break;
+              }
+
+            col->topdelta = j;                  // starting offset of post
+
+	    // killough 12/98:
+	    // Use 32-bit len counter, to support tall 1s multipatched textures
+
+	    for (len = 0; j < texture->height && mark[j]; j++)
+              len++;                    // count opaque cells
+
+	    col->length = len; // killough 12/98: intentionally truncate length
+
+            // copy opaque cells from the temporary back into the column
+            memcpy((byte *) col + 3, source + col->topdelta, len);
+            col = (column_t *)((byte *) col + len + 4); // next post
+          }
+      }
+  free(source);         // free temporary column
+  free(marks);          // free transparency marks
+
+  // Now that the texture has been built in column cache,
+  // it is purgable from zone memory.
+
+  Z_ChangeTag(block, PU_CACHE);
 }
-
-
 
 //
 // R_GenerateLookup
 //
-void R_GenerateLookup (int texnum)
+// Rewritten by Lee Killough for performance and to fix Medusa bug
+//
+
+static void R_GenerateLookup(int texnum)
 {
-    texture_t*		texture;
-    byte*		patchcount;	// patchcount[texture->width]
-    texpatch_t*		patch;	
-    patch_t*		realpatch;
-    int			x;
-    int			x1;
-    int			x2;
-    int			i;
-    short*		collump;
-    unsigned short*	colofs;
-	
-    texture = textures[texnum];
+  const texture_t *texture = textures[texnum];
 
-    // Composited texture not created yet.
-    texturecomposite[texnum] = 0;
-    
-    texturecompositesize[texnum] = 0;
-    collump = texturecolumnlump[texnum];
-    colofs = texturecolumnofs[texnum];
-    
-    // Now count the number of columns
-    //  that are covered by more than one patch.
-    // Fill in the lump / offset, so columns
-    //  with only a single patch are all done.
-    patchcount = (byte *) Z_Malloc(texture->width, PU_STATIC, &patchcount);
-    memset (patchcount, 0, texture->width);
-    patch = texture->patches;
+  // Composited texture not created yet.
 
-    for (i=0 , patch = texture->patches;
-	 i<texture->patchcount;
-	 i++, patch++)
+  short *collump = texturecolumnlump[texnum];
+  unsigned *colofs = texturecolumnofs[texnum]; // killough 4/9/98: make 32-bit
+
+  // killough 4/9/98: keep count of posts in addition to patches.
+  // Part of fix for medusa bug for multipatched 2s normals.
+
+  struct {
+    unsigned patches, posts;
+  } *count = calloc(sizeof *count, texture->width);
+
+  // killough 12/98: First count the number of patches per column.
+
+  const texpatch_t *patch = texture->patches;
+  int i = texture->patchcount;
+
+  while (--i >= 0)
     {
-	realpatch = W_CacheLumpNum (patch->patch, PU_CACHE);
-	x1 = patch->originx;
-	x2 = x1 + SHORT(realpatch->width);
-	
-	if (x1 < 0)
-	    x = 0;
-	else
-	    x = x1;
+      int pat = patch->patch;
+      const patch_t *realpatch = W_CacheLumpNum(pat, PU_CACHE);
+      int x, x1 = patch++->originx, x2 = x1 + SHORT(realpatch->width);
+      const int *cofs = realpatch->columnofs - x1;
 
-	if (x2 > texture->width)
+      if (x2 > texture->width)
+	x2 = texture->width;
+      if (x1 < 0)
+	x1 = 0;
+      for (x = x1 ; x<x2 ; x++)
+	{
+	  count[x].patches++;
+	  collump[x] = pat;
+	  colofs[x] = LONG(cofs[x])+3;
+	}
+    }
+
+  // killough 4/9/98: keep a count of the number of posts in column,
+  // to fix Medusa bug while allowing for transparent multipatches.
+  //
+  // killough 12/98:
+  // Post counts are only necessary if column is multipatched,
+  // so skip counting posts if column comes from a single patch.
+  // This allows arbitrarily tall textures for 1s walls.
+  //
+  // If texture is >= 256 tall, assume it's 1s, and hence it has
+  // only one post per column. This avoids crashes while allowing
+  // for arbitrarily tall multipatched 1s textures.
+
+  if (texture->patchcount > 1 && texture->height < 256)
+    {
+      // killough 12/98: Warn about a common column construction bug
+      unsigned limit = texture->height*3+3; // absolute column size limit
+      int badcol = devparm;                 // warn only if -devparm used
+
+      for (i = texture->patchcount, patch = texture->patches; --i >= 0;)
+	{
+	  int pat = patch->patch;
+	  const patch_t *realpatch = W_CacheLumpNum(pat, PU_CACHE);
+	  int x, x1 = patch++->originx, x2 = x1 + SHORT(realpatch->width);
+	  const int *cofs = realpatch->columnofs - x1;
+
+	  if (x2 > texture->width)
 	    x2 = texture->width;
-	for ( ; x<x2 ; x++)
-	{
-	    patchcount[x]++;
-	    collump[x] = patch->patch;
-	    colofs[x] = LONG(realpatch->columnofs[x-x1])+3;
-	}
-    }
-	
-    for (x=0 ; x<texture->width ; x++)
-    {
-	if (!patchcount[x])
-	{
-	    printf ("R_GenerateLookup: column without a patch (%s)\n",
-		    texture->name);
-	    return;
-	}
-	// I_Error ("R_GenerateLookup: column without a patch");
-	
-	if (patchcount[x] > 1)
-	{
-	    // Use the cached block.
-	    collump[x] = -1;	
-	    colofs[x] = texturecompositesize[texnum];
-	    
-	    if (texturecompositesize[texnum] > 0x10000-texture->height)
-	    {
-		I_Error ("R_GenerateLookup: texture %i is >64k",
-			 texnum);
-	    }
-	    
-	    texturecompositesize[texnum] += texture->height;
+	  if (x1 < 0)
+	    x1 = 0;
+
+	  for (x = x1 ; x<x2 ; x++)
+	    if (count[x].patches > 1)        // Only multipatched columns
+	      {
+		const column_t *col =
+		  (column_t*)((byte*) realpatch+LONG(cofs[x]));
+		const byte *base = (const byte *) col;
+
+		// count posts
+		for (;col->topdelta != 0xff; count[x].posts++)
+		  if ((unsigned)((byte *) col - base) <= limit)
+		    col = (column_t *)((byte *) col + col->length + 4);
+		  else
+		    { // killough 12/98: warn about column construction bug
+		      if (badcol)
+			{
+			  badcol = 0;
+			  printf("\nWarning: Texture %8.8s "
+				 "(height %d) has bad column(s)"
+				 " starting at x = %d.",
+				 texture->name, texture->height, x);
+			}
+		      break;
+		    }
+	      }
 	}
     }
 
-    Z_Free(patchcount);
+  // Now count the number of columns
+  //  that are covered by more than one patch.
+  // Fill in the lump / offset, so columns
+  //  with only a single patch are all done.
+
+  texturecomposite[texnum] = 0;
+
+  {
+    int x = texture->width;
+    int height = texture->height;
+    int csize = 0, err = 0;        // killough 10/98
+
+    while (--x >= 0)
+      {
+	if (!count[x].patches)     // killough 4/9/98
+	{
+	  if (devparm)
+	    {
+	      // killough 8/8/98
+	      printf("\nR_GenerateLookup:"
+		     " Column %d is without a patch in texture %.8s",
+		     x, texture->name);
+	    }
+	  else
+	    err = 1;               // killough 10/98
+	}
+
+        if (count[x].patches > 1)       // killough 4/9/98
+          {
+            // killough 1/25/98, 4/9/98:
+            //
+            // Fix Medusa bug, by adding room for column header
+            // and trailer bytes for each post in merged column.
+            // For now, just allocate conservatively 4 bytes
+            // per post per patch per column, since we don't
+            // yet know how many posts the merged column will
+            // require, and it's bounded above by this limit.
+
+            collump[x] = -1;              // mark lump as multipatched
+            colofs[x] = csize + 3;        // three header bytes in a column
+	    // killough 12/98: add room for one extra post
+            csize += 4*count[x].posts+5;  // 1 stop byte plus 4 bytes per post
+          }
+        csize += height;                  // height bytes of texture data
+      }
+
+    texturecompositesize[texnum] = csize;
+
+    if (err)       // killough 10/98: non-verbose output
+      {
+	printf("\nR_GenerateLookup: Column without a patch in texture %.8s",
+	       texture->name);
+      }
+  }
+  free(count);                    // killough 4/9/98
 }
 
 
@@ -687,147 +804,6 @@ void R_InitSpriteLumps (void)
     }
 }
 
-// [crispy] from boom202s/R_DATA.C:676-787
-
-// Emacs style mode select   -*- C++ -*-
-//-----------------------------------------------------------------------------
-//
-// $Id: r_data.c,v 1.24 1998/09/07 20:11:45 jim Exp $
-//
-//  BOOM, a modified and improved DOOM engine
-//  Copyright (C) 1999 by
-//  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
-//
-//  This program is free software; you can redistribute it and/or
-//  modify it under the terms of the GNU General Public License
-//  as published by the Free Software Foundation; either version 2
-//  of the License, or (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program; if not, write to the Free Software
-//  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
-//  02111-1307, USA.
-//
-// DESCRIPTION:
-//      Preparation of data for rendering,
-//      generation of lookups, caching, retrieval by name.
-//
-//-----------------------------------------------------------------------------
-
-byte *tranmap;
-
-//
-// R_InitTranMap
-//
-// Initialize translucency filter map
-//
-// By Lee Killough 2/21/98
-//
-
-int tran_filter_pct = 66;       // filter percent
-
-#define TSC 12        /* number of fixed point digits in filter percent */
-
-void R_InitTranMap()
-{
-  int lump = W_CheckNumForName("TRANMAP");
-
-  // If a tranlucency filter map lump is present, use it
-
-  if (lump != -1)  // Set a pointer to the translucency filter maps.
-    tranmap = W_CacheLumpNum(lump, PU_STATIC);   // killough 4/11/98
-  else
-    {   // Compose a default transparent filter map based on PLAYPAL.
-      unsigned char *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
-      char fname[PATH_MAX+1]; extern char *configdir;
-      struct {
-        unsigned char pct;
-        unsigned char playpal[256];
-      } cache;
-      FILE *cachefp = fopen(strcat(strcpy(fname, configdir),
-                                   "/tranmap.dat"),"r+b");
-
-      tranmap = Z_Malloc(256*256, PU_STATIC, 0);  // killough 4/11/98
-
-      // Use cached translucency filter if it's available
-
-      if (!cachefp ? cachefp = fopen(fname,"wb") , 1 :
-          fread(&cache, 1, sizeof cache, cachefp) != sizeof cache ||
-          cache.pct != tran_filter_pct ||
-          memcmp(cache.playpal, playpal, sizeof cache.playpal) ||
-          fread(tranmap, 256, 256, cachefp) != 256 ) // killough 4/11/98
-        {
-          long pal[3][256], tot[256], pal_w1[3][256];
-          long w1 = ((unsigned long) tran_filter_pct<<TSC)/100;
-          long w2 = (1l<<TSC)-w1;
-
-          // First, convert playpal into long int type, and transpose array,
-          // for fast inner-loop calculations. Precompute tot array.
-
-          {
-            register int i = 255;
-            register const unsigned char *p = playpal+255*3;
-            do
-              {
-                register long t,d;
-                pal_w1[0][i] = (pal[0][i] = t = p[0]) * w1;
-                d = t*t;
-                pal_w1[1][i] = (pal[1][i] = t = p[1]) * w1;
-                d += t*t;
-                pal_w1[2][i] = (pal[2][i] = t = p[2]) * w1;
-                d += t*t;
-                p -= 3;
-                tot[i] = d << (TSC-1);
-              }
-            while (--i>=0);
-          }
-
-          // Next, compute all entries using minimum arithmetic.
-
-          {
-            int i,j;
-            byte *tp = tranmap;
-            for (i=0;i<256;i++)
-              {
-                long r1 = pal[0][i] * w2;
-                long g1 = pal[1][i] * w2;
-                long b1 = pal[2][i] * w2;
-                for (j=0;j<256;j++,tp++)
-                  {
-                    register int color = 255;
-                    register long err;
-                    long r = pal_w1[0][j] + r1;
-                    long g = pal_w1[1][j] + g1;
-                    long b = pal_w1[2][j] + b1;
-                    long best = LONG_MAX;
-                    do
-                      if ((err = tot[color] - pal[0][color]*r
-                          - pal[1][color]*g - pal[2][color]*b) < best)
-                        best = err, *tp = color;
-                    while (--color >= 0);
-                  }
-              }
-          }
-          if (cachefp)        // write out the cached translucency map
-            {
-              cache.pct = tran_filter_pct;
-              memcpy(cache.playpal, playpal, 256);
-              fseek(cachefp, 0, SEEK_SET);
-              fwrite(&cache, 1, sizeof cache, cachefp);
-              fwrite(tranmap, 256, 256, cachefp);
-              fclose(cachefp);
-            }
-        }
-
-      Z_ChangeTag(playpal, PU_CACHE);
-    }
-}
-
 //
 // R_InitColormaps
 //
@@ -904,6 +880,37 @@ void R_InitColormaps (int pal)
     }
 
     memcpy(colormaps, *colormaptable[usegamma][pal], (NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t));
+
+    // Load in the light tables, 
+    //  256 byte align tables.
+    int lump = W_GetNumForName(DEH_String("COLORMAP"));
+    byte *colormaps_wad = W_CacheLumpNum(lump, PU_STATIC);
+
+    // [crispy] initialize colormaps strings array
+    {
+	char c[3];
+	int i;
+
+	if (!crstr)
+	    crstr = malloc(CRMAX * sizeof(*crstr));
+
+	for (i = 0; i < CRMAX; i++)
+	{
+	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);
+	    crstr[i] = strdup(c);
+	}
+
+	// [crispy] fill cr_none[] colormap with self-references
+	for (i = 0; i < 256; i++)
+	{
+	    cr[CR_NONE][i] = i;
+	}
+
+	// [crispy] fill cr_dark[] colormap with colormaps[16*256] content
+	memcpy(cr[CR_DARK], &colormaps_wad[16*256], 256);
+    }
+
+    W_ReleaseLumpNum(lump);
 }
 
 
@@ -922,11 +929,6 @@ void R_InitData (void)
     printf (".");
     R_InitSpriteLumps ();
     printf (".");
-    if (0) // not needed anymore, use I_AlphaBlend() instead
-    {
-        R_InitTranMap();
-        printf (".");
-    }
     R_InitColormaps (0);
 }
 
@@ -938,10 +940,25 @@ void R_InitData (void)
 //
 int R_FlatNumForName (char* name)
 {
-    int		i;
+    int		i, j;
     char	namet[9];
 
+    if (crispy_nwtmerge)
     i = W_CheckNumForName (name);
+    else
+    {
+	// [crispy] restrict lump numbers returned by
+	// R_FlatNumForName() into the "flats" range
+	i = -1;
+	for (j = firstflat; j <= lastflat; j++)
+	{
+	    if (!strncasecmp(lumpinfo[j].name, name, 8))
+	    {
+		i = j;
+		break;
+	    }
+	}
+    }
 
     if (i == -1)
     {

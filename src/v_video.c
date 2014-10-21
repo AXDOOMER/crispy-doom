@@ -1,9 +1,7 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 1993-2008 Raven Software
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,17 +13,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Gamma correction LUT stuff.
 //	Functions to draw patches (by post) directly to screen.
 //	Functions to blit a block to the screen.
 //
-//-----------------------------------------------------------------------------
 
 #include <stdio.h>
 #include <string.h>
@@ -57,7 +49,10 @@
 // Only used in Heretic/Hexen
 
 byte *tinttable = NULL;
+byte *tranmap = NULL;
 byte *dp_translation = NULL;
+boolean dp_translucent = false;
+lighttable_t dc_translucency = 0xa9ffffff;
 
 // villsa [STRIFE] Blending table used for Strife
 byte *xlatab = NULL;
@@ -98,7 +93,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source,
                 int destx, int desty)
 { 
     pixel_t *src;
-    pixel_t *dest; 
+    pixel_t *dest;
  
     srcx <<= hires;
     srcy <<= hires;
@@ -128,7 +123,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source,
 
     for ( ; height>0 ; height--) 
     { 
-        memcpy(dest, src, width * sizeof(pixel_t)); 
+        memcpy(dest, src, width * sizeof(pixel_t));
         src += SCREENWIDTH; 
         dest += SCREENWIDTH; 
     } 
@@ -192,6 +187,10 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
     w = SHORT(patch->width);
 
+  // [crispy] quadruple for-loop for each dp_translation and dp_translucent case
+  // to avoid checking these variables for each pixel and instead check once per patch
+  // (1) normal, opaque patch
+  if (!dp_translation && !dp_translucent)
     for ( ; col<w ; x++, col++, desttop++)
     {
         column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
@@ -207,18 +206,109 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                if (dp_translation)
-                    sourcergb = colormaps[dp_translation[*source++]];
-                else
-                    sourcergb = colormaps[*source++];
-
                 if (hires)
                 {
-                    *dest = sourcergb;
+                    *dest = colormaps[*source];
                     dest += SCREENWIDTH;
                 }
-                *dest = sourcergb;
+                *dest = colormaps[*source++];
                 dest += SCREENWIDTH;
+            }
+          }
+            column = (column_t *)((byte *)column + column->length + 4);
+        }
+    }
+  else
+  // (2) color-translated, opaque patch
+  if (dp_translation && !dp_translucent)
+    for ( ; col<w ; x++, col++, desttop++)
+    {
+        column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+
+        // step through the posts in a column
+        while (column->topdelta != 0xff)
+        {
+          for (f = 0; f <= hires; f++)
+          {
+            source = (byte *)column + 3;
+            dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
+            count = column->length;
+
+            while (count--)
+            {
+                if (hires)
+                {
+                    *dest = colormaps[dp_translation[*source]];
+                    dest += SCREENWIDTH;
+                }
+                *dest = colormaps[dp_translation[*source++]];
+                dest += SCREENWIDTH;
+            }
+          }
+            column = (column_t *)((byte *)column + column->length + 4);
+        }
+    }
+  else
+  // (3) normal, translucent patch
+  if (!dp_translation && dp_translucent)
+    for ( ; col<w ; x++, col++, desttop++)
+    {
+        column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+
+        // step through the posts in a column
+        while (column->topdelta != 0xff)
+        {
+          for (f = 0; f <= hires; f++)
+          {
+            source = (byte *)column + 3;
+            dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
+            count = column->length;
+
+            while (count--)
+            {
+                if (hires)
+                {
+                    sourcergb = colormaps[*source];
+                    *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                    dest += SCREENWIDTH;
+                }
+                sourcergb = colormaps[*source++];
+                *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                dest += SCREENWIDTH;
+            }
+          }
+            column = (column_t *)((byte *)column + column->length + 4);
+        }
+    }
+  else
+  // (4) color-translated, translucent patch
+  if (dp_translation && dp_translucent)
+    for ( ; col<w ; x++, col++, desttop++)
+    {
+        column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+
+        // step through the posts in a column
+        while (column->topdelta != 0xff)
+        {
+          for (f = 0; f <= hires; f++)
+          {
+            source = (byte *)column + 3;
+            dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
+            count = column->length;
+
+            while (count--)
+            {
+            {
+                if (hires)
+                {
+                    sourcergb = colormaps[dp_translation[*source]];
+                    *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                    dest += SCREENWIDTH;
+                }
+                sourcergb = colormaps[dp_translation[*source++]];
+                *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                dest += SCREENWIDTH;
+            }
             }
           }
             column = (column_t *)((byte *)column + column->length + 4);
@@ -285,17 +375,12 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                if (dp_translation)
-                    sourcergb = colormaps[dp_translation[*source++]];
-                else
-                    sourcergb = colormaps[*source++];
-
                 if (hires)
                 {
-                    *dest = sourcergb;
+                    *dest = colormaps[*source];
                     dest += SCREENWIDTH;
                 }
-                *dest = sourcergb;
+                *dest = colormaps[*source++];
                 dest += SCREENWIDTH;
             }
           }

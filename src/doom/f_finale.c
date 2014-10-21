@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,15 +12,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	Game completion, final screen animation.
 //
-//-----------------------------------------------------------------------------
 
 
 #include <stdio.h>
@@ -44,6 +36,7 @@
 
 #include "doomstat.h"
 #include "r_state.h"
+#include "m_controls.h" // [crispy] key_*
 
 typedef enum
 {
@@ -301,7 +294,7 @@ void F_TextWrite (void)
 	}
 		
 	w = SHORT (hu_font[c]->width);
-	if (cx+w > SCREENWIDTH)
+	if (cx+w > ORIGWIDTH)
 	    break;
 	V_DrawPatch(cx, cy, hu_font[c]);
 	cx+=w;
@@ -349,6 +342,8 @@ boolean		castdeath;
 int		castframes;
 int		castonmelee;
 boolean		castattacking;
+static signed char	castangle; // [crispy] turnable cast
+static signed char	castskip; // [crispy] skippable cast
 
 
 //
@@ -380,8 +375,14 @@ void F_CastTicker (void)
     if (--casttics > 0)
 	return;			// not time to change state yet
 		
-    if (caststate->tics == -1 || caststate->nextstate == S_NULL)
+    if (caststate->tics == -1 || caststate->nextstate == S_NULL || castskip) // [crispy] skippable cast
     {
+	if (castskip)
+	{
+	    castnum += castskip;
+	    castskip = 0;
+	}
+	else
 	// switch from deathstate to next monster
 	castnum++;
 	castdeath = false;
@@ -391,6 +392,7 @@ void F_CastTicker (void)
 	    S_StartSound (NULL, mobjinfo[castorder[castnum].type].seesound);
 	caststate = &states[mobjinfo[castorder[castnum].type].seestate];
 	castframes = 0;
+	castangle = 0; // [crispy] turnable cast
     }
     else
     {
@@ -481,18 +483,57 @@ void F_CastTicker (void)
 
 boolean F_CastResponder (event_t* ev)
 {
+    boolean xdeath = false;
+
     if (ev->type != ev_keydown)
 	return false;
+
+    // [crispy] make monsters turnable in cast ...
+    if (ev->data1 == key_left)
+    {
+	if (++castangle > 7)
+	    castangle = 0;
+	return false;
+    }
+    else
+    if (ev->data1 == key_right)
+    {
+	if (--castangle < 0)
+	    castangle = 7;
+	return false;
+    }
+    else
+    // [crispy] ... and allow to skip through them ..
+    if (ev->data1 == key_strafeleft || ev->data1 == key_alt_strafeleft)
+    {
+	castskip = castnum ? -1 : arrlen(castorder)-2;
+	return false;
+    }
+    else
+    if (ev->data1 == key_straferight || ev->data1 == key_alt_straferight)
+    {
+	castskip = +1;
+	return false;
+    }
+    // [crispy] ... and finally turn them into gibbs
+    if (ev->data1 == key_speed)
+	xdeath = true;
 		
     if (castdeath)
 	return true;			// already in dying frames
 		
     // go into death frame
     castdeath = true;
+    if (xdeath && mobjinfo[castorder[castnum].type].xdeathstate)
+	caststate = &states[mobjinfo[castorder[castnum].type].xdeathstate];
+    else
     caststate = &states[mobjinfo[castorder[castnum].type].deathstate];
     casttics = caststate->tics;
     castframes = 0;
     castattacking = false;
+    if (xdeath && mobjinfo[castorder[castnum].type].xdeathstate)
+        S_StartSound (NULL, sfx_slop);
+    else
     if (mobjinfo[castorder[castnum].type].deathsound)
 	S_StartSound (NULL, mobjinfo[castorder[castnum].type].deathsound);
 	
@@ -571,8 +612,8 @@ void F_CastDrawer (void)
     // draw the current frame in the middle of the screen
     sprdef = &sprites[caststate->sprite];
     sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
-    lump = sprframe->lump[0];
-    flip = (boolean)sprframe->flip[0];
+    lump = sprframe->lump[castangle]; // [crispy] turnable cast
+    flip = (boolean)sprframe->flip[castangle]; // [crispy] turnable cast
 			
     patch = W_CacheLumpNum (lump+firstspritelump, PU_CACHE);
     if (flip)

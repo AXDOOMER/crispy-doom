@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,24 +12,19 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	DOOM main program (D_DoomMain) and game loop (D_DoomLoop),
 //	plus functions to determine game mode (shareware, registered),
 //	parse command line parameters, configure game parameters (turbo),
 //	and call the startup functions.
 //
-//-----------------------------------------------------------------------------
 
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h> // [crispy] time_t, time(), struct tm, localtime()
 
 #include "config.h"
 #include "deh_main.h"
@@ -135,18 +128,29 @@ boolean         main_loop_started = false;
 char		wadfile[1024];		// primary wad file
 char		mapdir[1024];           // directory of development maps
 
-int             show_endoom = 0;
+int             show_endoom = 0; // [crispy] disable
 
-int             crispy_highcolor = 0;
+// [crispy] "crispness" config variables
 int             crispy_translucency = 0;
 int             crispy_coloredhud = 0;
 int             crispy_automapstats = 0;
 int             crispy_secretmessage = 0;
 int             crispy_crosshair = 0;
-int             crispy_crosshair_highlight = 0;
+int             crispy_highcolor = 0;
 int             crispy_jump = 0;
 int             crispy_freelook = 0;
 int             crispy_mouselook = 0;
+int             crispy_freeaim = 0;
+int             crispy_overunder = 0;
+int             crispy_recoil = 0;
+
+// [crispy] in-game switches
+uint8_t         crispy_coloredblood = 0;
+boolean         crispy_flashinghom = false;
+boolean         crispy_fliplevels = false;
+boolean         crispy_havemap33 = false;
+boolean         crispy_havessg = false;
+boolean         crispy_nwtmerge = false;
 
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
@@ -194,6 +198,7 @@ void D_Display (void)
     static  boolean		fullscreen = false;
     static  gamestate_t		oldgamestate = -1;
     static  int			borderdrawcount;
+    static  char		menushade; // [crispy] shade menu background
     int				nowtime;
     int				tics;
     int				wipestart;
@@ -234,7 +239,11 @@ void D_Display (void)
 	if (!gametic)
 	    break;
 	if (automapactive)
+	{
+	    // [crispy] update automap while playing
+	    R_RenderPlayerView (&players[displayplayer]);
 	    AM_Drawer ();
+	}
 	if (wipe || (scaledviewheight != (200 << hires) && fullscreen) )
 	    redrawsbar = true;
 	if (inhelpscreensstate && !inhelpscreens)
@@ -264,9 +273,9 @@ void D_Display (void)
     {
 	R_RenderPlayerView (&players[displayplayer]);
 
-        // [crispy] simple HUD
-        if (screenblocks == 12)
-            ST_Drawer(0, 0);
+        // [crispy] Crispy HUD
+        if (screenblocks >= CRISPY_HUD)
+            ST_Drawer(false, false);
     }
 
     if (gamestate == GS_LEVEL && gametic)
@@ -315,13 +324,19 @@ void D_Display (void)
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
-            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50);
+            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50); // colormaps[menushade * 256 + *b];
 	}
 
-	// force redraw of status bar and border
+	if (menushade < 16)
+	    menushade++;
+
+	// [crispy] force redraw of status bar and border
 	viewactivestate = false;
 	inhelpscreensstate = true;
     }
+    else
+    if (menushade)
+	menushade = 0;
 
     // draw pause pic
     if (paused)
@@ -421,16 +436,19 @@ void D_BindVariables(void)
         M_BindVariable(buf, &chat_macros[i]);
     }
 
-    M_BindVariable("crispy_highcolor",       &crispy_highcolor);
+    // [crispy] bind "crispness" config variables
     M_BindVariable("crispy_translucency",    &crispy_translucency);
     M_BindVariable("crispy_coloredhud",      &crispy_coloredhud);
     M_BindVariable("crispy_automapstats",    &crispy_automapstats);
     M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
     M_BindVariable("crispy_crosshair",       &crispy_crosshair);
-    M_BindVariable("crispy_crosshair_highlight", &crispy_crosshair_highlight);
+    M_BindVariable("crispy_highcolor",       &crispy_highcolor);
     M_BindVariable("crispy_jump",            &crispy_jump);
     M_BindVariable("crispy_freelook",        &crispy_freelook);
     M_BindVariable("crispy_mouselook",       &crispy_mouselook);
+    M_BindVariable("crispy_freeaim",         &crispy_freeaim);
+    M_BindVariable("crispy_overunder",       &crispy_overunder);
+    M_BindVariable("crispy_recoil",          &crispy_recoil);
 }
 
 //
@@ -733,6 +751,38 @@ static char *GetGameName(char *gamename)
     return gamename;
 }
 
+static void SetMissionForPackName(char *pack_name)
+{
+    int i;
+    static const struct
+    {
+        char *name;
+        int mission;
+    } packs[] = {
+        { "doom2",    doom2 },
+        { "tnt",      pack_tnt },
+        { "plutonia", pack_plut },
+    };
+
+    for (i = 0; i < arrlen(packs); ++i)
+    {
+        if (!strcasecmp(pack_name, packs[i].name))
+        {
+            gamemission = packs[i].mission;
+            return;
+        }
+    }
+
+    printf("Valid mission packs are:\n");
+
+    for (i = 0; i < arrlen(packs); ++i)
+    {
+        printf("\t%s\n", packs[i].name);
+    }
+
+    I_Error("Unknown mission pack name: %s", pack_name);
+}
+
 //
 // Find out what version of Doom is playing.
 //
@@ -794,9 +844,27 @@ void D_IdentifyVersion(void)
     }
     else
     {
-        // Doom 2 of some kind.
+        int p;
 
+        // Doom 2 of some kind.
         gamemode = commercial;
+
+        // We can manually override the gamemission that we got from the
+        // IWAD detection code. This allows us to eg. play Plutonia 2
+        // with Freedoom and get the right level names.
+
+        //!
+        // @arg <pack>
+        //
+        // Explicitly specify a Doom II "mission pack" to run as, instead of
+        // detecting it based on the filename. Valid values are: "doom2",
+        // "tnt" and "plutonia".
+        //
+        p = M_CheckParmWithArgs("-pack", 1);
+        if (p > 0)
+        {
+            SetMissionForPackName(myargv[p + 1]);
+        }
     }
 }
 
@@ -804,18 +872,25 @@ void D_IdentifyVersion(void)
 
 void D_SetGameDescription(void)
 {
+    boolean is_freedoom = W_CheckNumForName("FREEDOOM") >= 0,
+            is_freedm = W_CheckNumForName("FREEDM") >= 0;
+
     gamedescription = "Unknown";
 
     if (logical_gamemission == doom)
     {
         // Doom 1.  But which version?
 
-        if (gamemode == retail)
+        if (is_freedoom)
+        {
+            gamedescription = GetGameName("Freedoom: Phase 1");
+        }
+        else if (gamemode == retail)
         {
             // Ultimate Doom
 
             gamedescription = GetGameName("The Ultimate DOOM");
-        } 
+        }
         else if (gamemode == registered)
         {
             gamedescription = GetGameName("DOOM Registered");
@@ -829,14 +904,33 @@ void D_SetGameDescription(void)
     {
         // Doom 2 of some kind.  But which mission?
 
-        if (logical_gamemission == doom2)
+        if (is_freedoom)
+        {
+            if (is_freedm)
+            {
+                gamedescription = GetGameName("FreeDM");
+            }
+            else
+            {
+                gamedescription = GetGameName("Freedoom: Phase 2");
+            }
+        }
+        else if (logical_gamemission == doom2)
+        {
             gamedescription = GetGameName("DOOM 2: Hell on Earth");
+        }
         else if (logical_gamemission == pack_plut)
+        {
             gamedescription = GetGameName("DOOM 2: Plutonia Experiment"); 
+        }
         else if (logical_gamemission == pack_tnt)
+        {
             gamedescription = GetGameName("DOOM 2: TNT - Evilution");
+        }
         else if (logical_gamemission == pack_nerve)
+        {
             gamedescription = GetGameName("DOOM 2: No Rest For The Living");
+        }
     }
 }
 
@@ -1040,59 +1134,6 @@ void PrintGameVersion(void)
     }
 }
 
-// Load the Chex Quest dehacked file, if we are in Chex mode.
-
-static void LoadChexDeh(void)
-{
-    char *chex_deh = NULL;
-    char *sep;
-
-    if (gameversion == exe_chex)
-    {
-        // Look for chex.deh in the same directory as the IWAD file.
-
-        sep = strrchr(iwadfile, DIR_SEPARATOR);
-
-        if (sep != NULL)
-        {
-            size_t chex_deh_len = strlen(iwadfile) + 9;
-            chex_deh = malloc(chex_deh_len);
-            M_StringCopy(chex_deh, iwadfile, chex_deh_len);
-            chex_deh[sep - iwadfile + 1] = '\0';
-            M_StringConcat(chex_deh, "chex.deh", chex_deh_len);
-        }
-        else
-        {
-            chex_deh = strdup("chex.deh");
-        }
-
-        // If the dehacked patch isn't found, try searching the WAD
-        // search path instead.  We might find it...
-
-        if (!M_FileExists(chex_deh))
-        {
-            free(chex_deh);
-            chex_deh = D_FindWADByName("chex.deh");
-        }
-
-        // Still not found?
-
-        if (chex_deh == NULL)
-        {
-            I_Error("Unable to find Chex Quest dehacked file (chex.deh).\n"
-                    "The dehacked file is required in order to emulate\n"
-                    "chex.exe correctly.  It can be found in your nearest\n"
-                    "/idgames repository mirror at:\n\n"
-                    "   utils/exe_edit/patches/chexdeh.zip");
-        }
-
-        if (!DEH_LoadFile(chex_deh))
-        {
-            I_Error("Failed to load chex.deh needed for emulating chex.exe.");
-        }
-    }
-}
-
 // Function called at exit to display the ENDOOM screen
 
 static void D_Endoom(void)
@@ -1114,39 +1155,94 @@ static void D_Endoom(void)
     I_Endoom(endoom);
 }
 
-static void LoadHacxDeh(void)
+// Load dehacked patches needed for certain IWADs.
+static void LoadIwadDeh(void)
 {
-    // If this is the HACX IWAD, we need to load the DEHACKED lump.
+    // The Freedoom IWADs have DEHACKED lumps that must be loaded.
+    if (W_CheckNumForName("FREEDOOM") >= 0)
+    {
+        // Old versions of Freedoom (before 2014-09) did not have technically
+        // valid DEHACKED lumps, so ignore errors and just continue if this
+        // is an old IWAD.
+        DEH_LoadLumpByName("DEHACKED", false, true);
+    }
 
+    // If this is the HACX IWAD, we need to load the DEHACKED lump.
     if (gameversion == exe_hacx)
     {
-        if (!DEH_LoadLumpByName("DEHACKED", true))
+        if (!DEH_LoadLumpByName("DEHACKED", true, false))
         {
             I_Error("DEHACKED lump not found.  Please check that this is the "
                     "Hacx v1.2 IWAD.");
         }
     }
-}
 
-static void LoadNerveWad(void)
-{
-    int i;
-    char *sep;
-    char lumpname[9];
-
-    if (!bfgedition || gamemode != commercial)
-        return;
-
-    if (!modifiedgame)
+    // Chex Quest needs a separate Dehacked patch which must be downloaded
+    // and installed next to the IWAD.
+    if (gameversion == exe_chex)
     {
+        char *chex_deh = NULL;
+        char *sep;
+
+        // Look for chex.deh in the same directory as the IWAD file.
         sep = strrchr(iwadfile, DIR_SEPARATOR);
 
         if (sep != NULL)
         {
-            nervewadfile = malloc(strlen(iwadfile) + 9);
-            strcpy(nervewadfile, iwadfile);
-            nervewadfile[sep - iwadfile + 1] = '\0';
-            strcat(nervewadfile, "nerve.wad");
+            size_t chex_deh_len = strlen(iwadfile) + 9;
+            chex_deh = malloc(chex_deh_len);
+            M_StringCopy(chex_deh, iwadfile, chex_deh_len);
+            chex_deh[sep - iwadfile + 1] = '\0';
+            M_StringConcat(chex_deh, "chex.deh", chex_deh_len);
+        }
+        else
+        {
+            chex_deh = strdup("chex.deh");
+        }
+
+        // If the dehacked patch isn't found, try searching the WAD
+        // search path instead.  We might find it...
+        if (!M_FileExists(chex_deh))
+        {
+            free(chex_deh);
+            chex_deh = D_FindWADByName("chex.deh");
+        }
+
+        // Still not found?
+        if (chex_deh == NULL)
+        {
+            I_Error("Unable to find Chex Quest dehacked file (chex.deh).\n"
+                    "The dehacked file is required in order to emulate\n"
+                    "chex.exe correctly.  It can be found in your nearest\n"
+                    "/idgames repository mirror at:\n\n"
+                    "   utils/exe_edit/patches/chexdeh.zip");
+        }
+
+        if (!DEH_LoadFile(chex_deh))
+        {
+            I_Error("Failed to load chex.deh needed for emulating chex.exe.");
+        }
+    }
+}
+
+// [crispy] support loading NERVE.WAD alongside DOOM2.WAD
+static void LoadNerveWad(void)
+{
+    int i;
+    char lumpname[9];
+
+    if (gamemission != doom2)
+        return;
+
+    if (bfgedition && !modifiedgame)
+    {
+
+        if (strrchr(iwadfile, DIR_SEPARATOR) != NULL)
+        {
+            char *dir;
+            dir = M_DirName(iwadfile);
+            nervewadfile = M_StringJoin(dir, DIR_SEPARATOR_S, "nerve.wad", NULL);
+            free(dir);
         }
         else
         {
@@ -1166,29 +1262,21 @@ static void LoadNerveWad(void)
 
         D_AddFile(nervewadfile);
 
-        // Rename level name patch lumps out of the way
+        // [crispy] rename level name patch lumps out of the way
         for (i = 0; i < 9; i++)
         {
-            snprintf (lumpname, 9, "CWILV%2.2d", i);
+            M_snprintf (lumpname, 9, "CWILV%2.2d", i);
             lumpinfo[W_GetNumForName(lumpname)].name[0] = 'N';
         }
     }
     else
     {
-        i = M_CheckParmWithArgs ("-file", 1);
-
-        if (i)
-        {
-            while (++i != myargc && myargv[i][0] != '-')
-            {
-                if (!strncasecmp(basename(myargv[i]), "nerve.wad", 9))
-                {
-                    gamemission = pack_nerve;
-                    DEH_AddStringReplacement ("TITLEPIC", "DMENUPIC");
-                    break;
-                }
-            }
-        }
+	i = W_GetNumForName("map01");
+	if (!strcmp(lumpinfo[i].wad_file->path, "nerve.wad"))
+	{
+	    gamemission = pack_nerve;
+	    DEH_AddStringReplacement ("TITLEPIC", "INTERPIC");
+	}
     }
 }
 
@@ -1197,9 +1285,10 @@ static void LoadNerveWad(void)
 //
 void D_DoomMain (void)
 {
-    int             p;
-    char            file[256];
-    char            demolumpname[9];
+    int p;
+    char file[256];
+    char demolumpname[9];
+    int numiwadlumps;
 
     I_AtExit(D_Endoom, false);
 
@@ -1267,11 +1356,6 @@ void D_DoomMain (void)
         exit(0);
     }
 
-#endif
-            
-#ifdef FEATURE_DEHACKED
-    printf("DEH_Init: Init Dehacked support.\n");
-    DEH_Init();
 #endif
 
     //!
@@ -1345,7 +1429,7 @@ void D_DoomMain (void)
     // allowing play from CD.
     //
 
-    if (M_CheckParm("-cdrom") > 0)
+    if (M_ParmExists("-cdrom"))
     {
         printf(D_CDROM);
 
@@ -1358,7 +1442,7 @@ void D_DoomMain (void)
 
         M_SetConfigDir(NULL);
     }
-    
+
     //!
     // @arg <x>
     // @vanilla
@@ -1396,6 +1480,14 @@ void D_DoomMain (void)
     D_BindVariables();
     M_LoadDefaults();
 
+    // [crispy] unconditionally disable savegame and demo limits
+    vanilla_savegame_limit = 0;
+    vanilla_demo_limit = 0;
+
+    // [crispy] normalize screenblocks
+    if (screenblocks > CRISPY_HUD)
+	screenblocks = CRISPY_HUD + (crispy_translucency ? 1 : 0);
+
     // Save configuration at exit.
     I_AtExit(M_SaveDefaults, false);
 
@@ -1414,6 +1506,27 @@ void D_DoomMain (void)
 
     DEH_printf("W_Init: Init WADfiles.\n");
     D_AddFile(iwadfile);
+    numiwadlumps = numlumps;
+
+    W_CheckCorrectIWAD(doom);
+
+    // Now that we've loaded the IWAD, we can figure out what gamemission
+    // we're playing and which version of Vanilla Doom we need to emulate.
+    D_IdentifyVersion();
+    InitGameVersion();
+
+    //!
+    // @category mod
+    //
+    // Disable automatic loading of Dehacked patches for certain
+    // IWAD files.
+    //
+    if (!M_ParmExists("-nodeh"))
+    {
+        // Some IWADs have dehacked patches that need to be loaded for
+        // them to be played properly.
+        LoadIwadDeh();
+    }
 
     // Doom 3: BFG Edition includes modified versions of the classic
     // IWADs which can be identified by an additional DMENUPIC lump.
@@ -1437,8 +1550,32 @@ void D_DoomMain (void)
         DEH_AddStringReplacement(HUSTR_31, "level 31: idkfa");
         DEH_AddStringReplacement(HUSTR_32, "level 32: keen");
         DEH_AddStringReplacement(PHUSTR_1, "level 33: betray");
+
+        // The BFG edition doesn't have the "low detail" menu option (fair
+        // enough). But bizarrely, it reuses the M_GDHIGH patch as a label
+        // for the options menu (says "Fullscreen:"). Why the perpetrators
+        // couldn't just add a new graphic lump and had to reuse this one,
+        // I don't know.
+        //
+        // The end result is that M_GDHIGH is too wide and causes the game
+        // to crash. As a workaround to get a minimum level of support for
+        // the BFG edition IWADs, use the "ON"/"OFF" graphics instead.
+
+        DEH_AddStringReplacement("M_GDHIGH", "M_MSGON");
+        DEH_AddStringReplacement("M_GDLOW", "M_MSGOFF");
     }
 
+#ifdef FEATURE_DEHACKED
+    // Load Dehacked patches specified on the command line with -deh.
+    // Note that there's a very careful and deliberate ordering to how
+    // Dehacked patches are loaded. The order we use is:
+    //  1. IWAD dehacked patches.
+    //  2. Command line dehacked patches specified with -deh.
+    //  3. PWAD dehacked patches in DEHACKED lumps.
+    DEH_ParseCommandLine();
+#endif
+
+    // Load PWAD files.
     modifiedgame = W_ParseCommandLine();
 
     // Debug:
@@ -1501,19 +1638,53 @@ void D_DoomMain (void)
     I_AtExit((atexit_func_t) G_CheckDemoStatus, true);
 
     // Generate the WAD hash table.  Speed things up a bit.
-
     W_GenerateHashTable();
-    
-    D_IdentifyVersion();
-    InitGameVersion();
+
+    // [crispy] allow overriding of special-casing
     if (!M_ParmExists("-nodeh"))
+	LoadNerveWad();
+
+    // Load DEHACKED lumps from WAD files - but only if we give the right
+    // command line parameter.
+
+    //!
+    // @category mod
+    //
+    // Load Dehacked patches from DEHACKED lumps contained in one of the
+    // loaded PWAD files.
+    //
+    // [crispy] load DEHACKED lumps by default, but allow overriding
+    if (!M_ParmExists("-nodehlump") && !M_ParmExists("-nodeh"))
     {
-    LoadChexDeh();
-    LoadHacxDeh();
-    LoadNerveWad();
+        int i, loaded = 0;
+
+        for (i = numiwadlumps; i < numlumps; ++i)
+        {
+            if (!strncmp(lumpinfo[i].name, "DEHACKED", 8))
+            {
+                DEH_LoadLump(i, true, true); // [crispy] allow long, allow error
+                loaded++;
+            }
+        }
+
+        printf("  loaded %i DEHACKED lumps from PWAD files.\n", loaded);
     }
+
+    // Set the gamedescription string. This is only possible now that
+    // we've finished loading Dehacked patches.
     D_SetGameDescription();
-    savegamedir = M_GetSaveGameDir(D_SaveGameIWADName(gamemission));
+
+#ifdef _WIN32
+    // In -cdrom mode, we write savegames to c:\doomdata as well as configs.
+    if (M_ParmExists("-cdrom"))
+    {
+        savegamedir = configdir;
+    }
+    else
+#endif
+    {
+        savegamedir = M_GetSaveGameDir(D_SaveGameIWADName(gamemission));
+    }
 
     // Check for -file in shareware
     if (modifiedgame)
@@ -1564,42 +1735,65 @@ void D_DoomMain (void)
         I_PrintDivider();
     }
 
-    // Load DEHACKED lumps from WAD files - but only if we give the right
-    // command line parameter.
-
-    //!
-    // @category mod
-    //
-    // Load Dehacked patches from DEHACKED lumps contained in one of the
-    // loaded PWAD files.
-    //
-    if (!M_ParmExists("-nodehlump") && !M_ParmExists("-nodeh"))
-    {
-        int i, loaded = 0;
-        extern boolean deh_autoload;
-
-        deh_autoload = true;
-
-        for (i = 0; i < numlumps; ++i)
-        {
-            if (!strncmp(lumpinfo[i].name, "DEHACKED", 8))
-            {
-                DEH_LoadLump(i, true);
-                loaded++;
-            }
-        }
-
-        printf("Loaded %i DEHACKED lumps from WAD files.\n", loaded);
-
-        deh_autoload = false;
-    }
-
     DEH_printf("I_Init: Setting up machine state.\n");
     I_CheckIsScreensaver();
     I_InitTimer();
     I_InitJoystick();
     I_InitSound(true);
     I_InitMusic();
+
+    // [crispy] check for SSG resources
+    crispy_havessg =
+    (
+        gamemode == commercial ||
+        (
+            W_CheckNumForName("sht2a0")   != -1 && // [crispy] wielding/firing sprite sequence
+            W_CheckNumForName("dsdshtgn") != -1 && // [crispy] firing sound
+            W_CheckNumForName("dsdbopn")  != -1 && // [crispy] opening sound
+            W_CheckNumForName("dsdbload") != -1 && // [crispy] reloading sound
+            W_CheckNumForName("dsdbcls")  != -1    // [crispy] closing sound
+        )
+    );
+
+    // [crispy] check for presence of MAP33
+    crispy_havemap33 = (W_CheckNumForName("MAP33") != -1);
+
+    // [crispy] check for colored blood
+    {
+	int i;
+	char *iwadbasename = M_BaseName(iwadfile);
+
+	// [crispy] check for monster sprite replacements
+	// (first sprites of monster death frames)
+	i = W_CheckNumForName("bossi0");  // [crispy] Baron of Hell
+	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename));
+
+	i = W_CheckNumForName("bos2i0"); // [crispy] Hell Knight
+	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 1;
+
+	i = W_CheckNumForName("headg0"); // [crispy] Cacodemon
+	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 2;
+
+	i = W_CheckNumForName("skulg0"); // [crispy] Lost Soul
+	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 3;
+
+	i = W_CheckNumForName("sargi0");  // [crispy] Demon (Spectre)
+	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 4;
+
+	// [crispy] no colored blood in Chex Quest and Hacx
+	// except for the Thorn Things in Hacx which bleed green blood
+	if (gamemission == pack_chex || gamemission == pack_hacx)
+	{
+	    i = W_CheckNumForName("bspij0");  // [crispy] Ararchnotron (Thorn Thing)
+	    crispy_coloredblood = 0 | ((i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 5);
+	}
+    }
+
+    // [crispy] check for NWT-style merging
+    crispy_nwtmerge =
+	M_CheckParmWithArgs("-nwtmerge", 1) ||
+	M_CheckParmWithArgs("-af", 1) ||
+	M_CheckParmWithArgs("-aa", 1);
 
 #ifdef FEATURE_MULTIPLAYER
     printf ("NET_Init: Init network subsystem.\n");
@@ -1702,7 +1896,8 @@ void D_DoomMain (void)
             }
             else
             {
-                startmap = 1;
+                // [crispy] allow second digit without space in between for Doom 1
+                startmap = myargv[p+1][1]-'0';
             }
         }
         autostart = true;
@@ -1719,6 +1914,31 @@ void D_DoomMain (void)
         startmap = 1;
         autostart = true;
         testcontrols = true;
+    }
+
+    // [crispy] enable flashing HOM indicator
+    p = M_CheckParm("-flashinghom");
+
+    if (p > 0)
+    {
+        crispy_flashinghom = true;
+    }
+
+    // [crispy] port level flipping feature over from Strawberry Doom
+    {
+        time_t curtime = time(NULL);
+        struct tm *tm;
+
+        if ((tm = localtime(&curtime)) != NULL &&
+            tm->tm_mon == 3 && tm->tm_mday == 1)
+            crispy_fliplevels = true;
+    }
+
+    p = M_CheckParm("-fliplevels");
+
+    if (p > 0)
+    {
+        crispy_fliplevels = !crispy_fliplevels;
     }
 
     // Check for load game parameter

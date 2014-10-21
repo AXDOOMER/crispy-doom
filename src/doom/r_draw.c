@@ -1,8 +1,6 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,17 +12,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //	The actual span/column drawing functions.
 //	Here find the main potential for optimization,
 //	 e.g. inline assembly, different algorithms.
 //
-//-----------------------------------------------------------------------------
 
 
 
@@ -40,7 +32,6 @@
 
 // Needs access to LFB (guess what).
 #include "v_video.h"
-#include "v_trans.h"
 
 // State.
 #include "doomstat.h"
@@ -72,6 +63,7 @@ int		viewwindowx;
 int		viewwindowy; 
 pixel_t*		ylookup[MAXHEIGHT];
 int		columnofs[MAXWIDTH]; 
+static const int	linesize = SCREENWIDTH;
 
 // Color tables for different players,
 //  translate a limited part to another
@@ -95,6 +87,7 @@ int			dc_yl;
 int			dc_yh; 
 fixed_t			dc_iscale; 
 fixed_t			dc_texturemid;
+int			dc_texheight; // [crispy] Tutti-Frutti fix
 
 // first pixel in a column (possibly virtual) 
 byte*			dc_source;		
@@ -109,50 +102,121 @@ int			dccount;
 // Thus a special case loop for very fast rendering can
 //  be used. It has also been used with Wolfenstein 3D.
 // 
+
+// [crispy] replace R_DrawColumn() with Lee Killough's implementation
+// found in MBF to fix Tutti-Frutti, taken from mbfsrc/R_DRAW.C:99-1979
+
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
+//
+// $Id: r_draw.c,v 1.16 1998/05/03 22:41:46 killough Exp $
+//
+//  Copyright (C) 1999 by
+//  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
+//
+//  This program is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License
+//  as published by the Free Software Foundation; either version 2
+//  of the License, or (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+//  02111-1307, USA.
+//
+// DESCRIPTION:
+//      The actual span/column drawing functions.
+//      Here find the main potential for optimization,
+//       e.g. inline assembly, different algorithms.
+//
+//-----------------------------------------------------------------------------
+
 void R_DrawColumn (void) 
 { 
-    int			count; 
-    pixel_t*		dest;
-    fixed_t		frac;
-    fixed_t		fracstep;	 
- 
-    count = dc_yh - dc_yl; 
+  int              count;
+  register pixel_t *dest;            // killough
+  register fixed_t frac;            // killough
+  fixed_t          fracstep;
 
-    // Zero length, column does not exceed a pixel.
-    if (count < 0) 
-	return; 
-				 
-#ifdef RANGECHECK 
-    if ((unsigned)dc_x >= SCREENWIDTH
-	|| dc_yl < 0
-	|| dc_yh >= SCREENHEIGHT) 
-	I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x); 
-#endif 
+  count = dc_yh - dc_yl + 1;
 
-    // Framebuffer destination address.
-    // Use ylookup LUT to avoid multiply with ScreenWidth.
-    // Use columnofs LUT for subwindows? 
-    dest = ylookup[dc_yl] + columnofs[dc_x];  
+  if (count <= 0)    // Zero length, column does not exceed a pixel.
+    return;
 
-    // Determine scaling,
-    //  which is the only mapping to be done.
-    fracstep = dc_iscale; 
-    frac = dc_texturemid + (dc_yl-centery)*fracstep; 
+#ifdef RANGECHECK
+  if ((unsigned)dc_x >= SCREENWIDTH
+      || dc_yl < 0
+      || dc_yh >= SCREENHEIGHT)
+    I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+#endif
 
-    // Inner loop that does the actual texture mapping,
-    //  e.g. a DDA-lile scaling.
-    // This is as fast as it gets.
-    do 
-    {
-	// Re-map color indices from wall texture column
-	//  using a lighting/special effects LUT.
-	*dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-	
-	dest += SCREENWIDTH; 
-	frac += fracstep;
-	
-    } while (count--); 
-} 
+  // Framebuffer destination address.
+  // Use ylookup LUT to avoid multiply with ScreenWidth.
+  // Use columnofs LUT for subwindows?
+
+  dest = ylookup[dc_yl] + columnofs[dc_x];
+
+  // Determine scaling, which is the only mapping to be done.
+
+  fracstep = dc_iscale;
+  frac = dc_texturemid + (dc_yl-centery)*fracstep;
+
+  // Inner loop that does the actual texture mapping,
+  //  e.g. a DDA-lile scaling.
+  // This is as fast as it gets.       (Yeah, right!!! -- killough)
+  //
+  // killough 2/1/98: more performance tuning
+
+  {
+    register const byte *source = dc_source;
+    register const lighttable_t *colormap = dc_colormap;
+    register int heightmask = dc_texheight-1;
+    if (dc_texheight & heightmask)   // not a power of 2 -- killough
+      {
+        heightmask++;
+        heightmask <<= FRACBITS;
+
+        if (frac < 0)
+          while ((frac += heightmask) < 0);
+        else
+          while (frac >= heightmask)
+            frac -= heightmask;
+
+        do
+          {
+            // Re-map color indices from wall texture column
+            //  using a lighting/special effects LUT.
+
+            // heightmask is the Tutti-Frutti fix -- killough
+
+            *dest = colormap[source[frac>>FRACBITS]];
+            dest += linesize;                     // killough 11/98
+            if ((frac += fracstep) >= heightmask)
+              frac -= heightmask;
+          }
+        while (--count);
+      }
+    else
+      {
+        while ((count-=2)>=0)   // texture height is a power of 2 -- killough
+          {
+            *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+            dest += linesize;   // killough 11/98
+            frac += fracstep;
+            *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+            dest += linesize;   // killough 11/98
+            frac += fracstep;
+          }
+        if (count & 1)
+          *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+      }
+  }
+}
 
 
 
@@ -563,7 +627,7 @@ void R_DrawTranslatedColumnLow (void)
     } while (count--); 
 } 
 
-lighttable_t dc_translucency = 0xa9ffffff;
+extern lighttable_t dc_translucency;
 
 void R_DrawTLColumn (void)
 {
@@ -602,6 +666,7 @@ void R_DrawTLColumn (void)
     } while (count--);
 }
 
+// [crispy] draw translucent column, low-resolution version
 void R_DrawTLColumnLow (void)
 {
     int			count;
@@ -727,7 +792,7 @@ int			dscount;
 // Draws the actual span.
 void R_DrawSpan (void) 
 { 
-    unsigned int position, step;
+    //unsigned int position, step;
     pixel_t *dest;
     int count;
     int spot;
@@ -750,10 +815,12 @@ void R_DrawSpan (void)
     // each 16-bit part, the top 6 bits are the integer part and the
     // bottom 10 bits are the fractional part of the pixel position.
 
+/*
     position = ((ds_xfrac << 10) & 0xffff0000)
              | ((ds_yfrac >> 6)  & 0x0000ffff);
     step = ((ds_xstep << 10) & 0xffff0000)
          | ((ds_ystep >> 6)  & 0x0000ffff);
+*/
 
     dest = ylookup[ds_y] + columnofs[ds_x1];
 
@@ -763,15 +830,18 @@ void R_DrawSpan (void)
     do
     {
 	// Calculate current texture index in u,v.
-        ytemp = (position >> 4) & 0x0fc0;
-        xtemp = (position >> 26);
+        // [crispy] fix flats getting more distorted the closer they are to the right
+        ytemp = (ds_yfrac >> 10) & 0x0fc0;
+        xtemp = (ds_xfrac >> 16) & 0x3f;
         spot = xtemp | ytemp;
 
 	// Lookup pixel from flat texture tile,
 	//  re-index using light/colormap.
 	*dest++ = ds_colormap[ds_source[spot]];
 
-        position += step;
+        //position += step;
+        ds_xfrac += ds_xstep;
+        ds_yfrac += ds_ystep;
 
     } while (count--);
 }

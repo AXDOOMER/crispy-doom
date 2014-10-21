@@ -1,7 +1,5 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -12,11 +10,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
 //
 // Network server code
 //
@@ -412,7 +405,7 @@ static void NET_SV_SendWaitingData(net_client_t *client)
     // If no controller found (?), send the details that the client
     // is expecting anyway.
 
-    if (controller != NULL)
+    if (controller == NULL)
     {
         controller = client;
     }
@@ -619,7 +612,9 @@ static void NET_SV_ParseSYN(net_packet_t *packet,
         return;
     }
 
-    if (strcmp(client_version, PACKAGE_STRING) != 0)
+    // [crispy] allow Chocolate Doom 2.0.0 clients to connect to Crispy Doom servers
+    if (strcmp(client_version, PACKAGE_STRING) != 0 &&
+        strcmp(client_version, "Chocolate Doom 2.0.0") != 0)
     {
         //!
         // @category net

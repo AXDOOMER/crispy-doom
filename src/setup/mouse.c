@@ -1,7 +1,5 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
-// Copyright(C) 2006 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -12,11 +10,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
 //
 
 #include <stdlib.h>
@@ -40,6 +33,7 @@ static int mouse_threshold = 10;
 static int mouseSensitivity_y = 5;
 static float mouse_acceleration_y = 1.0;
 static int mouse_threshold_y = 0;
+static int mouse_y_invert = 0;
 static int grabmouse = 1;
 
 int novert = 1;
@@ -163,6 +157,7 @@ void ConfigMouse(void)
                    TXT_NewFloatSpinControl(&mouse_acceleration_y, 1.0, 5.0),
                    TXT_NewLabel("Acceleration threshold (v)"),
                    TXT_NewSpinControl(&mouse_threshold_y, 0, 32),
+                   TXT_NewCheckBox("Invert mouse (v)", &mouse_y_invert),
                    NULL);
     }
     else
@@ -198,6 +193,7 @@ void BindMouseVariables(void)
     M_BindVariable("mouse_sensitivity_y",  &mouseSensitivity_y);
     M_BindVariable("mouse_acceleration_y", &mouse_acceleration_y);
     M_BindVariable("mouse_threshold_y",    &mouse_threshold_y);
+    M_BindVariable("mouse_y_invert",       &mouse_y_invert);
     }
     M_BindVariable("grabmouse",            &grabmouse);
 }

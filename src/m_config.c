@@ -1,9 +1,7 @@
-// Emacs style mode select   -*- C++ -*- 
-//-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 1993-2008 Raven Software
-// Copyright(C) 2005 Simon Howard
+// Copyright(C) 2005-2014 Simon Howard
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,15 +13,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-// 02111-1307, USA.
-//
 // DESCRIPTION:
 //    Configuration file interface.
 //
-//-----------------------------------------------------------------------------
 
 
 #include <stdio.h>
@@ -199,16 +191,40 @@ static default_t	doom_defaults_list[] =
     CONFIG_VARIABLE_KEY(key_down),
 
     //!
+    // Keyboard key to move forward (alternative).
+    //
+
+    CONFIG_VARIABLE_KEY(key_alt_up),
+
+    //!
+    // Keyboard key to move backward (alternative).
+    //
+
+    CONFIG_VARIABLE_KEY(key_alt_down),
+
+    //!
     // Keyboard key to strafe left.
     //
 
     CONFIG_VARIABLE_KEY(key_strafeleft),
 
     //!
+    // Keyboard key to strafe left (alternative).
+    //
+
+    CONFIG_VARIABLE_KEY(key_alt_strafeleft),
+
+    //!
     // Keyboard key to strafe right.
     //
 
     CONFIG_VARIABLE_KEY(key_straferight),
+
+    //!
+    // Keyboard key to strafe right (alternative).
+    //
+
+    CONFIG_VARIABLE_KEY(key_alt_straferight),
 
     //!
     // @game strife
@@ -469,27 +485,30 @@ static default_t	doom_defaults_list[] =
     CONFIG_VARIABLE_INT(use_joystick),
 
     //!
-    // Joystick button to fire the current weapon.
+    // Joystick virtual button that fires the current weapon.
     //
 
     CONFIG_VARIABLE_INT(joyb_fire),
 
     //!
-    // Joystick button to fire the current weapon.
+    // Joystick virtual button that makes the player strafe while
+    // held down.
     //
 
     CONFIG_VARIABLE_INT(joyb_strafe),
 
     //!
-    // Joystick button to "use" an object, eg. a door or switch.
+    // Joystick virtual button to "use" an object, eg. a door or switch.
     //
 
     CONFIG_VARIABLE_INT(joyb_use),
 
     //!
-    // Joystick button to make the player run.
+    // Joystick virtual button that makes the player run while held
+    // down.
     //
-    // If this has a value of 20 or greater, the player will always run.
+    // If this has a value of 20 or greater, the player will always run,
+    // even if use_joystick is 0.
     //
 
     CONFIG_VARIABLE_INT(joyb_speed),
@@ -497,7 +516,7 @@ static default_t	doom_defaults_list[] =
     //!
     // @game hexen strife
     //
-    // Joystick button to jump.
+    // Joystick virtual button that makes the player jump.
     //
 
     CONFIG_VARIABLE_INT(joyb_jump),
@@ -761,6 +780,8 @@ static default_t extra_defaults_list[] =
 
     //!
     // Color depth of the screen, in bits.
+    // If this is set to zero, the color depth will be automatically set
+    // on startup to the machine's default/native color depth.
     //
 
     CONFIG_VARIABLE_INT(screen_bpp),
@@ -954,25 +975,114 @@ static default_t extra_defaults_list[] =
     CONFIG_VARIABLE_INT(joystick_y_invert),
 
     //!
-    // Joystick button to strafe left.
+    // Joystick axis to use to for strafing movement.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_strafe_axis),
+
+    //!
+    // If non-zero, movement on the joystick axis used for strafing
+    // is inverted.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_strafe_invert),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #0.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button0),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #1.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button1),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #2.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button2),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #3.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button3),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #4.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button4),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #5.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button5),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #6.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button6),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #7.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button7),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #8.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button8),
+
+    //!
+    // The physical joystick button that corresponds to joystick
+    // virtual button #9.
+    //
+
+    CONFIG_VARIABLE_INT(joystick_physical_button9),
+
+    //!
+    // Joystick virtual button to make the player strafe left.
     //
 
     CONFIG_VARIABLE_INT(joyb_strafeleft),
 
     //!
-    // Joystick button to strafe right.
+    // Joystick virtual button to make the player strafe right.
     //
 
     CONFIG_VARIABLE_INT(joyb_straferight),
 
     //!
-    // Joystick button to cycle to the previous weapon.
+    // Joystick virtual button to activate the menu.
+    //
+
+    CONFIG_VARIABLE_INT(joyb_menu_activate),
+
+    //!
+    // Joystick virtual button that cycles to the previous weapon.
     //
 
     CONFIG_VARIABLE_INT(joyb_prevweapon),
 
     //!
-    // Joystick button to cycle to the next weapon.
+    // Joystick virtual button that cycles to the next weapon.
     //
 
     CONFIG_VARIABLE_INT(joyb_nextweapon),
@@ -1205,6 +1315,18 @@ static default_t extra_defaults_list[] =
     //
 
     CONFIG_VARIABLE_KEY(key_spy),
+
+    //!
+    // Keyboard shortcut to go to next level.
+    //
+
+    CONFIG_VARIABLE_KEY(key_menu_nextlevel),
+
+    //!
+    // Keyboard shortcut to reload current level.
+    //
+
+    CONFIG_VARIABLE_KEY(key_menu_reloadlevel),
 
     //!
     // Keyboard shortcut to increase the screen size.
@@ -1496,6 +1618,27 @@ static default_t extra_defaults_list[] =
 
     //!
     // @game doom
+    // Quick 180° reverse.
+    //
+
+    CONFIG_VARIABLE_KEY(key_reverse),
+
+    //!
+    // @game doom
+    // Toggle always run.
+    //
+
+    CONFIG_VARIABLE_KEY(key_toggleautorun),
+
+    //!
+    // @game doom
+    // Invert vertical mouse movement.
+    //
+
+    CONFIG_VARIABLE_KEY(mouse_y_invert),
+
+    //!
+    // @game doom
     //
     // Enable high color rendering.
     //
@@ -1545,14 +1688,6 @@ static default_t extra_defaults_list[] =
     //!
     // @game doom
     //
-    // Change laser pointer color on target.
-    //
-
-    CONFIG_VARIABLE_INT(crispy_crosshair_highlight),
-
-    //!
-    // @game doom
-    //
     // Enable jumping.
     //
 
@@ -1573,6 +1708,30 @@ static default_t extra_defaults_list[] =
     //
 
     CONFIG_VARIABLE_INT(crispy_mouselook),
+
+    //!
+    // @game doom
+    //
+    // Enable vertical aiming.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_freeaim),
+
+    //!
+    // @game doom
+    //
+    // Players may walk over and under shootable things.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_overunder),
+
+    //!
+    // @game doom
+    //
+    // Enable weapon recoil.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_recoil),
 };
 
 static default_collection_t extra_defaults =
