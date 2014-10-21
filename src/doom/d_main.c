@@ -324,7 +324,7 @@ void D_Display (void)
 
 	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
 	{
-            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50); // colormaps[menushade * 256 + *b];
+            I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50 / 16 * menushade);
 	}
 
 	if (menushade < 16)
