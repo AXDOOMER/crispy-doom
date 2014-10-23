@@ -197,6 +197,7 @@ void M_ChangeSensitivity(int choice);
 static void M_ChangeSensitivity_y(int choice);
 static void M_MouseInvert(int choice);
 static void M_MouseLook(int choice);
+static void M_CrispyToggleHighcolor(int choice);
 static void M_CrispyToggleTranslucency(int choice);
 static void M_CrispyToggleColoredhud(int choice);
 static void M_CrispyToggleAutomapstats(int choice);
@@ -449,6 +450,7 @@ static menu_t  MouseDef =
 // [crispy] crispness menu
 enum
 {
+    crispness_highcolor,
     crispness_translucency,
     crispness_coloredhud,
     crispness_automapstats,
@@ -464,6 +466,7 @@ enum
 
 static menuitem_t CrispnessMenu[]=
 {
+    {1,"",	M_CrispyToggleHighcolor,'t'},
     {1,"",	M_CrispyToggleTranslucency,'t'},
     {1,"",	M_CrispyToggleColoredhud,'c'},
     {1,"",	M_CrispyToggleAutomapstats,'a'},
@@ -1207,6 +1210,12 @@ static void M_DrawCrispness(void)
     M_WriteText(160 - M_StringWidth("Crispness") / 2, 20, crispy_menu_text);
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
+               "%sEnable true color transitions: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
+               crispy_highcolor ? "On" : "Off");
+    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_highcolor + 6,
+                crispy_menu_text);
+
+    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
                "%sEnable translucency: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
                crispy_translucency ? "On" : "Off");
     M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_translucency + 6,
@@ -1515,6 +1524,14 @@ static void M_MouseLook(int choice)
     crispy_mouselook = 1 - crispy_mouselook;
 
     players2[consoleplayer].lookdir = 0;
+}
+
+static void M_CrispyToggleHighcolor(int choice)
+{
+    choice = 0;
+    crispy_highcolor = 1 - crispy_highcolor;
+
+    R_InitColormaps(0);
 }
 
 static void M_CrispyToggleTranslucency(int choice)

@@ -812,12 +812,13 @@ void R_InitColormaps (int pal)
     // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
     static lighttable_t colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
     static byte *doompalette, *doomcolormap;
+    static int reinit;
 
     int gamma, p, c, i;
     byte a, r, g, b;
     float scale;
 
-    if (!colormaptable[0][0][0][0])
+    if (!colormaptable[0][0][0][0] || reinit != crispy_highcolor)
     {
       for (gamma = 0; gamma < 5; gamma++)
       {
@@ -843,7 +844,7 @@ void R_InitColormaps (int pal)
           }
           else
           {
-            for (c = 0; c <= NUMCOLORMAPS - 1; c++)
+            for (c = 0; c < NUMCOLORMAPS; c++)
             {
               scale = 1. - 1. * c / NUMCOLORMAPS;
 
@@ -858,7 +859,6 @@ void R_InitColormaps (int pal)
             }
 
             // Invulnerability
-            c = NUMCOLORMAPS;
             doompalette -= 768 * p;
             for (i = 0; i < 256; i++)
             {
@@ -911,6 +911,8 @@ void R_InitColormaps (int pal)
     }
 
     W_ReleaseLumpNum(lump);
+
+    reinit = crispy_highcolor;
 }
 
 
