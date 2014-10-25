@@ -52,7 +52,7 @@ byte *tinttable = NULL;
 byte *tranmap = NULL;
 byte *dp_translation = NULL;
 boolean dp_translucent = false;
-lighttable_t dc_translucency = 0xa9ffffff;
+const lighttable_t dc_translucency = 0xa8ffffff;
 
 // villsa [STRIFE] Blending table used for Strife
 byte *xlatab = NULL;
@@ -148,6 +148,7 @@ void V_SetPatchClipCallback(vpatchclipfunc_t func)
 // V_DrawPatch
 // Masks a column based masked pic to the screen. 
 //
+extern pixel_t I_Desaturate(pixel_t a);
 
 void V_DrawPatch(int x, int y, patch_t *patch)
 { 
@@ -269,11 +270,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
                 if (hires)
                 {
                     sourcergb = colormaps[*source];
-                    *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                    *dest = I_Desaturate(sourcergb);
                     dest += SCREENWIDTH;
                 }
                 sourcergb = colormaps[*source++];
-                *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                    *dest = I_Desaturate(sourcergb);
                 dest += SCREENWIDTH;
             }
           }

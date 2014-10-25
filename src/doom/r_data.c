@@ -818,6 +818,8 @@ void R_InitColormaps (int pal)
     byte a, r, g, b;
     float scale;
 
+            doomcolormap = W_CacheLumpName("COLORMAP", PU_CACHE);
+
     if (!colormaptable[0][0][0][0] || reinit != crispy_highcolor)
     {
       for (gamma = 0; gamma < 5; gamma++)
@@ -828,7 +830,6 @@ void R_InitColormaps (int pal)
 
           if (!crispy_highcolor)
           {
-            doomcolormap = W_CacheLumpName("COLORMAP", PU_CACHE);
 
             for (c = 0; c <= NUMCOLORMAPS; c++)
             {
@@ -838,7 +839,7 @@ void R_InitColormaps (int pal)
                 g = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 1]];
                 b = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 2]];
 
-                colormaptable[gamma][p][c][i] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0);
+                colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
               }
             }
           }
@@ -846,15 +847,16 @@ void R_InitColormaps (int pal)
           {
             for (c = 0; c < NUMCOLORMAPS; c++)
             {
+              // TODO: scale down to the darkest color in the current gamma
               scale = 1. - 1. * c / NUMCOLORMAPS;
 
               for (i = 0; i < 256; i++)
               {
-                r = gammatable[gamma][doompalette[3 * i + 0]] * scale + (1. * gamma * c / NUMCOLORMAPS);
-                g = gammatable[gamma][doompalette[3 * i + 1]] * scale + (1. * gamma * c / NUMCOLORMAPS);
-                b = gammatable[gamma][doompalette[3 * i + 2]] * scale + (1. * gamma * c / NUMCOLORMAPS);
+                r = gammatable[gamma][doompalette[3 * i + 0]] * scale;
+                g = gammatable[gamma][doompalette[3 * i + 1]] * scale;
+                b = gammatable[gamma][doompalette[3 * i + 2]] * scale;
 
-                colormaptable[gamma][p][c][i] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0);
+                colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
               }
             }
 
@@ -867,7 +869,7 @@ void R_InitColormaps (int pal)
                          doompalette[3 * i + 2]) / 3;
               r = g = b = gammatable[gamma][a];
 
-              colormaptable[gamma][p][c][i] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0);
+              colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
             }
           }
         }

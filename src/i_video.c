@@ -2241,11 +2241,34 @@ pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
     g2 = (b & 0x0000ff00) >> 8;
     b2 = (b & 0x000000ff);
 
-    rr = (a1 * r1 + (255 - a1) * r2) / 0xff;
-    gr = (a1 * g1 + (255 - a1) * g2) / 0xff;
-    br = (a1 * b1 + (255 - a1) * b2) / 0xff;
+    rr = ((short) a1 * r1 + (short) (0xff - a1) * r2) / 0xff;
+    gr = ((short) a1 * g1 + (short) (0xff - a1) * g2) / 0xff;
+    br = ((short) a1 * b1 + (short) (0xff - a1) * b2) / 0xff;
 
-    return ((0xff << 24) + (rr << 16) + (gr << 8) + br);
+    return 0xff000000 + (rr << 16) + (gr << 8) + br;
+}
+
+#define RLUM    (0.3086)
+#define GLUM    (0.6094)
+#define BLUM    (0.0820)
+
+extern lighttable_t dc_translucency;
+
+pixel_t I_Desaturate (pixel_t a)
+{
+    byte r1, g1, b1;
+    byte rr, gr, br;
+    pixel_t b;
+
+    r1 = (a & 0x00ff0000) >> 16;
+    g1 = (a & 0x0000ff00) >> 8;
+    b1 = (a & 0x000000ff);
+
+    rr = gr = br =
+	RLUM * r1 + GLUM * g1 + BLUM * b1;
+
+    b = 0xff000000 + (br<<8);
+    return b;
 }
 
 /*
