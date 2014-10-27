@@ -193,6 +193,8 @@ void NET_WriteTiccmdDiff(net_packet_t *packet, net_ticdiff_t *diff,
     {
         NET_WriteInt8(packet, diff->cmd.buttons2);
         NET_WriteInt8(packet, diff->cmd.inventory);
+// [crispy] TODO post-release
+//        NET_WriteInt16(packet, diff->cmd.inventory);
     }
 }
 
@@ -278,6 +280,8 @@ boolean NET_ReadTiccmdDiff(net_packet_t *packet, net_ticdiff_t *diff,
         diff->cmd.buttons2 = val;
 
         if (!NET_ReadInt8(packet, &val))
+// [crispy] TODO post-release
+//        if (!NET_ReadInt16(packet, &val))
             return false;
         diff->cmd.inventory = val;
     }

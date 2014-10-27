@@ -37,7 +37,7 @@
 extern int dirtybox[4];
 
 extern byte *tinttable;
-extern byte *dp_translation;
+extern uint32_t *dp_translation;
 extern boolean dp_translucent;
 
 #define CB_DARK25      0x40000000

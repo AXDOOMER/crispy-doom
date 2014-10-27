@@ -43,13 +43,11 @@ enum
     CR_GREEN,
     CR_GOLD,
     CR_RED,
-    CR_BLUE2,
+    CR_BLUE,
     CRMAX
 } cr_t;
 
-extern byte *cr[CRMAX];
+extern uint32_t *cr[CRMAX];
 extern char **crstr;
-
-extern byte *tranmap;
 
 #endif // __V_TRANS__

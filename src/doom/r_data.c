@@ -888,28 +888,28 @@ void R_InitColormaps (int pal)
     int lump = W_GetNumForName(DEH_String("COLORMAP"));
     byte *colormaps_wad = W_CacheLumpNum(lump, PU_STATIC);
 
-    // [crispy] initialize colormaps strings array
+    // [crispy] initialize color translation and color strings tables
     {
+	byte *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
 	char c[3];
-	int i;
+	int i, j;
+	extern uint32_t V_Colorize (byte *playpal, int cr, byte source);
 
 	if (!crstr)
 	    crstr = malloc(CRMAX * sizeof(*crstr));
 
 	for (i = 0; i < CRMAX; i++)
 	{
+	    for (j = 0; j < 256; j++)
+	    {
+		cr[i][j] = V_Colorize(playpal, i, j);
+	    }
+
 	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);
-	    crstr[i] = strdup(c);
+	    crstr[i] = M_StringDuplicate(c);
 	}
 
-	// [crispy] fill cr_none[] colormap with self-references
-	for (i = 0; i < 256; i++)
-	{
-	    cr[CR_NONE][i] = i;
-	}
-
-	// [crispy] fill cr_dark[] colormap with colormaps[16*256] content
-	memcpy(cr[CR_DARK], &colormaps_wad[16*256], 256);
+	Z_ChangeTag(playpal, PU_CACHE);
     }
 
     W_ReleaseLumpNum(lump);
