@@ -162,7 +162,7 @@ static void rgb_to_hsv(vect *rgb, vect *hsv)
     hsv->z = v;
 }
 
-uint32_t V_Colorize (byte *playpal, int cr, byte source)
+uint32_t V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray)
 {
     vect rgb, hsv;
     extern int FindNearestColor(byte *palette, int r, int g, int b);
@@ -188,9 +188,9 @@ uint32_t V_Colorize (byte *playpal, int cr, byte source)
     else
     {
 	// [crispy] hack some colors into gray shades
-	if (hsv.y < CTOLERANCE)
+	if (hsv.y < CTOLERANCE && coloredgray)
 	{
-		hsv.y = 1.0;
+	    hsv.y = 1.0;
 	}
 
 	if (cr == CR_GREEN)
