@@ -167,12 +167,16 @@ uint32_t V_Colorize (byte *playpal, int cr, byte source)
     vect rgb, hsv;
     extern int FindNearestColor(byte *palette, int r, int g, int b);
 
-    if (cr == CR_NONE)
-	return source;
+    rgb.x = playpal[3 * source + 0];
+    rgb.y = playpal[3 * source + 1];
+    rgb.z = playpal[3 * source + 2];
 
-    rgb.x = playpal[3 * source + 0] / 255.;
-    rgb.y = playpal[3 * source + 1] / 255.;
-    rgb.z = playpal[3 * source + 2] / 255.;
+    if (cr == CR_NONE)
+	return 0xff000000 + ((int) rgb.x << 16) + ((int) rgb.y << 8) + (int) rgb.z;
+
+    rgb.x /= 255.;
+    rgb.y /= 255.;
+    rgb.z /= 255.;
 
     rgb_to_hsv(&rgb, &hsv);
 
@@ -186,15 +190,7 @@ uint32_t V_Colorize (byte *playpal, int cr, byte source)
 	// [crispy] hack some colors into gray shades
 	if (hsv.y < CTOLERANCE)
 	{
-	    if (hsv.z < 0.5)
-	    {
 		hsv.y = 1.0;
-	    }
-	    else
-	    {
-		hsv.y = 1.0 - hsv.z;
-		hsv.z = 1.0;
-	    }
 	}
 
 	if (cr == CR_GREEN)
