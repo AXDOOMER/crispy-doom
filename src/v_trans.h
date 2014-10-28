@@ -47,7 +47,7 @@ enum
     CRMAX
 } cr_t;
 
-extern uint32_t *cr[CRMAX];
+extern byte *cr[CRMAX];
 extern char **crstr;
 
 #endif // __V_TRANS__

@@ -1210,7 +1210,7 @@ static void M_DrawCrispness(void)
     M_WriteText(160 - M_StringWidth("Crispness") / 2, 20, crispy_menu_text);
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sEnable true color transitions: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
+               "%sEnable high color rendering: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
                crispy_highcolor ? "On" : "Off");
     M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_highcolor + 6,
                 crispy_menu_text);
@@ -1531,7 +1531,7 @@ static void M_CrispyToggleHighcolor(int choice)
     choice = 0;
     crispy_highcolor = 1 - crispy_highcolor;
 
-    R_InitColormaps(0);
+    R_InitColormaps(INT_MAX);
 }
 
 static void M_CrispyToggleTranslucency(int choice)

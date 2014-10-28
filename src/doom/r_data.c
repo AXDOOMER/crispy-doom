@@ -811,110 +811,100 @@ void R_InitColormaps (int pal)
 {
     // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
     static lighttable_t colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
-    static byte *doompalette, *doomcolormap;
-    static int reinit;
+    byte *doompalette, *doomcolormap;
 
     int gamma, p, c, i;
     byte a, r, g, b;
     float scale;
 
-            doomcolormap = W_CacheLumpName("COLORMAP", PU_CACHE);
-
-    if (!colormaptable[0][0][0][0] || reinit != crispy_highcolor)
+    if (!colormaptable[0][0][0][0] || pal == INT_MAX)
     {
-      for (gamma = 0; gamma < 5; gamma++)
-      {
-        for (p = 0; p < 14; p++)
-        {
-          doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE) + 768 * p;
+	pal = 0;
 
-          if (!crispy_highcolor)
-          {
+	for (gamma = 0; gamma < 5; gamma++)
+	{
+	    doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE);
 
-            for (c = 0; c <= NUMCOLORMAPS; c++)
-            {
-              for (i = 0; i < 256; i++)
-              {
-                r = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 0]];
-                g = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 1]];
-                b = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 2]];
+	    for (p = 0; p < 14; p++)
+	    {
+		if (!crispy_highcolor)
+		{
+		    doomcolormap = W_CacheLumpName("COLORMAP", PU_CACHE);
 
-                colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
-              }
-            }
-          }
-          else
-          {
-            for (c = 0; c < NUMCOLORMAPS; c++)
-            {
-              // TODO: scale down to the darkest color in the current gamma
-              scale = 1. - 1. * c / NUMCOLORMAPS;
+		    for (c = 0; c <= NUMCOLORMAPS; c++)
+		    {
+			for (i = 0; i < 256; i++)
+			{
+			    r = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 0]];
+			    g = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 1]];
+			    b = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 2]];
 
-              for (i = 0; i < 256; i++)
-              {
-                r = gammatable[gamma][doompalette[3 * i + 0]] * scale;
-                g = gammatable[gamma][doompalette[3 * i + 1]] * scale;
-                b = gammatable[gamma][doompalette[3 * i + 2]] * scale;
+			    colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
+			}
+		    }
+		}
+		else
+		{
+		    for (c = 0; c < NUMCOLORMAPS; c++)
+		    {
+			// TODO: scale down to the darkest color in the current gamma
+			scale = 1. - 1. * c / NUMCOLORMAPS;
 
-                colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
-              }
-            }
+			for (i = 0; i < 256; i++)
+			{
+			    r = gammatable[gamma][doompalette[3 * i + 0]] * scale + (1. - scale) * gamma;
+			    g = gammatable[gamma][doompalette[3 * i + 1]] * scale + (1. - scale) * gamma;
+			    b = gammatable[gamma][doompalette[3 * i + 2]] * scale + (1. - scale) * gamma;
 
-            // Invulnerability
-            doompalette -= 768 * p;
-            for (i = 0; i < 256; i++)
-            {
-              a = 255 - (doompalette[3 * i + 0] +
-                         doompalette[3 * i + 1] +
-                         doompalette[3 * i + 2]) / 3;
-              r = g = b = gammatable[gamma][a];
+			    colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
+			}
+		    }
 
-              colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
-            }
-          }
-        }
-      }
-    }
+		    // Invulnerability
+		    for (i = 0; i < 256; i++)
+		    {
+			a = 255 - (doompalette[3 * i + 0] +
+			           doompalette[3 * i + 1] +
+			           doompalette[3 * i + 2]) / 3;
+			r = g = b = gammatable[gamma][a];
 
-    if (!colormaps)
-    {
-        colormaps = (lighttable_t*) Z_Malloc ((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+			colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
+		    }
+		}
+
+	    doompalette += 768;
+	    }
+	}
+
+	if (!colormaps)
+	{
+	    colormaps = (lighttable_t*) Z_Malloc ((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+	}
     }
 
     memcpy(colormaps, *colormaptable[usegamma][pal], (NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t));
 
-    // Load in the light tables, 
-    //  256 byte align tables.
-    int lump = W_GetNumForName(DEH_String("COLORMAP"));
-    byte *colormaps_wad = W_CacheLumpNum(lump, PU_STATIC);
-
     // [crispy] initialize color translation and color strings tables
+    if (!crstr)
     {
-	byte *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
-	char c[3];
-	int i, j;
+	char s[3];
 	extern uint32_t V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray);
 
-	if (!crstr)
-	    crstr = malloc(CRMAX * sizeof(*crstr));
+	doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE);
+
+	crstr = malloc(CRMAX * sizeof(*crstr));
 
 	for (i = 0; i < CRMAX; i++)
 	{
-	    for (j = 0; j < 256; j++)
+	    for (c = 0; c < 256; c++)
 	    {
-		cr[i][j] = V_Colorize(playpal, i, j, crispy_coloredgray);
+		cr[i][c] = V_Colorize(doompalette, i, c, crispy_coloredgray);
 	    }
 
-	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);
-	    crstr[i] = M_StringDuplicate(c);
+	    M_snprintf(s, sizeof(s), "\x1b%c", '0' + i);
+	    crstr[i] = M_StringDuplicate(s);
 	}
-
-	Z_ChangeTag(playpal, PU_CACHE);
     }
-
-    W_ReleaseLumpNum(lump);
-
-    reinit = crispy_highcolor;
 }
 
 

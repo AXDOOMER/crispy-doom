@@ -26,24 +26,24 @@
 // by means of actual color space conversions in r_data:R_InitColormaps().
 
 // this one will be the identity matrix
-static uint32_t cr_none[256];
+static byte cr_none[256];
 // this one will be the ~50% darker matrix
-static uint32_t cr_dark[256];
-static uint32_t cr_gray[256];
-static uint32_t cr_green[256];
-static uint32_t cr_gold[256];
-static uint32_t cr_red[256];
-static uint32_t cr_blue[256];
+static byte cr_dark[256];
+static byte cr_gray[256];
+static byte cr_green[256];
+static byte cr_gold[256];
+static byte cr_red[256];
+static byte cr_blue[256];
 
-uint32_t *cr[] =
+byte *cr[] =
 {
-    (uint32_t *) &cr_none,
-    (uint32_t *) &cr_dark,
-    (uint32_t *) &cr_gray,
-    (uint32_t *) &cr_green,
-    (uint32_t *) &cr_gold,
-    (uint32_t *) &cr_red,
-    (uint32_t *) &cr_blue
+    (byte *) &cr_none,
+    (byte *) &cr_dark,
+    (byte *) &cr_gray,
+    (byte *) &cr_green,
+    (byte *) &cr_gold,
+    (byte *) &cr_red,
+    (byte *) &cr_blue
 };
 
 char **crstr = 0;
@@ -162,21 +162,17 @@ static void rgb_to_hsv(vect *rgb, vect *hsv)
     hsv->z = v;
 }
 
-uint32_t V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray)
+byte V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray)
 {
     vect rgb, hsv;
     extern int FindNearestColor(byte *palette, int r, int g, int b);
 
-    rgb.x = playpal[3 * source + 0];
-    rgb.y = playpal[3 * source + 1];
-    rgb.z = playpal[3 * source + 2];
-
     if (cr == CR_NONE)
-	return 0xff000000 + ((int) rgb.x << 16) + ((int) rgb.y << 8) + (int) rgb.z;
+	return source;
 
-    rgb.x /= 255.;
-    rgb.y /= 255.;
-    rgb.z /= 255.;
+    rgb.x = playpal[3 * source + 0] / 255.;
+    rgb.y = playpal[3 * source + 1] / 255.;
+    rgb.z = playpal[3 * source + 2] / 255.;
 
     rgb_to_hsv(&rgb, &hsv);
 
@@ -220,5 +216,5 @@ uint32_t V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray)
     rgb.y *= 255.;
     rgb.z *= 255.;
 
-    return 0xff000000 + ((int) rgb.x << 16) + ((int) rgb.y << 8) + (int) rgb.z;
+    return FindNearestColor(playpal, (int) rgb.x, (int) rgb.y, (int) rgb.z);
 }

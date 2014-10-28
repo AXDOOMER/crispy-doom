@@ -50,7 +50,7 @@
 
 byte *tinttable = NULL;
 byte *tranmap = NULL;
-uint32_t *dp_translation = NULL;
+byte *dp_translation = NULL;
 boolean dp_translucent = false;
 const lighttable_t dc_translucency = 0xa8ffffff;
 
@@ -239,10 +239,10 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             {
                 if (hires)
                 {
-                    *dest = dp_translation[*source];
+                    *dest = colormaps[dp_translation[*source]];
                     dest += SCREENWIDTH;
                 }
-                *dest = dp_translation[*source++];
+                *dest = colormaps[dp_translation[*source++]];
                 dest += SCREENWIDTH;
             }
           }
@@ -302,11 +302,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             {
                 if (hires)
                 {
-                    sourcergb = dp_translation[*source];
+                    sourcergb = colormaps[dp_translation[*source]];
                     *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
                     dest += SCREENWIDTH;
                 }
-                sourcergb = dp_translation[*source++];
+                sourcergb = colormaps[dp_translation[*source++]];
                 *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
                 dest += SCREENWIDTH;
             }
@@ -331,7 +331,6 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
     pixel_t *desttop;
     pixel_t *dest;
     byte *source; 
-    pixel_t sourcergb;
     int w, f;
  
     y -= SHORT(patch->topoffset); 

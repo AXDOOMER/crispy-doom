@@ -846,7 +846,7 @@ void AM_Ticker (void)
 //
 void AM_clearFB(int color)
 {
-    memset(fb, colormaps[color], f_w*f_h*sizeof(pixel_t));
+    memset(fb, colormaps[color], f_w*f_h*sizeof(pixel_t)); // [crispy] highcolor
 }
 
 
@@ -1020,7 +1020,7 @@ AM_drawFline
 	return;
     }
 
-#define PUTDOT(xx,yy,cc) fb[(yy)*f_w+(xx)]=(cc)
+#define PUTDOT(xx,yy,cc) fb[(yy)*f_w+(xx)]=(colormaps[cc]) // [crispy] highcolor
 
     dx = fl->b.x - fl->a.x;
     ax = 2 * (dx<0 ? -dx : dx);
@@ -1038,7 +1038,7 @@ AM_drawFline
 	d = ay - ax/2;
 	while (1)
 	{
-	    PUTDOT(x,y,colormaps[color]);
+	    PUTDOT(x,y,color);
 	    if (x == fl->b.x) return;
 	    if (d>=0)
 	    {
@@ -1054,7 +1054,7 @@ AM_drawFline
 	d = ax - ay/2;
 	while (1)
 	{
-	    PUTDOT(x, y, colormaps[color]);
+	    PUTDOT(x, y, color);
 	    if (y == fl->b.y) return;
 	    if (d >= 0)
 	    {
