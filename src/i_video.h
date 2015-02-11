@@ -157,7 +157,6 @@ extern byte *I_VideoBuffer;
 
 extern int screen_width;
 extern int screen_height;
-extern int screen_bpp;
 extern int fullscreen;
 extern int aspect_ratio_correct;
 extern int novert;
