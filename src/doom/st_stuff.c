@@ -396,7 +396,7 @@ cheatseq_t cheat_ammonokey = CHEAT("idfa", 0);
 cheatseq_t cheat_noclip = CHEAT("idspispopd", 0);
 cheatseq_t cheat_commercial_noclip = CHEAT("idclip", 0);
 
-cheatseq_t	cheat_powerup[7] =
+cheatseq_t	cheat_powerup[8] = // [crispy] idbehold0
 {
     CHEAT("idbeholdv", 0),
     CHEAT("idbeholds", 0),
@@ -405,6 +405,7 @@ cheatseq_t	cheat_powerup[7] =
     CHEAT("idbeholda", 0),
     CHEAT("idbeholdl", 0),
     CHEAT("idbehold", 0),
+    CHEAT("idbehold0", 0), // [crispy] idbehold0
 };
 
 cheatseq_t cheat_choppers = CHEAT("idchoppers", 0);
@@ -417,6 +418,7 @@ cheatseq_t cheat_massacre = CHEAT("tntem", 0);
 cheatseq_t cheat_hom = CHEAT("tnthom", 0);
 cheatseq_t cheat_notarget = CHEAT("notarget", 0);
 cheatseq_t cheat_spechits = CHEAT("spechits", 0);
+cheatseq_t cheat_nomomentum = CHEAT("nomomentum", 0);
 
 //
 // STATUS BAR CODE
@@ -586,6 +588,25 @@ ST_Responder (event_t* ev)
       // 'dqd' cheat for toggleable god mode
       if (cht_CheckCheat(&cheat_god, ev->data2))
       {
+	// [crispy] dead players are first respawned at the current position
+	mapthing_t mt = {0};
+	if (plyr->playerstate == PST_DEAD)
+	{
+	    signed int an;
+	    extern void P_SpawnPlayer (mapthing_t* mthing);
+
+	    mt.x = plyr->mo->x >> FRACBITS;
+	    mt.y = plyr->mo->y >> FRACBITS;
+	    mt.angle = plyr->mo->angle*(uint64_t)45/ANG45;
+	    mt.type = consoleplayer + 1;
+	    P_SpawnPlayer(&mt);
+
+	    // [crispy] spawn a teleport fog
+	    an = plyr->mo->angle >> ANGLETOFINESHIFT;
+	    P_SpawnMobj(plyr->mo->x+20*finecosine[an], plyr->mo->y+20*finesine[an], plyr->mo->z, MT_TFOG);
+	    S_StartSound(plyr, sfx_slop);
+	}
+
 	plyr->cheats ^= CF_GODMODE;
 	if (plyr->cheats & CF_GODMODE)
 	{
@@ -597,6 +618,10 @@ ST_Responder (event_t* ev)
 	}
 	else 
 	  plyr->message = DEH_String(STSTR_DQDOFF);
+
+	// [crispy] eat key press when respawning
+	if (mt.type)
+	    return true;
       }
       // 'fa' cheat for killer fucking arsenal
       else if (cht_CheckCheat(&cheat_ammonokey, ev->data2))
@@ -744,6 +769,18 @@ ST_Responder (event_t* ev)
 	           (plyr->cheats & CF_NOTARGET) ? "ON" : "OFF");
 	plyr->message = msg;
       }
+      // [crispy] implement "nomomentum" cheat, ne debug aid -- pretty useless, though
+      else if (cht_CheckCheat(&cheat_nomomentum, ev->data2))
+      {
+	static char msg[32];
+
+	plyr->cheats ^= CF_NOMOMENTUM;
+
+	M_snprintf(msg, sizeof(msg), "Nomomentum Mode %s%s",
+	           crstr[CR_GREEN],
+	           (plyr->cheats & CF_NOMOMENTUM) ? "ON" : "OFF");
+	plyr->message = msg;
+      }
       // 'behold?' power-up cheats
       for (i=0;i<6;i++)
       {
@@ -758,6 +795,12 @@ ST_Responder (event_t* ev)
 	  
 	  plyr->message = DEH_String(STSTR_BEHOLDX);
 	}
+      }
+      // [crispy] idbehold0
+      if (cht_CheckCheat(&cheat_powerup[7], ev->data2))
+      {
+	memset(plyr->powers, 0, sizeof(plyr->powers));
+	plyr->message = DEH_String(STSTR_BEHOLDX);
       }
       
       // 'behold' power-up menu
@@ -883,13 +926,19 @@ ST_Responder (event_t* ev)
       if ((map == 0) && (buf[0] - '0' == 0)) // [crispy] IDCLEV00 restarts current map
 	map = gamemap;
       else
+      if ((map == 0) && crispy_havee1m10 && epsd == 1) // [crispy] support E1M10 "Sewers"
+	map = 10;
+      else
       if (map < 1)
 	return false;
 
       // Ohmygod - this is not going to work.
       if ((gamemode == retail)
 	  && ((epsd > 4) || (map > 9)))
+      {
+	if (!(crispy_havee1m10 && epsd == 1 && map == 10)) // [crispy] support E1M10 "Sewers"
 	return false;
+      }
 
       if ((gamemode == registered)
 	  && ((epsd > 3) || (map > 9)))
@@ -1395,12 +1444,16 @@ void ST_drawWidgets(boolean refresh)
     }
 
     dp_translation = ST_WidgetColor(hudcolor_health);
+    // [crispy] in the Crispy HUD, health blinks if below 10%
+    if (screenblocks < CRISPY_HUD || automapactive || plyr->health > 9 || (gametic & TICRATE/2) > TICRATE/4)
+    {
     STlib_updatePercent(&w_health, refresh || screenblocks >= CRISPY_HUD);
+    }
     dp_translation = ST_WidgetColor(hudcolor_armor);
     STlib_updatePercent(&w_armor, refresh || screenblocks >= CRISPY_HUD);
     V_ClearDPTranslation();
 
-    if (screenblocks < CRISPY_HUD || automapactive)
+    if (screenblocks < CRISPY_HUD || (automapactive && !crispy_automapoverlay))
     {
     STlib_updateBinIcon(&w_armsbg, refresh);
     }
@@ -1408,7 +1461,7 @@ void ST_drawWidgets(boolean refresh)
     for (i=0;i<6;i++)
 	STlib_updateMultIcon(&w_arms[i], refresh || screenblocks >= CRISPY_HUD);
 
-    if (screenblocks < CRISPY_HUD || automapactive)
+    if (screenblocks < CRISPY_HUD || (automapactive && !crispy_automapoverlay))
     {
     STlib_updateMultIcon(&w_faces, refresh);
     }
@@ -1443,7 +1496,7 @@ void ST_diffDraw(void)
 void ST_Drawer (boolean fullscreen, boolean refresh)
 {
   
-    st_statusbaron = (!fullscreen) || automapactive || screenblocks >= CRISPY_HUD;
+    st_statusbaron = (!fullscreen) || (automapactive && !crispy_automapoverlay) || screenblocks >= CRISPY_HUD;
     st_firsttime = st_firsttime || refresh;
 
     if (crispy_cleanscreenshot && screenblocks >= CRISPY_HUD)
@@ -1453,7 +1506,7 @@ void ST_Drawer (boolean fullscreen, boolean refresh)
     ST_doPaletteStuff();
 
     // [crispy] translucent HUD
-    if (crispy_translucency && screenblocks > CRISPY_HUD && !automapactive)
+    if (crispy_translucency && screenblocks > CRISPY_HUD && !(automapactive && !crispy_automapoverlay))
 	dp_translucent = true;
 
     // If just after ST_Start(), refresh all

@@ -131,24 +131,30 @@ char		mapdir[1024];           // directory of development maps
 int             show_endoom = 0; // [crispy] disable
 
 // [crispy] "crispness" config variables
-int             crispy_translucency = 0;
-int             crispy_coloredhud = 0;
 int             crispy_automapstats = 0;
-int             crispy_secretmessage = 0;
+int             crispy_centerweapon = 0;
+int             crispy_coloredblood = 0;
+int             crispy_coloredblood2 = 0;
+int             crispy_coloredhud = 0;
 int             crispy_crosshair = 0;
+int             crispy_crosshair2 = 0;
+int             crispy_flipcorpses = 0;
+int             crispy_freeaim = 0;
+int             crispy_freelook = 0;
 int             crispy_highcolor = 0;
 int             crispy_jump = 0;
-int             crispy_freelook = 0;
 int             crispy_mouselook = 0;
-int             crispy_freeaim = 0;
 int             crispy_overunder = 0;
+int             crispy_pitch = 0;
 int             crispy_recoil = 0;
+int             crispy_secretmessage = 0;
+int             crispy_translucency = 0;
 
 // [crispy] in-game switches
-uint8_t         crispy_coloredblood = 0;
-boolean         crispy_coloredgray = false;
+boolean         crispy_automapoverlay = false;
 boolean         crispy_flashinghom = false;
 boolean         crispy_fliplevels = false;
+boolean         crispy_havee1m10 = false;
 boolean         crispy_havemap33 = false;
 boolean         crispy_havessg = false;
 boolean         crispy_nwtmerge = false;
@@ -239,7 +245,7 @@ void D_Display (void)
       case GS_LEVEL:
 	if (!gametic)
 	    break;
-	if (automapactive)
+	if (automapactive && !crispy_automapoverlay)
 	{
 	    // [crispy] update automap while playing
 	    R_RenderPlayerView (&players[displayplayer]);
@@ -270,7 +276,7 @@ void D_Display (void)
     I_UpdateNoBlit ();
     
     // draw the view directly
-    if (gamestate == GS_LEVEL && !automapactive && gametic)
+    if (gamestate == GS_LEVEL && (!automapactive || (automapactive && crispy_automapoverlay)) && gametic)
     {
 	R_RenderPlayerView (&players[displayplayer]);
 
@@ -279,7 +285,9 @@ void D_Display (void)
             ST_Drawer(false, false);
     }
 
-    if (gamestate == GS_LEVEL && gametic)
+    // [crispy] in automap overlay mode,
+    // the HUD is drawn on top of everything else
+    if (gamestate == GS_LEVEL && gametic && !(automapactive && crispy_automapoverlay))
 	HU_Drawer ();
     
     // clean up border stuff
@@ -294,7 +302,7 @@ void D_Display (void)
     }
 
     // see if the border needs to be updated to the screen
-    if (gamestate == GS_LEVEL && !automapactive && scaledviewwidth != (320 << hires))
+    if (gamestate == GS_LEVEL && (!automapactive || (automapactive && crispy_automapoverlay)) && scaledviewwidth != (320 << hires))
     {
 	if (menuactive || menuactivestate || !viewactivestate)
 	    borderdrawcount = 3;
@@ -318,15 +326,23 @@ void D_Display (void)
     inhelpscreensstate = inhelpscreens;
     oldgamestate = wipegamestate = gamestate;
     
+    // [crispy] in automap overlay mode,
+    // draw the automap and HUD on top of everything else
+    if (automapactive && crispy_automapoverlay)
+    {
+	AM_Drawer ();
+	HU_Drawer ();
+
+	// [crispy] force redraw of status bar and border
+	viewactivestate = false;
+	inhelpscreensstate = true;
+    }
+
     // [crispy] shade background when a menu is active or the game is paused
     if (paused || menuactive)
     {
-	int i;
-
-	for (i = 0; i < SCREENWIDTH * SCREENHEIGHT; i++)
-	{
-	    I_VideoBuffer[i] = I_AlphaBlend(I_VideoBuffer[i], CB_DARK50 / 0x10 * menushade);
-	}
+	for (y = 0; y < SCREENWIDTH * SCREENHEIGHT; y++)
+	    I_VideoBuffer[y] = I_AlphaBlend(I_VideoBuffer[y], CB_DARK50 / 0x10 * menushade);
 
 	if (menushade < 16)
 	    menushade++;
@@ -342,7 +358,7 @@ void D_Display (void)
     // draw pause pic
     if (paused)
     {
-	if (automapactive)
+	if (automapactive && !crispy_automapoverlay)
 	    y = 4;
 	else
 	    y = (viewwindowy >> hires)+4;
@@ -438,18 +454,24 @@ void D_BindVariables(void)
     }
 
     // [crispy] bind "crispness" config variables
-    M_BindVariable("crispy_translucency",    &crispy_translucency);
-    M_BindVariable("crispy_coloredhud",      &crispy_coloredhud);
     M_BindVariable("crispy_automapstats",    &crispy_automapstats);
-    M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
+    M_BindVariable("crispy_centerweapon",    &crispy_centerweapon);
+    M_BindVariable("crispy_coloredblood",    &crispy_coloredblood);
+    M_BindVariable("crispy_coloredblood2",   &crispy_coloredblood2);
+    M_BindVariable("crispy_coloredhud",      &crispy_coloredhud);
     M_BindVariable("crispy_crosshair",       &crispy_crosshair);
+    M_BindVariable("crispy_crosshair2",      &crispy_crosshair2);
+    M_BindVariable("crispy_flipcorpses",     &crispy_flipcorpses);
+    M_BindVariable("crispy_freeaim",         &crispy_freeaim);
+    M_BindVariable("crispy_freelook",        &crispy_freelook);
     M_BindVariable("crispy_highcolor",       &crispy_highcolor);
     M_BindVariable("crispy_jump",            &crispy_jump);
-    M_BindVariable("crispy_freelook",        &crispy_freelook);
     M_BindVariable("crispy_mouselook",       &crispy_mouselook);
-    M_BindVariable("crispy_freeaim",         &crispy_freeaim);
     M_BindVariable("crispy_overunder",       &crispy_overunder);
+    M_BindVariable("crispy_pitch",           &crispy_pitch);
     M_BindVariable("crispy_recoil",          &crispy_recoil);
+    M_BindVariable("crispy_secretmessage",   &crispy_secretmessage);
+    M_BindVariable("crispy_translucency",    &crispy_translucency);
 }
 
 //
@@ -554,6 +576,9 @@ void D_PageTicker (void)
 //
 void D_PageDrawer (void)
 {
+    if (crispy_fliplevels)
+    V_DrawPatchFlipped (0, 0, W_CacheLumpName(pagename, PU_CACHE));
+    else
     V_DrawPatch (0, 0, W_CacheLumpName(pagename, PU_CACHE));
 }
 
@@ -1571,13 +1596,90 @@ void D_DoomMain (void)
     // Note that there's a very careful and deliberate ordering to how
     // Dehacked patches are loaded. The order we use is:
     //  1. IWAD dehacked patches.
+    // [crispy] 1.a. dehacked patches in the config directory following
+    // the preload?.deh/.bex naming scheme are preloaded at game startup
+    if (!M_ParmExists("-nodeh") && !M_ParmExists("-noload"))
+    {
+	int i;
+	char file[16], *path;
+
+	for (i = 0; i < 10; i++)
+	{
+	    M_snprintf(file, sizeof(file), "preload%d.deh", i);
+	    path = M_StringJoin(configdir, file, NULL);
+
+	    if (M_FileExists(path))
+		DEH_LoadFile(path);
+	    else
+	    {
+		free(path);
+		M_snprintf(file, sizeof(file), "preload%d.bex", i);
+		path = M_StringJoin(configdir, file, NULL);
+
+		if (M_FileExists(path))
+		    DEH_LoadFile(path);
+	    }
+	    free(path);
+	}
+    }
     //  2. Command line dehacked patches specified with -deh.
     //  3. PWAD dehacked patches in DEHACKED lumps.
     DEH_ParseCommandLine();
 #endif
 
+    // [crispy] PWAD files in the config directory following
+    // the preload?.wad naming scheme are preloaded at game startup
+    if (!M_ParmExists("-noload"))
+    {
+	int i;
+	char file[16], *path;
+	extern void W_MergeFile(char *filename);
+
+	for (i = 0; i < 10; i++)
+	{
+	    M_snprintf(file, sizeof(file), "preload%d.wad", i);
+	    path = M_StringJoin(configdir, file, NULL);
+
+	    if (M_FileExists(path))
+	    {
+		modifiedgame = true;
+		printf(" auto-merging %s !\n", path);
+		W_MergeFile(path);
+	    }
+	    free(path);
+	}
+    }
+
     // Load PWAD files.
-    modifiedgame = W_ParseCommandLine();
+    modifiedgame |= W_ParseCommandLine(); // [crispy] OR'ed
+
+    //!
+    // @arg <file>
+    // @category mod
+    //
+    // [crispy] experimental feature: in conjunction with -merge <files>
+    // merges PWADs into the main IWAD and writes the merged data into <file>
+    //
+
+    p = M_CheckParmWithArgs ("-mergeout", 1);
+
+    if (p)
+    {
+	if (M_StringEndsWith(myargv[p + 1], ".wad"))
+	{
+	    M_StringCopy(file, myargv[p + 1], sizeof(file));
+	}
+	else
+	{
+	    DEH_snprintf(file, sizeof(file), "%s.wad", myargv[p+1]);
+	}
+
+	if (W_MergeOut(file))
+	{
+	    printf("Merging into file %s.\n", file);
+	    I_Quit();
+	}
+    }
 
     // Debug:
 //    W_PrintDirectory();
@@ -1759,43 +1861,13 @@ void D_DoomMain (void)
         )
     );
 
+    // [crispy] check for presence of E1M10
+    crispy_havee1m10 = (W_CheckNumForName("e1m10") != -1) &&
+                       (W_CheckNumForName("sewers") != -1);
+
     // [crispy] check for presence of MAP33
-    crispy_havemap33 = (W_CheckNumForName("MAP33") != -1);
-
-    // [crispy] check for colored blood
-    {
-	int i;
-	char *iwadbasename = M_BaseName(iwadfile);
-
-	// [crispy] check for monster sprite replacements
-	// (first sprites of monster death frames)
-	i = W_CheckNumForName("bossi0");  // [crispy] Baron of Hell
-	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename));
-
-	i = W_CheckNumForName("bos2i0"); // [crispy] Hell Knight
-	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 1;
-
-	i = W_CheckNumForName("headg0"); // [crispy] Cacodemon
-	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 2;
-
-	i = W_CheckNumForName("skulg0"); // [crispy] Lost Soul
-	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 3;
-
-	i = W_CheckNumForName("sargi0");  // [crispy] Demon (Spectre)
-	crispy_coloredblood |= (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 4;
-
-	// [crispy] no colored blood in Chex Quest and Hacx
-	// except for the Thorn Things in Hacx which bleed green blood
-	if (gamemission == pack_chex || gamemission == pack_hacx)
-	{
-	    i = W_CheckNumForName("bspij0");  // [crispy] Ararchnotron (Thorn Thing)
-	    crispy_coloredblood = 0 | ((i >= 0 && !strcmp(lumpinfo[i].wad_file->path, iwadbasename)) << 5);
-	}
-
-	// [crispy] check for status bar graphics replacements
-	i = W_CheckNumForName("sttnum0"); // [crispy] Status Bar '0'
-	crispy_coloredgray = (i >= 0 && !!strcmp(lumpinfo[i].wad_file->path, iwadbasename));
-    }
+    crispy_havemap33 = (W_CheckNumForName("map33") != -1) &&
+                       (W_CheckNumForName("cwilv32") != -1);
 
     // [crispy] check for NWT-style merging
     crispy_nwtmerge =

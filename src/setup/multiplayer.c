@@ -55,7 +55,7 @@ static const iwad_t fallback_iwads[] = {
 // Array of IWADs found to be installed
 
 static const iwad_t **found_iwads;
-static char *iwad_labels[8];
+static char **iwad_labels;
 
 // Index of the currently selected IWAD
 
@@ -559,8 +559,14 @@ static txt_widget_t *IWADSelector(void)
 
     for (i=0; found_iwads[i] != NULL; ++i)
     {
-        iwad_labels[i] = found_iwads[i]->description;
          ++num_iwads;
+    }
+
+    iwad_labels = malloc(sizeof(*iwad_labels) * num_iwads);
+
+    for (i=0; i < num_iwads; ++i)
+    {
+        iwad_labels[i] = found_iwads[i]->description;
     }
 
     // If no IWADs are found, provide Doom 2 as an option, but
@@ -1053,28 +1059,29 @@ void SetPlayerNameDefault(void)
 {
     if (net_player_name == NULL)
     {
-        net_player_name = M_StringDuplicate(getenv("USER"));
+        net_player_name = getenv("USER");
     }
 
     if (net_player_name == NULL)
     {
-        net_player_name = M_StringDuplicate(getenv("USERNAME"));
+        net_player_name = getenv("USERNAME");
     }
 
-    // On Windows, environment variables are in OEM codepage
-    // encoding, so convert to UTF8:
+    if (net_player_name == NULL)
+    {
+        net_player_name = "player";
+    }
+
+    // Now strdup() the string so that it's in a mutable form
+    // that can be freed when the value changes.
 
 #ifdef _WIN32
-    if (net_player_name != NULL)
-    {
-        net_player_name = M_OEMToUTF8(net_player_name);
-    }
+    // On Windows, environment variables are in OEM codepage
+    // encoding, so convert to UTF8:
+    net_player_name = M_OEMToUTF8(net_player_name);
+#else
+    net_player_name = M_StringDuplicate(net_player_name);
 #endif
-
-    if (net_player_name == NULL)
-    {
-        net_player_name = M_StringDuplicate("player");
-    }
 }
 
 void MultiplayerConfig(void)

@@ -1213,6 +1213,9 @@ void A_VileChase (mobj_t* actor)
 		    corpsehit->health = info->spawnhealth;
 		    corpsehit->target = NULL;
 
+		    // [crispy] count resurrected monsters
+		    extrakills++;
+
 		    // [crispy] resurrected pools of gore ("ghost monsters") are translucent
 		    if (corpsehit->height == 0 && corpsehit->radius == 0)
 		        corpsehit->flags |= MF_TRANSLUCENT;
@@ -1513,8 +1516,11 @@ A_PainShootSkull
     }
 		
     // [crispy] Lost Souls bleed Puffs
-    if (crispy_coloredblood & (1 << 3))
+    if (crispy_coloredblood2)
 	newmobj->flags |= MF_NOBLOOD;
+
+    // [crispy] count spawned Lost Souls
+    extrakills++;
 
     newmobj->target = actor->target;
     A_SkullAttack (newmobj);
@@ -1855,6 +1861,10 @@ void A_BrainAwake (mobj_t* mo)
     }
 	
     S_StartSound (NULL,sfx_bossit);
+
+    // [crispy] no spawn spots available
+    if (numbraintargets == 0)
+	numbraintargets = INT_MIN;
 }
 
 
@@ -1931,8 +1941,12 @@ void A_BrainSpit (mobj_t*	mo)
 	return;
 		
     // [crispy] avoid division by zero by recalculating the number of spawn spots
-    if (!numbraintargets)
+    if (numbraintargets == 0)
 	A_BrainAwake(NULL);
+
+    // [crispy] still no spawn spots available
+    if (numbraintargets == INT_MIN)
+	return;
 
     // shoot a cube at current target
     targ = braintargets[braintargeton];
@@ -2004,6 +2018,10 @@ void A_SpawnFly (mobj_t* mo)
 	type = MT_BRUISER;		
 
     newmobj	= P_SpawnMobj (targ->x, targ->y, targ->z, type);
+
+    // [crispy] count spawned monsters
+    extrakills++;
+
     if (P_LookForPlayers (newmobj, true) )
 	P_SetMobjState (newmobj, newmobj->info->seestate);
 	

@@ -152,6 +152,8 @@ void P_MovePlayer (player_t* player)
     // Do not let the player control movement
     //  if not onground.
     onground = (player->mo->z <= player->mo->floorz);
+    // [crispy] give full control in no-clipping mode
+    onground |= (player->mo->flags & MF_NOCLIP);
 	
     if (cmd->forwardmove && onground)
 	P_Thrust (player, player->mo->angle, cmd->forwardmove*2048);
@@ -300,6 +302,18 @@ void P_PlayerThink (player_t* player)
             player2->lookdir = 0;
             player2->centering = false;
         }
+    }
+
+    // [crispy] weapon recoil pitch
+    // adapted from strife-ve-src/src/strife/p_user.c:677-688
+    if (player2->recoilpitch)
+    {
+	fixed_t recoil = (player2->recoilpitch >> 3);
+
+	if(player2->recoilpitch - recoil > 0)
+	    player2->recoilpitch -= recoil;
+	else
+	    player2->recoilpitch = 0;
     }
 
     if (player->playerstate == PST_DEAD)

@@ -349,6 +349,7 @@ static void R_GenerateComposite(int texnum)
 static void R_GenerateLookup(int texnum)
 {
   const texture_t *texture = textures[texnum];
+  char texturename[9];
 
   // Composited texture not created yet.
 
@@ -366,6 +367,9 @@ static void R_GenerateLookup(int texnum)
 
   const texpatch_t *patch = texture->patches;
   int i = texture->patchcount;
+
+  texturename[8] = '\0';
+  memcpy(texturename, texture->name, 8);
 
   while (--i >= 0)
     {
@@ -432,10 +436,10 @@ static void R_GenerateLookup(int texnum)
 		      if (badcol)
 			{
 			  badcol = 0;
-			  printf("\nWarning: Texture %8.8s "
+			  fprintf(stderr, "\nWarning: Texture %8.8s "
 				 "(height %d) has bad column(s)"
 				 " starting at x = %d.",
-				 texture->name, texture->height, x);
+				 texturename, texture->height, x);
 			}
 		      break;
 		    }
@@ -462,9 +466,9 @@ static void R_GenerateLookup(int texnum)
 	  if (devparm)
 	    {
 	      // killough 8/8/98
-	      printf("\nR_GenerateLookup:"
+	      fprintf(stderr, "\nR_GenerateLookup:"
 		     " Column %d is without a patch in texture %.8s",
-		     x, texture->name);
+		     x, texturename);
 	    }
 	  else
 	    err = 1;               // killough 10/98
@@ -493,8 +497,8 @@ static void R_GenerateLookup(int texnum)
 
     if (err)       // killough 10/98: non-verbose output
       {
-	printf("\nR_GenerateLookup: Column without a patch in texture %.8s",
-	       texture->name);
+	fprintf(stderr, "\nR_GenerateLookup: Column without a patch in texture %.8s",
+	       texturename);
       }
   }
   free(count);                    // killough 4/9/98
@@ -575,6 +579,10 @@ static void GenerateTextureHashTable(void)
 // Initializes the texture list
 //  with the textures from the world map.
 //
+// [crispy] partly rewritten to merge up to MAXPNAMESLUMPS PNAMES lumps
+// and up to MAXTEXTURELUMPS TEXTURE1/2 lumps
+#define MAXTEXTURELUMPS 8 // [crispy] seems reasonable
+#define MAXPNAMESLUMPS MAXTEXTURELUMPS/2
 void R_InitTextures (void)
 {
     maptexture_t*	mtexture;
@@ -584,14 +592,11 @@ void R_InitTextures (void)
 
     int			i;
     int			j;
+    int			k;
 
     int*		maptex;
-    int*		maptex2;
-    int*		maptex1;
     
     char		name[9];
-    char*		names;
-    char*		name_p;
     
     int*		patchlookup;
     
@@ -599,9 +604,6 @@ void R_InitTextures (void)
     int			nummappatches;
     int			offset;
     int			maxoff;
-    int			maxoff2;
-    int			numtextures1;
-    int			numtextures2;
 
     int*		directory;
     
@@ -610,42 +612,142 @@ void R_InitTextures (void)
     int			temp3;
 
     
-    // Load the patch names from pnames.lmp.
+    int			numpnameslumps;
+    int			numtexturelumps;
+
+    typedef struct
+    {
+	int lumpnum;
+	void *names;
+	short nummappatches;
+	short summappatches;
+	char *name_p;
+    } pnameslump_t;
+
+    typedef struct
+    {
+	int lumpnum;
+	int *maptex;
+	int maxoff;
+	short numtextures;
+	short sumtextures;
+	short pnamesoffset;
+    } texturelump_t;
+
+    pnameslump_t	pnameslumps[MAXPNAMESLUMPS];
+    texturelump_t	texturelumps[MAXTEXTURELUMPS], *texturelump;
+
+    // [crispy] initialize the pnameslumps[] and texturelumps[] arrays,
+    // so that the lumpnum fields are all -1
+    numpnameslumps = 0;
+    numtexturelumps = 0;
+    memset(pnameslumps, -1, sizeof(pnameslumps));
+    memset(texturelumps, -1, sizeof(texturelumps));
+
+    // [crispy] make sure the first available TEXTURE1/2 lumps
+    // are always processed first
+    texturelumps[numtexturelumps++].lumpnum = W_GetNumForName(DEH_String("TEXTURE1"));
+    if ((i = W_CheckNumForName(DEH_String("TEXTURE2"))) != -1)
+    {
+	texturelumps[numtexturelumps++].lumpnum = i;
+    }
+
+    // [crispy] fill the arrays with all available PNAMES lumps
+    // and the remaining available TEXTURE1/2 lumps
+    nummappatches = 0;
+    for (i = numlumps - 1; i >= 0; i--)
+    {
+	if (!strncasecmp(lumpinfo[i].name, DEH_String("PNAMES"), 6))
+	{
+	    if (numpnameslumps == arrlen(pnameslumps))
+		continue;
+
+	    pnameslumps[numpnameslumps].lumpnum = i;
+	    pnameslumps[numpnameslumps].names = W_CacheLumpNum(pnameslumps[numpnameslumps].lumpnum, PU_STATIC);
+	    pnameslumps[numpnameslumps].nummappatches = LONG(*((int *) pnameslumps[numpnameslumps].names));
+
+	    // [crispy] accumulated number of patches in the lookup tables
+	    // excluding the current one
+	    pnameslumps[numpnameslumps].summappatches = nummappatches;
+	    pnameslumps[numpnameslumps].name_p = pnameslumps[numpnameslumps].names + 4;
+
+	    // [crispy] calculate total number of patches
+	    nummappatches += pnameslumps[numpnameslumps].nummappatches;
+	    numpnameslumps++;
+	}
+	else
+	if (!strncasecmp(lumpinfo[i].name, DEH_String("TEXTURE"), 7))
+	{
+	    if (numtexturelumps == arrlen(texturelumps))
+		continue;
+
+	    // [crispy] support only TEXTURE1/2 lumps, not TEXTURE3 etc.
+	    if (lumpinfo[i].name[7] != '1' &&
+	        lumpinfo[i].name[7] != '2')
+		continue;
+
+	    // [crispy] make sure the first available TEXTURE1/2 lumps
+	    // are not processed again
+	    if (i == texturelumps[0].lumpnum ||
+	        i == texturelumps[1].lumpnum) // [crispy] may still be -1
+		continue;
+
+	    // [crispy] do not proceed any further, yet
+	    // we first need a complete pnameslumps[] array and need
+	    // to process texturelumps[0] (and also texturelumps[1]) as well
+	    texturelumps[numtexturelumps].lumpnum = i;
+	    numtexturelumps++;
+	}
+    }
+
+    // [crispy] fill up the patch lookup table
     name[8] = 0;
-    names = W_CacheLumpName (DEH_String("PNAMES"), PU_STATIC);
-    nummappatches = LONG ( *((int *)names) );
-    name_p = names + 4;
-    patchlookup = Z_Malloc(nummappatches*sizeof(*patchlookup), PU_STATIC, NULL);
+    patchlookup = Z_Malloc(nummappatches * sizeof(*patchlookup), PU_STATIC, NULL);
+    for (i = 0, k = 0; i < numpnameslumps; i++)
+    {
+	for (j = 0; j < pnameslumps[i].nummappatches; j++)
+	{
+	    M_StringCopy(name, pnameslumps[i].name_p + j * 8, sizeof(name));
+	    patchlookup[k++] = W_CheckNumForName(name);
+	}
+    }
 
-    for (i = 0; i < nummappatches; i++)
+    // [crispy] calculate total number of textures
+    numtextures = 0;
+    for (i = 0; i < numtexturelumps; i++)
     {
-        M_StringCopy(name, name_p + i * 8, sizeof(name));
-        patchlookup[i] = W_CheckNumForName(name);
-    }
-    W_ReleaseLumpName(DEH_String("PNAMES"));
+	texturelumps[i].maptex = W_CacheLumpNum(texturelumps[i].lumpnum, PU_STATIC);
+	texturelumps[i].maxoff = W_LumpLength(texturelumps[i].lumpnum);
+	texturelumps[i].numtextures = LONG(*texturelumps[i].maptex);
 
-    // Load the map texture definitions from textures.lmp.
-    // The data is contained in one or two lumps,
-    //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
-    maptex = maptex1 = W_CacheLumpName (DEH_String("TEXTURE1"), PU_STATIC);
-    numtextures1 = LONG(*maptex);
-    maxoff = W_LumpLength (W_GetNumForName (DEH_String("TEXTURE1")));
-    directory = maptex+1;
-	
-    if (W_CheckNumForName (DEH_String("TEXTURE2")) != -1)
-    {
-	maptex2 = W_CacheLumpName (DEH_String("TEXTURE2"), PU_STATIC);
-	numtextures2 = LONG(*maptex2);
-	maxoff2 = W_LumpLength (W_GetNumForName (DEH_String("TEXTURE2")));
+	// [crispy] accumulated number of textures in the texture files
+	// including the current one
+	numtextures += texturelumps[i].numtextures;
+	texturelumps[i].sumtextures = numtextures;
+
+	// [crispy] link textures to their own WAD's patch lookup table (if any)
+	texturelumps[i].pnamesoffset = 0;
+	for (j = 0; j < numpnameslumps; j++)
+	{
+	    // [crispy] both point to the same WAD file name string?
+	    if (lumpinfo[texturelumps[i].lumpnum].wad_file->path ==
+	        lumpinfo[pnameslumps[j].lumpnum].wad_file->path)
+	    {
+		texturelumps[i].pnamesoffset = pnameslumps[j].summappatches;
+		break;
+	    }
+	}
     }
-    else
+
+    // [crispy] release memory allocated for patch lookup tables
+    for (i = 0; i < numpnameslumps; i++)
     {
-	maptex2 = NULL;
-	numtextures2 = 0;
-	maxoff2 = 0;
+	W_ReleaseLumpNum(pnameslumps[i].lumpnum);
     }
-    numtextures = numtextures1 + numtextures2;
-	
+
+    // [crispy] pointer to (i.e. actually before) the first texture file
+    texturelump = texturelumps - 1; // [crispy] gets immediately increased below
+
     textures = Z_Malloc (numtextures * sizeof(*textures), PU_STATIC, 0);
     texturecolumnlump = Z_Malloc (numtextures * sizeof(*texturecolumnlump), PU_STATIC, 0);
     texturecolumnofs = Z_Malloc (numtextures * sizeof(*texturecolumnofs), PU_STATIC, 0);
@@ -680,11 +782,12 @@ void R_InitTextures (void)
 	if (!(i&63))
 	    printf (".");
 
-	if (i == numtextures1)
+	if (!i || i == texturelump->sumtextures)
 	{
-	    // Start looking in second texture file.
-	    maptex = maptex2;
-	    maxoff = maxoff2;
+	    // [crispy] start looking in next texture file
+	    texturelump++;
+	    maptex = texturelump->maptex;
+	    maxoff = texturelump->maxoff;
 	    directory = maptex+1;
 	}
 		
@@ -710,13 +813,24 @@ void R_InitTextures (void)
 
 	for (j=0 ; j<texture->patchcount ; j++, mpatch++, patch++)
 	{
+	    short p;
 	    patch->originx = SHORT(mpatch->originx);
 	    patch->originy = SHORT(mpatch->originy);
-	    patch->patch = patchlookup[SHORT(mpatch->patch)];
-	    if (patch->patch == -1)
+	    // [crispy] apply offset for patches not in the
+	    // first available patch offset table
+	    p = SHORT(mpatch->patch) + texturelump->pnamesoffset;
+	    // [crispy] catch out-of-range patches
+	    if (p < nummappatches)
+		patch->patch = patchlookup[p];
+	    if (patch->patch == -1 || p >= nummappatches)
 	    {
-		I_Error ("R_InitTextures: Missing patch in texture %s",
-			 texture->name);
+		char	texturename[9];
+		texturename[8] = '\0';
+		memcpy (texturename, texture->name, 8);
+		// [crispy] make non-fatal
+		fprintf (stderr, "R_InitTextures: Missing patch in texture %s\n",
+			 texturename);
+		patch->patch = 0;
 	    }
 	}		
 	texturecolumnlump[i] = Z_Malloc (texture->width*sizeof(**texturecolumnlump), PU_STATIC,0);
@@ -734,9 +848,11 @@ void R_InitTextures (void)
 
     Z_Free(patchlookup);
 
-    W_ReleaseLumpName(DEH_String("TEXTURE1"));
-    if (maptex2)
-        W_ReleaseLumpName(DEH_String("TEXTURE2"));
+    // [crispy] release memory allocated for texture files
+    for (i = 0; i < numtexturelumps; i++)
+    {
+	W_ReleaseLumpNum(texturelumps[i].lumpnum);
+    }
     
     // Precalculate whatever possible.	
 
@@ -885,25 +1001,33 @@ void R_InitColormaps (int pal)
     memcpy(colormaps, *colormaptable[usegamma][pal], (NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t));
 
     // [crispy] initialize color translation and color strings tables
-    if (!crstr)
     {
-	char s[3];
-	extern uint32_t V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray);
+	byte *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
+	char c[3];
+	int i, j;
+	boolean keepgray = false;
+	extern char *iwadfile;
+	extern byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
 
-	doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE);
+	if (!crstr)
+	    crstr = malloc(CRMAX * sizeof(*crstr));
 
-	crstr = malloc(CRMAX * sizeof(*crstr));
+	// [crispy] check for status bar graphics replacements
+	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'
+	keepgray = (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, M_BaseName(iwadfile)));
 
 	for (i = 0; i < CRMAX; i++)
 	{
-	    for (c = 0; c < 256; c++)
+	    for (j = 0; j < 256; j++)
 	    {
-		cr[i][c] = V_Colorize(doompalette, i, c, crispy_coloredgray);
+		cr[i][j] = V_Colorize(playpal, i, j, keepgray);
 	    }
 
-	    M_snprintf(s, sizeof(s), "\x1b%c", '0' + i);
-	    crstr[i] = M_StringDuplicate(s);
+	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);
+	    crstr[i] = M_StringDuplicate(c);
 	}
+
+	Z_ChangeTag(playpal, PU_CACHE);
     }
 }
 
@@ -958,7 +1082,9 @@ int R_FlatNumForName (char* name)
     {
 	namet[8] = 0;
 	memcpy (namet, name,8);
-	I_Error ("R_FlatNumForName: %s not found",namet);
+	// [crispy] make non-fatal
+	fprintf (stderr, "R_FlatNumForName: %s not found\n", namet);
+	return 0;
     }
     return i - firstflat;
 }
@@ -1010,8 +1136,14 @@ int	R_TextureNumForName (char* name)
 
     if (i==-1)
     {
-	I_Error ("R_TextureNumForName: %s not found",
-		 name);
+	// [crispy] fix absurd texture name in error message
+	char	namet[9];
+	namet[8] = '\0';
+	memcpy (namet, name, 8);
+	// [crispy] make non-fatal
+	fprintf (stderr, "R_TextureNumForName: %s not found\n",
+		 namet);
+	return 0;
     }
     return i;
 }

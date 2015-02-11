@@ -69,8 +69,15 @@ typedef struct
     fixed_t	x;
     fixed_t	y;
     
+// [crispy] remove slime trails
+// pseudovertexes are dummies that have their coordinates modified to get
+// moved towards the linedef associated with their seg by projecting them
+// using the law of cosines in p_setup.c:P_RemoveSlimeTrails();
+// they are *only* used in rendering
+    fixed_t	px;
+    fixed_t	py;
+    boolean	moved;
 } vertex_t;
-
 
 // Forward of LineDefs, for Sectors.
 struct line_s;
@@ -254,6 +261,7 @@ typedef struct
     sector_t*	frontsector;
     sector_t*	backsector;
     
+    fixed_t	length; // [crispy] fix long wall wobble
 } seg_t;
 
 
@@ -327,9 +335,9 @@ typedef struct drawseg_s
     
     // Pointers to lists for sprite clipping,
     //  all three adjusted so [x1] is first value.
-    short*		sprtopclip;		
-    short*		sprbottomclip;	
-    short*		maskedtexturecol;
+    int*		sprtopclip; // [crispy] 32-bit integer math
+    int*		sprbottomclip; // [crispy] 32-bit integer math
+    int*		maskedtexturecol; // [crispy] 32-bit integer math
     
 } drawseg_t;
 
@@ -435,15 +443,15 @@ typedef struct
   
   // leave pads for [minx-1]/[maxx+1]
   
-  unsigned short		pad1; // [crispy] hires
+  unsigned int		pad1; // [crispy] hires / 32-bit integer math
   // Here lies the rub for all
   //  dynamic resize/change of resolution.
-  unsigned short		top[SCREENWIDTH]; // [crispy] hires
-  unsigned short		pad2; // [crispy] hires
-  unsigned short		pad3; // [crispy] hires
+  unsigned int		top[SCREENWIDTH]; // [crispy] hires / 32-bit integer math
+  unsigned int		pad2; // [crispy] hires / 32-bit integer math
+  unsigned int		pad3; // [crispy] hires / 32-bit integer math
   // See above.
-  unsigned short		bottom[SCREENWIDTH]; // [crispy] hires
-  unsigned short		pad4; // [crispy] hires
+  unsigned int		bottom[SCREENWIDTH]; // [crispy] hires / 32-bit integer math
+  unsigned int		pad4; // [crispy] hires / 32-bit integer math
 
 } visplane_t;
 

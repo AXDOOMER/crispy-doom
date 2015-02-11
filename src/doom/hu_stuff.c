@@ -124,6 +124,8 @@ extern int		showMessages;
 
 static boolean		headsupactive = false;
 
+extern int		screenblocks; // [crispy]
+
 //
 // Builtin map names.
 // The actual names can be found in DStrings.h.
@@ -446,8 +448,14 @@ void HU_Start(void)
         s = HU_TITLE_CHEX;
     }
 
+    // [crispy] special-casing for E1M10 "Sewers" support
+    if (crispy_havee1m10 && gameepisode == 1 && gamemap == 10)
+    {
+	s = HUSTR_E1M10;
+    }
+
     // [crispy] explicitely display (episode and) map if the
-    // map is from a PWAD of if the map title string has been dehacked
+    // map is from a PWAD or if the map title string has been dehacked
     {
 	char map[6], *wad;
 	extern char *iwadfile;
@@ -494,46 +502,85 @@ void HU_Start(void)
 
 }
 
+// [crispy] print a bar indicating demo progress at the bottom of the screen
+static void HU_DemoProgressBar (void)
+{
+    int i;
+    extern char *demo_p, *demobuffer;
+    extern int defdemosize;
+
+    i = SCREENWIDTH * (demo_p - demobuffer) / defdemosize;
+
+    V_DrawHorizLine(0, SCREENHEIGHT - 2, i, 0); // [crispy] black
+    V_DrawHorizLine(0, SCREENHEIGHT - 1, i, 4); // [crispy] white
+}
+
+// [crispy] static, non-projected crosshair
+static void HU_DrawCrosshair (void)
+{
+    static int		lump;
+    static patch_t*	patch;
+
+    if (plr->readyweapon == wp_fist ||
+        plr->readyweapon == wp_chainsaw ||
+        plr->playerstate > PST_LIVE ||
+        automapactive ||
+        menuactive ||
+        paused ||
+        secret_on)
+	return;
+
+    if (!lump)
+    {
+	lump = W_GetNumForName(CRISPY_CROSSHAIR);
+	patch = W_CacheLumpNum(lump, PU_CACHE);
+    }
+
+    if (crispy_translucency)
+	dp_translucent = true;
+
+    V_DrawPatch(160-SHORT(patch->width/2), (screenblocks <= 10) ? 84 : 100, patch);
+}
+
 void HU_Drawer(void)
 {
 
-    extern int screenblocks;
     static char str[32], *s;
 
     if (crispy_cleanscreenshot)
     {
-        HU_Erase();
-        return;
+	HU_Erase();
+	return;
     }
 
     // [crispy] translucent messages for translucent HUD
-    if (crispy_translucency && screenblocks > CRISPY_HUD && !automapactive)
+    if (crispy_translucency && screenblocks > CRISPY_HUD && (!automapactive || (automapactive && crispy_automapoverlay)))
 	dp_translucent = true;
 
     V_ClearDPTranslation();
     HUlib_drawSText(&w_message);
-    dp_translation = cr[CR_GOLD];
-    HUlib_drawSText(&w_secret);
-    V_ClearDPTranslation();
     HUlib_drawIText(&w_chat);
 
-    if (dp_translucent)
-	dp_translucent = false;
+    if (crispy_coloredhud)
+	dp_translation = cr[CR_GOLD];
+    HUlib_drawSText(&w_secret);
 
     if (automapactive)
-    {
-	if (crispy_coloredhud)
-	    dp_translation = cr[CR_GOLD];
 	HUlib_drawTextLine(&w_title, false);
 
-	if (crispy_automapstats)
-	{
+    if (automapactive && crispy_automapstats)
+    {
 	int time = leveltime / TICRATE;
 
 	HUlib_drawTextLine(&w_map, false);
 
-	M_snprintf(str, sizeof(str), "%sKills: %s%d/%d", crstr[CR_RED], crstr[CR_GRAY],
-	        players[consoleplayer].killcount, totalkills);
+	// [crispy] count Lost Souls and spawned monsters
+	if (extrakills)
+	    M_snprintf(str, sizeof(str), "%sKills: %s%d/%d+%d", crstr[CR_RED], crstr[CR_GRAY],
+	            players[consoleplayer].killcount, totalkills, extrakills);
+	else
+	    M_snprintf(str, sizeof(str), "%sKills: %s%d/%d", crstr[CR_RED], crstr[CR_GRAY],
+	            players[consoleplayer].killcount, totalkills);
 	HUlib_clearTextLine(&w_kills);
 	s = str;
 	while (*s)
@@ -563,17 +610,12 @@ void HU_Drawer(void)
 	while (*s)
 	    HUlib_addCharToTextLine(&w_ltime, *(s++));
 	HUlib_drawTextLine(&w_ltime, false);
-	}
-    V_ClearDPTranslation();
     }
 
     // [crispy] show map coordinates in upper right corner
     // if either automap stats or IDMYPOS cheat are enabled
     if ((automapactive && crispy_automapstats) || coord_on)
     {
-	if (crispy_translucency && screenblocks > CRISPY_HUD && !automapactive)
-	    dp_translucent = true;
-
 	M_snprintf(str, sizeof(str), "%sX: %s%-5d", crstr[CR_GREEN], crstr[CR_GRAY],
 	        (players[consoleplayer].mo->x)>>FRACBITS);
 	HUlib_clearTextLine(&w_coordx);
@@ -597,12 +639,19 @@ void HU_Drawer(void)
 	while (*s)
 	    HUlib_addCharToTextLine(&w_coorda, *(s++));
 	HUlib_drawTextLine(&w_coorda, false);
-
-	if (dp_translucent)
-	    dp_translucent = false;
+    }
 
     V_ClearDPTranslation();
-    }
+
+    if (crispy_crosshair && !crispy_crosshair2)
+	HU_DrawCrosshair();
+
+    if (dp_translucent)
+	dp_translucent = false;
+
+    // [crispy] demo progress bar
+    if (demoplayback)
+	HU_DemoProgressBar();
 }
 
 void HU_Erase(void)

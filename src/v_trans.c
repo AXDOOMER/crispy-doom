@@ -48,6 +48,31 @@ byte *cr[] =
 
 char **crstr = 0;
 
+/*
+Date: Sun, 26 Oct 2014 10:36:12 -0700
+From: paul haeberli <paulhaeberli@yahoo.com>
+Subject: Re: colors and color conversions
+To: Fabian Greffrath <fabian@greffrath.com>
+
+Yes, this seems exactly like the solution I was looking for. I just
+couldn't find code to do the HSV->RGB conversion. Speaking of the code,
+would you allow me to use this code in my software? The Doom source code
+is licensed under the GNU GPL, so this code yould have to be under a
+compatible license.
+
+    Yes. I'm happy to contribute this code to your project.  GNU GPL or anything
+    compatible sounds fine.
+
+Regarding the conversions, the procedure you sent me will leave grays
+(r=g=b) untouched, no matter what I set as HUE, right? Is it possible,
+then, to also use this routine to convert colors *to* gray?
+
+    You can convert any color to an equivalent grey by setting the saturation
+    to 0.0
+
+
+    - Paul Haeberli
+*/
 
 #define CTOLERANCE      (0.0001)
 
@@ -162,12 +187,13 @@ static void rgb_to_hsv(vect *rgb, vect *hsv)
     hsv->z = v;
 }
 
-byte V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray)
+byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 {
     vect rgb, hsv;
     extern int FindNearestColor(byte *palette, int r, int g, int b);
 
-    if (cr == CR_NONE)
+    // [crispy] preserve gray drop shadow in IWAD status bar numbers
+    if (cr == CR_NONE || (keepgray109 && source == 109))
 	return source;
 
     rgb.x = playpal[3 * source + 0] / 255.;
@@ -183,19 +209,18 @@ byte V_Colorize (byte *playpal, int cr, byte source, boolean coloredgray)
 	hsv.y = 0;
     else
     {
-	// [crispy] hack some colors into gray shades
-	if (coloredgray)
-	{
-	    hsv.y = 1.0;
-	}
+	// [crispy] hack colors to full saturation
+	hsv.y = 1.0;
 
 	if (cr == CR_GREEN)
 	{
+//	    hsv.x = ((16.216 * hsv.z) + 100.784)/360.;
 	    hsv.x = 135./360.;
 	}
 	else
 	if (cr == CR_GOLD)
 	{
+//	    hsv.x = ((51.351 * hsv.z) + 8.648)/360.;
 	    hsv.x = 45./360.;
 	}
 	else

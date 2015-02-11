@@ -128,6 +128,7 @@ int             consoleplayer;          // player taking events and displaying
 int             displayplayer;          // view being displayed 
 int             levelstarttic;          // gametic at level start 
 int             totalkills, totalitems, totalsecret;    // for intermission 
+int             extrakills;             // [crispy] count Lost Souls and spawned monsters
  
 char           *demoname;
 boolean         demorecording; 
@@ -140,9 +141,6 @@ byte*		demo_p;
 byte*		demoend; 
 boolean         singledemo;            	// quit after playing a demo from cmdline 
  
-// [crispy] for non-user-visible, non-gameplay-affecting changes
-boolean         crispy_democritical = false;
-
 boolean         precache = true;        // if true, load all graphics at start 
 
 boolean         testcontrols = false;    // Invoked by setup to test controls
@@ -288,7 +286,7 @@ static boolean WeaponSelectable(weapontype_t weapon)
 static int G_NextWeapon(int direction)
 {
     weapontype_t weapon;
-    int i;
+    int start_i, i;
 
     // Find index in the table.
 
@@ -309,13 +307,13 @@ static int G_NextWeapon(int direction)
         }
     }
 
-    // Switch weapon.
-
+    // Switch weapon. Don't loop forever.
+    start_i = i;
     do
     {
         i += direction;
         i = (i + arrlen(weapon_order_table)) % arrlen(weapon_order_table);
-    } while (!WeaponSelectable(weapon_order_table[i].weapon));
+    } while (i != start_i && !WeaponSelectable(weapon_order_table[i].weapon));
 
     return weapon_order_table[i].weapon_num;
 }
@@ -540,12 +538,11 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     // next_weapon variable is set to change weapons when
     // we generate a ticcmd.  Choose a new weapon.
 
-    if (next_weapon != 0)
+    if (gamestate == GS_LEVEL && next_weapon != 0)
     {
         i = G_NextWeapon(next_weapon);
         cmd->buttons |= BT_CHANGE;
         cmd->buttons |= i << BT_WEAPONSHIFT;
-        next_weapon = 0;
     }
     else
     {
@@ -563,6 +560,8 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
             }
         }
     }
+
+    next_weapon = 0;
 
     // mouse
     if (mousebuttons[mousebforward]) 
@@ -644,7 +643,7 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     else
     if (!novert)
     {
-        forward += mousey;
+    forward += mousey;
     }
 
     // [crispy] single click on mouse look button centers view
@@ -956,8 +955,14 @@ boolean G_Responder (event_t* ev)
 		 
       case ev_mouse: 
         SetMouseButtons(ev->data1);
+	if (mouseSensitivity)
 	mousex = ev->data2*(mouseSensitivity+5)/10; 
+	else
+	    mousex = 0; // [crispy] disable entirely
+	if (mouseSensitivity_y)
 	mousey = ev->data3*(mouseSensitivity_y+5)/10; // [crispy] separate sensitivity for y-axis
+	else
+	    mousey = 0; // [crispy] disable entirely
 	return true;    // eat events 
  
       case ev_joystick: 
@@ -1621,7 +1626,12 @@ void G_DoCompleted (void)
     else
     {
 	if (secretexit) 
+	{
+	    if (crispy_havee1m10 && singleplayer && gameepisode == 1 && gamemap == 1)
+	    wminfo.next = 9; // [crispy] go to secret level E1M10 "Sewers"
+	    else
 	    wminfo.next = 8; 	// go to secret level 
+	}
 	else if (gamemap == 9) 
 	{
 	    // returning from secret level 
@@ -1641,6 +1651,9 @@ void G_DoCompleted (void)
 		break;
 	    }                
 	} 
+	else
+	if (crispy_havee1m10 && singleplayer && gameepisode == 1 && gamemap == 10)
+	    wminfo.next = 1; // [crispy] returning from secret level E1M10 "Sewers"
 	else 
 	    wminfo.next = gamemap;          // go to next level 
     }
@@ -1712,6 +1725,9 @@ void G_WorldDone (void)
     gameaction = ga_worlddone; 
 
     if (secretexit) 
+      // [crispy] special-casing for E1M10 "Sewers" support
+      // i.e. avoid drawing the splat for E1M9 already
+      if (!crispy_havee1m10 || gameepisode != 1 || gamemap != 1)
 	players[consoleplayer].didsecret = true; 
 
     if ( gamemission == pack_nerve && singleplayer )
@@ -1990,7 +2006,13 @@ G_InitNew
 
     if ( (map > 9)
 	 && ( gamemode != commercial) )
+    {
+      // [crispy] support E1M10 "Sewers"
+      if (!crispy_havee1m10 || episode != 1)
       map = 9;
+      else
+      map = 10;
+    }
 
     M_ClearRandom ();
 
@@ -2204,7 +2226,6 @@ void G_RecordDemo (char *name)
     int maxsize;
     FILE *fp = NULL;
 
-    crispy_democritical = true;
     usergame = false;
     demoname_size = strlen(name) + 5 + 4; // [crispy] + 4 for "-000"
     demoname = Z_Malloc(demoname_size, PU_STATIC, NULL);
@@ -2304,6 +2325,7 @@ void G_BeginRecording (void)
 //
 
 char*	defdemoname; 
+int	defdemosize; // [crispy] demo progress bar
  
 void G_DeferedPlayDemo (char* name) 
 { 
@@ -2356,9 +2378,16 @@ void G_DoPlayDemo (void)
     int             i, episode, map; 
     int demoversion;
 	 
-    crispy_democritical = true;
     gameaction = ga_nothing; 
     demobuffer = demo_p = W_CacheLumpName (defdemoname, PU_STATIC); 
+
+    // [crispy] demo progress bar
+    defdemosize = 0;
+    while (*demo_p++ != DEMOMARKER)
+    {
+	defdemosize++;
+    }
+    demo_p = demobuffer;
 
     demoversion = *demo_p++;
 

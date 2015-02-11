@@ -433,6 +433,9 @@ P_NightmareRespawn (mobj_t* mobj)
     mo->spawnpoint = mobj->spawnpoint;	
     mo->angle = ANG45 * (mthing->angle/45);
 
+    // [crispy] count respawned monsters
+    extrakills++;
+
     if (mthing->options & MTF_AMBUSH)
 	mo->flags |= MF_AMBUSH;
 
@@ -805,7 +808,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
     if (i==NUMMOBJTYPES)
     {
 	// [crispy] ignore unknown map things
-	printf ("P_SpawnMapThing: Unknown type %i at (%i, %i)\n",
+	fprintf (stderr, "P_SpawnMapThing: Unknown type %i at (%i, %i)\n",
 		 mthing->type,
 		 mthing->x, mthing->y);
 	return;
@@ -815,6 +818,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
     if (deathmatch && mobjinfo[i].flags & MF_NOTDMATCH)
 	return;
 		
+
     // don't spawn any monsters if -nomonsters
     if (nomonsters
 	&& ( i == MT_SKULL
@@ -835,6 +839,10 @@ void P_SpawnMapThing (mapthing_t* mthing)
     mobj = P_SpawnMobj (x,y,z, i);
     mobj->spawnpoint = *mthing;
 
+    // [crispy] count Lost Souls
+    if (i == MT_SKULL)
+	extrakills++;
+
     if (mobj->tics > 0)
 	mobj->tics = 1 + (P_Random () % mobj->tics);
     if (mobj->flags & MF_COUNTKILL)
@@ -847,7 +855,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
 	mobj->flags |= MF_AMBUSH;
 
     // [crispy] Lost Souls bleed Puffs
-    if ((crispy_coloredblood & (1 << 3)) && i == MT_SKULL)
+    if (crispy_coloredblood2 && i == MT_SKULL)
         mobj->flags |= MF_NOBLOOD;
 }
 
@@ -908,7 +916,7 @@ P_SpawnBlood
     th->target = target;
 
     // [crispy] Spectres bleed spectre blood
-    if ((crispy_coloredblood & (1 << 4)) && target->flags & MF_SHADOW)
+    if (crispy_coloredblood2 && target->flags & MF_SHADOW)
 	th->flags |= MF_SHADOW;
 
     if (th->tics < 1)
@@ -1030,8 +1038,6 @@ P_SpawnPlayerMissile
     
     extern void A_Recoil (player_t* player);
 
-    A_Recoil (source->player);
-
     // see which target is to be aimed at
     an = source->angle;
     slope = P_AimLineAttack (source, an, 16*64*FRACUNIT);
@@ -1075,5 +1081,7 @@ P_SpawnPlayerMissile
     th->momz = FixedMul( th->info->speed, slope);
 
     P_CheckMissileSpawn (th);
+
+    A_Recoil (source->player);
 }
 

@@ -1419,6 +1419,18 @@ static default_t extra_defaults_list[] =
     CONFIG_VARIABLE_KEY(key_map_clearmark),
 
     //!
+    // Key to toogle the overlay mode when in the map view.
+    //
+
+    CONFIG_VARIABLE_KEY(key_map_overlay),
+
+    //!
+    // Key to toogle the rotate mode when in the map view.
+    //
+
+    CONFIG_VARIABLE_KEY(key_map_rotate),
+
+    //!
     // Key to select weapon 1.
     //
 
@@ -1680,10 +1692,18 @@ static default_t extra_defaults_list[] =
     //!
     // @game doom
     //
-    // Show a laser pointer.
+    // Draw a crosshair.
     //
 
     CONFIG_VARIABLE_INT(crispy_crosshair),
+
+    //!
+    // @game doom
+    //
+    // Project Crosshair into Scene.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_crosshair2),
 
     //!
     // @game doom
@@ -1732,6 +1752,46 @@ static default_t extra_defaults_list[] =
     //
 
     CONFIG_VARIABLE_INT(crispy_recoil),
+
+    //!
+    // @game doom
+    //
+    // Enable weapon pitch.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_pitch),
+
+    //!
+    // @game doom
+    //
+    // Center Weapon when Firing.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_centerweapon),
+
+    //!
+    // @game doom
+    //
+    // Enable Colored Blood.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_coloredblood),
+
+    //!
+    // @game doom
+    //
+    // Fix Spectre and Lost Soul Blood.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_coloredblood2),
+
+    //!
+    // @game doom
+    //
+    // Enable Mirrored Corpses.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_flipcorpses),
 };
 
 static default_collection_t extra_defaults =

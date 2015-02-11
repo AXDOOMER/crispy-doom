@@ -1,7 +1,7 @@
-AC_INIT(Crispy Doom, 2.0, fabian@greffrath.com, crispy-doom)
+AC_INIT(Crispy Doom, 2.2, fabian@greffrath.com, crispy-doom)
 
 PACKAGE_SHORTNAME=${PACKAGE_NAME% Doom}
-PACKAGE_SHORTDESC="Limit-raising medium-resolution Doom source port"
+PACKAGE_SHORTDESC="Limit-removing enhanced-resolution Doom source port"
 PACKAGE_COPYRIGHT="Copyright (C) 1993-2014"
 PACKAGE_LICENSE="GNU General Public License, version 2"
 PACKAGE_MAINTAINER="Fabian Greffrath"
@@ -93,7 +93,7 @@ AC_SDL_MAIN_WORKAROUND([
     AC_CHECK_LIB(m, log)
 
     AC_CHECK_HEADERS([linux/kd.h dev/isa/spkrio.h dev/speaker/speaker.h])
-    AC_CHECK_FUNCS(mmap sched_setaffinity ioperm)
+    AC_CHECK_FUNCS(mmap ioperm)
 
     # OpenBSD I/O i386 library for I/O port access.
     # (64 bit has the same thing with a different name!)

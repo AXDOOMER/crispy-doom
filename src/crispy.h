@@ -24,29 +24,36 @@
 #include "doomtype.h"
 
 #define CRISPY_HUD 12
+#define CRISPY_CROSSHAIR "STCFN043"
 
-#define singleplayer (!crispy_democritical && !netgame)
-#define uncrispy (demorecording || netgame)
+#define singleplayer (!demorecording && !demoplayback && !netgame)
 
+extern boolean crispy_automapoverlay;
 extern boolean crispy_cleanscreenshot;
-extern uint8_t crispy_coloredblood;
-extern boolean crispy_coloredgray;
-extern boolean crispy_democritical;
 extern boolean crispy_flashinghom;
 extern boolean crispy_fliplevels;
+extern boolean crispy_havee1m10;
 extern boolean crispy_havemap33;
 extern boolean crispy_havessg;
 extern boolean crispy_nwtmerge;
 
+#define crispy_stretchsky (crispy_freelook || crispy_mouselook || crispy_pitch)
+
 extern int crispy_automapstats;
+extern int crispy_centerweapon;
+extern int crispy_coloredblood;
+extern int crispy_coloredblood2;
 extern int crispy_coloredhud;
 extern int crispy_crosshair;
+extern int crispy_crosshair2;
+extern int crispy_flipcorpses;
 extern int crispy_freeaim;
 extern int crispy_freelook;
 extern int crispy_highcolor;
 extern int crispy_jump;
 extern int crispy_mouselook;
 extern int crispy_overunder;
+extern int crispy_pitch;
 extern int crispy_recoil;
 extern int crispy_secretmessage;
 extern int crispy_translucency;

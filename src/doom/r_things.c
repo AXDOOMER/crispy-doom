@@ -76,8 +76,8 @@ lighttable_t**	spritelights;
 
 // constant arrays
 //  used for psprite clipping and initializing clipping
-short		negonearray[SCREENWIDTH];
-short		screenheightarray[SCREENWIDTH];
+int		negonearray[SCREENWIDTH]; // [crispy] 32-bit integer math
+int		screenheightarray[SCREENWIDTH]; // [crispy] 32-bit integer math
 
 
 //
@@ -333,7 +333,7 @@ vissprite_t* R_NewVisSprite (void)
 	// [crispy] cap MAXVISSPRITES limit at 4096
 	if (!max && numvissprites == 32 * MAXVISSPRITES)
 	{
-	    printf("R_NewVisSprite: MAXVISSPRITES limit capped at %d.\n", numvissprites);
+	    fprintf(stderr, "R_NewVisSprite: MAXVISSPRITES limit capped at %d.\n", numvissprites);
 	    max++;
 	}
 
@@ -347,7 +347,7 @@ vissprite_t* R_NewVisSprite (void)
 	vissprite_p = vissprites + numvissprites_old;
 
 	if (numvissprites_old)
-	    printf("R_NewVisSprite: Hit MAXVISSPRITES limit at %d, raised to %d.\n", numvissprites_old, numvissprites);
+	    fprintf(stderr, "R_NewVisSprite: Hit MAXVISSPRITES limit at %d, raised to %d.\n", numvissprites_old, numvissprites);
     }
     
     vissprite_p++;
@@ -362,8 +362,8 @@ vissprite_t* R_NewVisSprite (void)
 // Masked means: partly transparent, i.e. stored
 //  in posts/runs of opaque pixels.
 //
-short*		mfloorclip;
-short*		mceilingclip;
+int*		mfloorclip; // [crispy] 32-bit integer math
+int*		mceilingclip; // [crispy] 32-bit integer math
 
 fixed_t		spryscale;
 fixed_t		sprtopscreen;
@@ -598,7 +598,7 @@ void R_ProjectSprite (mobj_t* thing)
         thing->flags & MF_CORPSE &&
         thing->health & 1)
     {
-        flip = true;
+        flip = !!crispy_flipcorpses;
     }
 
     if (flip)
@@ -644,33 +644,40 @@ void R_ProjectSprite (mobj_t* thing)
 	vis->colormap = spritelights[index];
     }	
 
-    // [crispy] Cacodemons bleed blue blood
-    // Barons of Hell and Hell Knights bleed green blood
-    if (thing->type == MT_BLOOD && thing->target)
+    // [crispy] colored blood
+    if (crispy_coloredblood &&
+        thing->type == MT_BLOOD && thing->target)
     {
-	if ((crispy_coloredblood & 1) && thing->target->type == MT_BRUISER)
-	    vis->translation = cr[CR_GREEN];
-	else
-	if ((crispy_coloredblood & (1 << 1)) && thing->target->type == MT_KNIGHT)
-	    vis->translation = cr[CR_GREEN];
-	else
-	if ((crispy_coloredblood & (1 << 2)) && thing->target->type == MT_HEAD)
-	    vis->translation = cr[CR_BLUE];
-	else
 	// [crispy] Thorn Things in Hacx bleed green blood
-	if ((crispy_coloredblood & (1 << 5)) && thing->target->type == MT_BABY)
-	    vis->translation = cr[CR_GREEN];
+	if (gamemission == pack_hacx)
+	{
+	    if (thing->target->type == MT_BABY)
+	    {
+		vis->translation = cr[CR_GREEN];
+	    }
+	}
+	else
+	{
+	    // [crispy] Barons of Hell and Hell Knights bleed green blood
+	    if (thing->target->type == MT_BRUISER || thing->target->type == MT_KNIGHT)
+	    {
+		vis->translation = cr[CR_GREEN];
+	    }
+	    else
+	    // [crispy] Cacodemons bleed blue blood
+	    if (thing->target->type == MT_HEAD)
+	    {
+		vis->translation = cr[CR_BLUE];
+	    }
+	}
     }
 }
-
- // [crispy] HU font plus sign
- #define HU_LASERSPOT "STCFN043"
 
 // [crispy] generate a vissprite for the laser spot
 static void R_DrawLSprite (void)
 {
     fixed_t		xscale;
-    fixed_t		tx;
+    fixed_t		tx, tz;
     vissprite_t*	vis;
 
     static int		lump;
@@ -680,40 +687,58 @@ static void R_DrawLSprite (void)
 
     if (viewplayer->readyweapon == wp_fist ||
         viewplayer->readyweapon == wp_chainsaw ||
-        viewplayer->playerstate == PST_DEAD)
+        viewplayer->playerstate > PST_LIVE)
 	return;
 
+    if (!lump)
+    {
+	lump = W_GetNumForName(CRISPY_CROSSHAIR);
+	patch = W_CacheLumpNum(lump, PU_CACHE);
+    }
+
+    crispy_crosshair = 2; // [crispy] intercepts overflow guard
     P_LineLaser(viewplayer->mo, viewplayer->mo->angle,
                 16*64*FRACUNIT, ((p2fromp(viewplayer)->lookdir/MLOOKUNIT)<<FRACBITS)/173);
+    crispy_crosshair = 1; // [crispy] intercepts overflow guard
 
     if (!laserspot->x &&
         !laserspot->y &&
         !laserspot->z)
 	return;
 
-    if (!lump)
-    {
-	lump = W_GetNumForName(HU_LASERSPOT);
-	patch = W_CacheLumpNum(lump, PU_CACHE);
-    }
+    tz = FixedMul(laserspot->x - viewx, viewcos) +
+         FixedMul(laserspot->y - viewy, viewsin);
 
-    xscale = FixedDiv(projection, FixedMul(laserspot->x - viewx, viewcos) + FixedMul(laserspot->y - viewy, viewsin));
+    if (tz < MINZ)
+	return;
+
+    xscale = FixedDiv(projection, tz);
     // [crispy] the original patch has 5x5 pixels, cap the projection at 20x20
     xscale = (xscale > 4*FRACUNIT) ? 4*FRACUNIT : xscale;
+
+    tx = -(FixedMul(laserspot->y - viewy, viewcos) -
+           FixedMul(laserspot->x - viewx, viewsin));
+
+    if (abs(tx) > (tz<<2))
+	return;
 
     vis = R_NewVisSprite();
     memset(vis, 0, sizeof(*vis)); // [crispy] set all fields to NULL, except ...
     vis->patch = lump - firstspritelump; // [crispy] not a sprite patch
     vis->colormap = fixedcolormap ? fixedcolormap : colormaps; // [crispy] always full brightness
-    vis->mobjflags |= MF_TRANSLUCENT;
+//  vis->mobjflags |= MF_TRANSLUCENT;
     vis->xiscale = FixedDiv (FRACUNIT, xscale);
-    vis->texturemid = laserspot->z + (patch->topoffset<<FRACBITS) - viewz;
+    vis->texturemid = laserspot->z - viewz;
     vis->scale = xscale<<(detailshift && !hires);
 
-    tx = -((SHORT(patch->width)/2)<<FRACBITS);
+    tx -= SHORT(patch->width/2)<<FRACBITS;
     vis->x1 =  (centerxfrac + FixedMul(tx, xscale))>>FRACBITS;
     tx += SHORT(patch->width)<<FRACBITS;
     vis->x2 = ((centerxfrac + FixedMul(tx, xscale))>>FRACBITS) - 1;
+
+    if (vis->x1 < 0 || vis->x1 >= viewwidth ||
+        vis->x2 < 0 || vis->x2 >= viewwidth)
+	return;
 
     R_DrawVisSprite (vis, vis->x1, vis->x2);
 }
@@ -888,7 +913,7 @@ void R_DrawPlayerSprites (void)
     mfloorclip = screenheightarray;
     mceilingclip = negonearray;
     
-    if (crispy_crosshair)
+    if (crispy_crosshair && crispy_crosshair2)
 	R_DrawLSprite();
 
     // add all active psprites
@@ -969,8 +994,8 @@ void R_SortVisSprites (void)
 void R_DrawSprite (vissprite_t* spr)
 {
     drawseg_t*		ds;
-    short		clipbot[SCREENWIDTH];
-    short		cliptop[SCREENWIDTH];
+    int		clipbot[SCREENWIDTH]; // [crispy] 32-bit integer math
+    int		cliptop[SCREENWIDTH]; // [crispy] 32-bit integer math
     int			x;
     int			r1;
     int			r2;

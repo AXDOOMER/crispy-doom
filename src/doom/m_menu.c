@@ -121,7 +121,7 @@ boolean			menuactive;
 
 #define SKULLXOFF		-32
 #define LINEHEIGHT		16
-#define CRISPY_LINEHEIGHT	12
+#define CRISPY_LINEHEIGHT	10
 
 extern boolean		sendpause;
 char			savegamestrings[10][SAVESTRINGSIZE];
@@ -197,17 +197,23 @@ void M_ChangeSensitivity(int choice);
 static void M_ChangeSensitivity_y(int choice);
 static void M_MouseInvert(int choice);
 static void M_MouseLook(int choice);
-static void M_CrispyToggleHighcolor(int choice);
-static void M_CrispyToggleTranslucency(int choice);
-static void M_CrispyToggleColoredhud(int choice);
 static void M_CrispyToggleAutomapstats(int choice);
-static void M_CrispyToggleSecretmessage(int choice);
+static void M_CrispyToggleCenterweapon(int choice);
+static void M_CrispyToggleColoredblood(int choice);
+static void M_CrispyToggleColoredblood2(int choice);
+static void M_CrispyToggleColoredhud(int choice);
 static void M_CrispyToggleCrosshair(int choice);
-static void M_CrispyToggleFreelook(int choice);
+static void M_CrispyToggleCrosshair2(int choice);
+static void M_CrispyToggleFlipcorpses(int choice);
 static void M_CrispyToggleFreeaim(int choice);
+static void M_CrispyToggleFreelook(int choice);
+static void M_CrispyToggleHighcolor(int choice);
 static void M_CrispyToggleJumping(int choice);
 static void M_CrispyToggleOverunder(int choice);
+static void M_CrispyTogglePitch(int choice);
 static void M_CrispyToggleRecoil(int choice);
+static void M_CrispyToggleSecretmessage(int choice);
+static void M_CrispyToggleTranslucency(int choice);
 void M_SfxVol(int choice);
 void M_MusicVol(int choice);
 void M_ChangeDetail(int choice);
@@ -215,6 +221,7 @@ void M_SizeDisplay(int choice);
 void M_StartGame(int choice);
 static void M_Mouse(int choice);
 static void M_Crispness(int choice);
+static void M_Crispness2(int choice);
 void M_Sound(int choice);
 
 void M_FinishReadThis(int choice);
@@ -232,6 +239,7 @@ void M_DrawEpisode(void);
 void M_DrawOptions(void);
 static void M_DrawMouse(void);
 static void M_DrawCrispness(void);
+static void M_DrawCrispness2(void);
 void M_DrawSound(void);
 void M_DrawLoad(void);
 void M_DrawSave(void);
@@ -450,33 +458,45 @@ static menu_t  MouseDef =
 // [crispy] crispness menu
 enum
 {
+    crispness_sep_visual,
     crispness_highcolor,
-    crispness_translucency,
     crispness_coloredhud,
-    crispness_automapstats,
-    crispness_secretmessage,
-    crispness_crosshair,
+    crispness_translucency,
+    crispness_coloredblood,
+    crispness_coloredblood2,
+    crispness_flipcorpses,
+    crispness_sep_tactical,
     crispness_freelook,
-    crispness_freeaim,
-    crispness_jumping,
-    crispness_overunder,
-    crispness_recoil,
+    crispness_crosshair,
+    crispness_crosshair2,
+    crispness_centerweapon,
+    crispness_pitch,
+    crispness_secretmessage,
+    crispness_automapstats,
+    crispness_sep_goto2,
+    crispness_goto2,
     crispness_end
 } crispness_e;
 
 static menuitem_t CrispnessMenu[]=
 {
+    {-1,"",0,'\0'},
     {1,"",	M_CrispyToggleHighcolor,'t'},
-    {1,"",	M_CrispyToggleTranslucency,'t'},
     {1,"",	M_CrispyToggleColoredhud,'c'},
-    {1,"",	M_CrispyToggleAutomapstats,'a'},
-    {1,"",	M_CrispyToggleSecretmessage,'s'},
-    {1,"",	M_CrispyToggleCrosshair,'l'},
+    {1,"",	M_CrispyToggleTranslucency,'t'},
+    {1,"",	M_CrispyToggleColoredblood,'e'},
+    {1,"",	M_CrispyToggleColoredblood2,'f'},
+    {1,"",	M_CrispyToggleFlipcorpses,'r'},
+    {-1,"",0,'\0'},
     {1,"",	M_CrispyToggleFreelook,'f'},
-    {1,"",	M_CrispyToggleFreeaim,'v'},
-    {1,"",	M_CrispyToggleJumping,'j'},
-    {1,"",	M_CrispyToggleOverunder,'o'},
-    {1,"",	M_CrispyToggleRecoil,'r'},
+    {1,"",	M_CrispyToggleCrosshair,'l'},
+    {1,"",	M_CrispyToggleCrosshair2,'g'},
+    {1,"",	M_CrispyToggleCenterweapon,'c'},
+    {1,"",	M_CrispyTogglePitch,'p'},
+    {1,"",	M_CrispyToggleSecretmessage,'s'},
+    {1,"",	M_CrispyToggleAutomapstats,'a'},
+    {-1,"",0,'\0'},
+    {1,"",	M_Crispness2,'g'},
 };
 
 static menu_t  CrispnessDef =
@@ -486,7 +506,40 @@ static menu_t  CrispnessDef =
     CrispnessMenu,
     M_DrawCrispness,
     48,36,
-    0
+    1
+};
+
+enum
+{
+    crispness_sep_physical,
+    crispness_jumping,
+    crispness_freeaim,
+    crispness_overunder,
+    crispness_recoil,
+    crispness_sep_goto1,
+    crispness_goto1,
+    crispness2_end
+} crispness2_e;
+
+static menuitem_t Crispness2Menu[]=
+{
+    {-1,"",0,'\0'},
+    {1,"",	M_CrispyToggleJumping,'j'},
+    {1,"",	M_CrispyToggleFreeaim,'v'},
+    {1,"",	M_CrispyToggleOverunder,'o'},
+    {1,"",	M_CrispyToggleRecoil,'r'},
+    {-1,"",0,'\0'},
+    {1,"",	M_Crispness,'g'},
+};
+
+static menu_t  Crispness2Def =
+{
+    crispness2_end,
+    &CrispnessDef,
+    Crispness2Menu,
+    M_DrawCrispness2,
+    48,36,
+    1
 };
 
 //
@@ -714,6 +767,8 @@ void M_LoadSelect(int choice)
 	
     M_StringCopy(name, P_SaveGameFile(choice), sizeof(name));
 
+    // [crispy] save the last game you loaded
+    SaveDef.lastOn = choice;
     G_LoadGame (name);
     M_ClearMenus ();
 
@@ -780,6 +835,8 @@ void M_SaveSelect(int choice)
     // we are going to be intercepting all chars
     saveStringEnter = 1;
     
+    // [crispy] load the last game you saved
+    LoadDef.lastOn = choice;
     saveSlot = choice;
     M_StringCopy(saveOldString,savegamestrings[choice], SAVESTRINGSIZE);
     if (!strcmp(savegamestrings[choice], EMPTYSTRING))
@@ -1133,8 +1190,11 @@ static void M_Expansion(int choice)
 //
 // M_Options
 //
+// [crispy] no patches are drawn in the Options menu anymore
+/*
 static char *detailNames[2] = {"M_GDHIGH","M_GDLOW"};
 static char *msgNames[2] = {"M_MSGOFF","M_MSGON"};
+*/
 
 void M_DrawOptions(void)
 {
@@ -1186,13 +1246,15 @@ static void M_DrawMouse(void)
 		 21, mouseSensitivity_y);
 
     M_snprintf(mouse_menu_text, sizeof(mouse_menu_text),
-               "%sInvert Mouse: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
+               "%sInvert Vertical Axis: %s%s", crstr[CR_NONE],
+               mouse_y_invert ? crstr[CR_GREEN] : crstr[CR_DARK],
                mouse_y_invert ? "On" : "Off");
     M_WriteText(MouseDef.x, MouseDef.y + LINEHEIGHT * mouse_invert + 6,
                 mouse_menu_text);
 
     M_snprintf(mouse_menu_text, sizeof(mouse_menu_text),
-               "%sPermanent Mouse Look: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
+               "%sPermanent Mouse Look: %s%s", crstr[CR_NONE],
+               crispy_mouselook ? crstr[CR_GREEN] : crstr[CR_DARK],
                crispy_mouselook ? "On" : "Off");
     M_WriteText(MouseDef.x, MouseDef.y + LINEHEIGHT * mouse_look + 6,
                 mouse_menu_text);
@@ -1201,79 +1263,118 @@ static void M_DrawMouse(void)
 }
 
 // [crispy] crispness menu
-static void M_DrawCrispness(void)
+static void M_DrawCrispnessBackground(void)
+{
+    byte *src, *dest;
+    static byte *sdest;
+    int x, y;
+
+    if (!sdest)
+    {
+	src = W_CacheLumpName("FLOOR4_6" , PU_CACHE);
+	dest = (unsigned char *) Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
+	sdest = dest;
+
+	for (y = 0; y < SCREENHEIGHT; y++)
+	{
+	    for (x = 0; x < SCREENWIDTH / 64; x++)
+	    {
+		memcpy(dest, src+((y & 63) << 6), 64);
+		dest += 64;
+	    }
+	    if (SCREENWIDTH & 63)
+	    {
+		memcpy(dest, src + ((y & 63) << 6), SCREENWIDTH & 63);
+		dest += (SCREENWIDTH & 63);
+	    }
+	}
+    }
+
+    memcpy(I_VideoBuffer, sdest, SCREENWIDTH * SCREENHEIGHT);
+}
+
+static void M_DrawCrispnessHeader(char *item)
 {
     char crispy_menu_text[48];
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sCrispness", crstr[CR_GOLD]);
-    M_WriteText(160 - M_StringWidth("Crispness") / 2, 20, crispy_menu_text);
+               "%s%s", crstr[CR_GOLD], item);
+    M_WriteText(160 - M_StringWidth(item) / 2, 20, crispy_menu_text);
+}
+
+static void M_DrawCrispnessSeparator(int y, char *item)
+{
+    char crispy_menu_text[48];
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sEnable high color rendering: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_highcolor ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_highcolor + 6,
-                crispy_menu_text);
+               "%s%s", crstr[CR_GOLD], item);
+    M_WriteText(CrispnessDef.x - 8, CrispnessDef.y + CRISPY_LINEHEIGHT * y, crispy_menu_text);
+}
+
+static void M_DrawCrispnessItem(int y, char *item, int feat, boolean cond)
+{
+    char crispy_menu_text[48];
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sEnable translucency: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_translucency ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_translucency + 6,
-                crispy_menu_text);
+               "%s%s: %s%s", cond ? crstr[CR_NONE] : crstr[CR_DARK], item,
+               cond ? (feat ? crstr[CR_GREEN] : crstr[CR_DARK]) : crstr[CR_DARK],
+               cond && feat ? "On" : "Off");
+    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * y, crispy_menu_text);
+}
+
+static void M_DrawCrispnessGoto(int y, char *item)
+{
+    char crispy_menu_text[48];
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sColorize status bar and texts: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_coloredhud ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_coloredhud + 6,
-                crispy_menu_text);
+               "%s%s", crstr[CR_GOLD], item);
+    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * y, crispy_menu_text);
+}
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sLevel Stats in Automap: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_automapstats ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_automapstats + 6,
-                crispy_menu_text);
+static void M_DrawCrispness(void)
+{
+    M_DrawCrispnessBackground();
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%s\"Secret Revealed\" Message: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_secretmessage ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_secretmessage + 6,
-                crispy_menu_text);
+    M_DrawCrispnessHeader("Crispness 1/2");
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sLaser Pointer: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_crosshair ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_crosshair + 6,
-                crispy_menu_text);
+    M_DrawCrispnessSeparator(crispness_sep_visual, "Visual");
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sAllow Free Look: %s%s", crstr[CR_NONE], crstr[CR_GREEN],
-               crispy_freelook ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_freelook + 6,
-                crispy_menu_text);
+    M_DrawCrispnessItem(crispness_highcolor, "sEnable High Color Rendering", crispy_highcolor, true);
+    M_DrawCrispnessItem(crispness_coloredhud, "Colorize Status Bar and Texts", crispy_coloredhud, true);
+    M_DrawCrispnessItem(crispness_translucency, "Enable Translucency", crispy_translucency, true);
+    M_DrawCrispnessItem(crispness_coloredblood, "Enable Colored Blood", crispy_coloredblood, true);
+    M_DrawCrispnessItem(crispness_coloredblood2, "Fix Spectre and Lost Soul Blood", crispy_coloredblood2, true);
+    M_DrawCrispnessItem(crispness_flipcorpses, "Randomly Mirrored Corpses", crispy_flipcorpses, true);
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sVertical Aiming: %s%s", uncrispy ? crstr[CR_DARK] : crstr[CR_NONE], uncrispy ? crstr[CR_DARK] : crstr[CR_GREEN],
-               crispy_freeaim && !uncrispy ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_freeaim + 6,
-                crispy_menu_text);
+    M_DrawCrispnessSeparator(crispness_sep_tactical, "Tactical");
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sAllow Jumping: %s%s", uncrispy ? crstr[CR_DARK] : crstr[CR_NONE], uncrispy ? crstr[CR_DARK] : crstr[CR_GREEN],
-               crispy_jump && !uncrispy ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_jumping + 6,
-                crispy_menu_text);
+    M_DrawCrispnessItem(crispness_freelook, "Allow Free Look", crispy_freelook, true);
+    M_DrawCrispnessItem(crispness_crosshair, "Draw Crosshair", crispy_crosshair, true);
+    M_DrawCrispnessItem(crispness_crosshair2, "Project Crosshair into Scene", crispy_crosshair2, crispy_crosshair);
+    M_DrawCrispnessItem(crispness_centerweapon, "Center Weapon when Firing", crispy_centerweapon, true);
+    M_DrawCrispnessItem(crispness_pitch, "Enable Weapon Pitch", crispy_pitch, true);
+    M_DrawCrispnessItem(crispness_secretmessage, "Show Revealed Secrets", crispy_secretmessage, true);
+    M_DrawCrispnessItem(crispness_automapstats, "Show Level Stats in Automap", crispy_automapstats, true);
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sWalk over/under Monsters: %s%s", uncrispy ? crstr[CR_DARK] : crstr[CR_NONE], uncrispy ? crstr[CR_DARK] : crstr[CR_GREEN],
-               crispy_overunder && !uncrispy ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_overunder + 6,
-                crispy_menu_text);
+    M_DrawCrispnessGoto(crispness_goto2, "Next Page >");
 
-    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
-               "%sWeapon Recoil: %s%s", uncrispy ? crstr[CR_DARK] : crstr[CR_NONE], uncrispy ? crstr[CR_DARK] : crstr[CR_GREEN],
-               crispy_recoil && !uncrispy ? "On" : "Off");
-    M_WriteText(CrispnessDef.x, CrispnessDef.y + CRISPY_LINEHEIGHT * crispness_recoil + 6,
-                crispy_menu_text);
+    V_ClearDPTranslation();
+}
+
+static void M_DrawCrispness2(void)
+{
+    M_DrawCrispnessBackground();
+
+    M_DrawCrispnessHeader("Crispness 2/2");
+
+    M_DrawCrispnessSeparator(crispness_sep_physical, "Physical");
+
+    M_DrawCrispnessItem(crispness_jumping, "Allow Jumping", crispy_jump, singleplayer);
+    M_DrawCrispnessItem(crispness_freeaim, "Allow Vertical Aiming", crispy_freeaim, singleplayer);
+    M_DrawCrispnessItem(crispness_overunder, "Walk over/under Monsters", crispy_overunder, singleplayer);
+    M_DrawCrispnessItem(crispness_recoil, "Enable Weapon Recoil", crispy_recoil, singleplayer);
+
+    M_DrawCrispnessGoto(crispness_goto1, "< Prev Page");
 
     V_ClearDPTranslation();
 }
@@ -1304,6 +1405,11 @@ static void M_Mouse(int choice)
 static void M_Crispness(int choice)
 {
     M_SetupNextMenu(&CrispnessDef);
+}
+
+static void M_Crispness2(int choice)
+{
+    M_SetupNextMenu(&Crispness2Def);
 }
 
 
@@ -1515,13 +1621,13 @@ static void M_ChangeSensitivity_y(int choice)
 static void M_MouseInvert(int choice)
 {
     choice = 0;
-    mouse_y_invert = 1 - mouse_y_invert;
+    mouse_y_invert = 1 - !!mouse_y_invert;
 }
 
 static void M_MouseLook(int choice)
 {
     choice = 0;
-    crispy_mouselook = 1 - crispy_mouselook;
+    crispy_mouselook = 1 - !!crispy_mouselook;
 
     players2[consoleplayer].lookdir = 0;
 }
@@ -1537,7 +1643,7 @@ static void M_CrispyToggleHighcolor(int choice)
 static void M_CrispyToggleTranslucency(int choice)
 {
     choice = 0;
-    crispy_translucency = 1 - crispy_translucency;
+    crispy_translucency = 1 - !!crispy_translucency;
 
     // [crispy] translucent Crispy HUD?
     if (screenblocks > CRISPY_HUD)
@@ -1547,71 +1653,124 @@ static void M_CrispyToggleTranslucency(int choice)
 static void M_CrispyToggleColoredhud(int choice)
 {
     choice = 0;
-    crispy_coloredhud = 1 - crispy_coloredhud;
+    crispy_coloredhud = 1 - !!crispy_coloredhud;
 }
 
 static void M_CrispyToggleAutomapstats(int choice)
 {
     choice = 0;
-    crispy_automapstats = 1 - crispy_automapstats;
+    crispy_automapstats = 1 - !!crispy_automapstats;
 }
 
 static void M_CrispyToggleSecretmessage(int choice)
 {
     choice = 0;
-    crispy_secretmessage = 1 - crispy_secretmessage;
+    crispy_secretmessage = 1 - !!crispy_secretmessage;
 }
 
 static void M_CrispyToggleCrosshair(int choice)
 {
     choice = 0;
-    crispy_crosshair = 1 - crispy_crosshair;
+    crispy_crosshair = 1 - !!crispy_crosshair;
+}
+
+static void M_CrispyToggleCrosshair2(int choice)
+{
+    if (!crispy_crosshair)
+    {
+	S_StartSound(NULL,sfx_oof);
+	return;
+    }
+
+    choice = 0;
+    crispy_crosshair2 = 1 - !!crispy_crosshair2;
+}
+
+static void M_CrispyToggleCenterweapon(int choice)
+{
+    choice = 0;
+    crispy_centerweapon = 1 - !!crispy_centerweapon;
 }
 
 static void M_CrispyToggleFreelook(int choice)
 {
     choice = 0;
-    crispy_freelook = 1 - crispy_freelook;
+    crispy_freelook = 1 - !!crispy_freelook;
 
     players2[consoleplayer].lookdir = 0;
 }
 
 static void M_CrispyToggleFreeaim(int choice)
 {
-    if (uncrispy)
+    if (!singleplayer)
+    {
+	S_StartSound(NULL,sfx_oof);
 	return;
+    }
 
     choice = 0;
-    crispy_freeaim = 1 - crispy_freeaim;
+    crispy_freeaim = 1 - !!crispy_freeaim;
 }
 
 static void M_CrispyToggleJumping(int choice)
 {
-    if (uncrispy)
+    if (!singleplayer)
+    {
+	S_StartSound(NULL,sfx_oof);
 	return;
+    }
 
     choice = 0;
-    crispy_jump = 1 - crispy_jump;
+    crispy_jump = 1 - !!crispy_jump;
 }
 
 static void M_CrispyToggleOverunder(int choice)
 {
-    if (uncrispy)
+    if (!singleplayer)
+    {
+	S_StartSound(NULL,sfx_oof);
 	return;
+    }
 
     choice = 0;
-    crispy_overunder = 1 - crispy_overunder;
+    crispy_overunder = 1 - !!crispy_overunder;
+}
+
+static void M_CrispyTogglePitch(int choice)
+{
+    choice = 0;
+    crispy_pitch = 1 - !!crispy_pitch;
 }
 
 static void M_CrispyToggleRecoil(int choice)
 {
-    if (uncrispy)
+    if (!singleplayer)
+    {
+	S_StartSound(NULL,sfx_oof);
 	return;
+    }
 
     choice = 0;
-    crispy_recoil = 1 - crispy_recoil;
+    crispy_recoil = 1 - !!crispy_recoil;
 }
 
+static void M_CrispyToggleColoredblood(int choice)
+{
+    choice = 0;
+    crispy_coloredblood = 1 - !!crispy_coloredblood;
+}
+
+static void M_CrispyToggleColoredblood2(int choice)
+{
+    choice = 0;
+    crispy_coloredblood2 = 1 - !!crispy_coloredblood2;
+}
+
+static void M_CrispyToggleFlipcorpses(int choice)
+{
+    choice = 0;
+    crispy_flipcorpses = 1 - !!crispy_flipcorpses;
+}
 
 void M_ChangeDetail(int choice)
 {
@@ -1668,6 +1827,12 @@ M_DrawThermo
 {
     int		xx;
     int		i;
+    char	num[4];
+
+    if (!thermDot)
+    {
+        dp_translation = cr[CR_DARK];
+    }
 
     xx = x;
     V_DrawPatchDirect(xx, y, W_CacheLumpName(DEH_String("M_THERML"), PU_CACHE));
@@ -1679,12 +1844,12 @@ M_DrawThermo
     }
     V_DrawPatchDirect(xx, y, W_CacheLumpName(DEH_String("M_THERMR"), PU_CACHE));
 
+    M_snprintf(num, 4, "%3d", thermDot);
+    M_WriteText(xx + 8, y + 3, num);
+
     // [crispy] do not crash anymore if value exceeds thermometer range
     if (thermDot >= thermWidth)
     {
-        char num[4];
-        M_snprintf(num, 4, "%3d", thermDot);
-        M_WriteText(xx + 8, y + 3, num);
         thermDot = thermWidth - 1;
         dp_translation = cr[CR_DARK];
     }
@@ -1924,6 +2089,21 @@ static int G_GotoNextLevel(void)
     {
       epsd = doom_next[gameepisode-1][gamemap-1] / 10;
       map = doom_next[gameepisode-1][gamemap-1] % 10;
+    }
+
+    // [crispy] special-casing for E1M10 "Sewers" support
+    if (crispy_havee1m10 && gameepisode == 1)
+    {
+	if (gamemap == 1)
+	{
+	    map = 10;
+	}
+	else
+	if (gamemap == 10)
+	{
+	    epsd = 1;
+	    map = 2;
+	}
     }
 
     G_DeferedInitNew(gameskill, epsd, map);
@@ -2606,11 +2786,12 @@ void M_Drawer (void)
 
     
     // DRAW SKULL
-    if (currentMenu == &CrispnessDef)
+    if (currentMenu == &CrispnessDef || currentMenu == &Crispness2Def)
     {
-    V_DrawPatchDirect(x + SKULLXOFF, currentMenu->y - 5 + itemOn*CRISPY_LINEHEIGHT,
-		      W_CacheLumpName(DEH_String(skullName[whichSkull]),
-				      PU_CACHE));
+	char item[4];
+	M_snprintf(item, sizeof(item), "%s>", whichSkull ? crstr[CR_NONE] : crstr[CR_DARK]);
+	M_WriteText(CrispnessDef.x - 8, CrispnessDef.y + CRISPY_LINEHEIGHT * itemOn, item);
+	V_ClearDPTranslation();
     }
     else
     V_DrawPatchDirect(x + SKULLXOFF, currentMenu->y - 5 + itemOn*LINEHEIGHT,
