@@ -971,7 +971,7 @@ void R_InitColormaps (int pal)
 	boolean keepgray = false;
 
 	extern char *iwadfile;
-	extern byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
+	extern pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
 
 	crstr = malloc(CRMAX * sizeof(*crstr));
 

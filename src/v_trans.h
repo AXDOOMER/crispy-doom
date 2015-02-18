@@ -47,7 +47,7 @@ enum
     CRMAX
 } cr_t;
 
-extern byte *cr[CRMAX];
+extern pixel_t *cr[CRMAX];
 extern char **crstr;
 
 #endif // __V_TRANS__

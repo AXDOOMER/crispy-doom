@@ -50,7 +50,7 @@
 
 byte *tinttable = NULL;
 byte *tranmap = NULL;
-byte *dp_translation = NULL;
+pixel_t *dp_translation = NULL;
 boolean dp_translucent = false;
 const lighttable_t dc_translucency = 0xa8ffffff;
 
@@ -239,10 +239,10 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             {
                 if (hires)
                 {
-                    *dest = colormaps[dp_translation[*source]];
+                    *dest = dp_translation[*source];
                     dest += SCREENWIDTH;
                 }
-                *dest = colormaps[dp_translation[*source++]];
+                *dest = dp_translation[*source++];
                 dest += SCREENWIDTH;
             }
           }
@@ -302,11 +302,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             {
                 if (hires)
                 {
-                    sourcergb = colormaps[dp_translation[*source]];
+                    sourcergb = dp_translation[*source];
                     *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
                     dest += SCREENWIDTH;
                 }
-                sourcergb = colormaps[dp_translation[*source++]];
+                sourcergb = dp_translation[*source++];
                 *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
                 dest += SCREENWIDTH;
             }
