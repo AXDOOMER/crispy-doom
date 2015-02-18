@@ -1644,14 +1644,6 @@ static default_t extra_defaults_list[] =
     //!
     // @game doom
     //
-    // Enable high color rendering.
-    //
-
-    CONFIG_VARIABLE_INT(crispy_highcolor),
-
-    //!
-    // @game doom
-    //
     // Enable translucency.
     //
 

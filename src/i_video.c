@@ -1806,7 +1806,7 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     // software scaling pretty well, "linear" and "best" look much softer and
     // smoother. TODO: Turn this into a config option / command line parameter.
 
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
     // Create window and renderer context at once. We set the window title
     // later anyway and leave the window position "undefined". If "flags"

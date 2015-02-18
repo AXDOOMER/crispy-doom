@@ -35,7 +35,6 @@ int crispy_crosshair2 = 0;
 int crispy_flipcorpses = 0;
 int crispy_freeaim = 0;
 int crispy_freelook = 0;
-int crispy_highcolor = 0;
 int crispy_jump = 0;
 int crispy_mouselook = 0;
 int crispy_overunder = 0;
@@ -55,8 +54,6 @@ void CompatibilitySettings(void)
 
     TXT_AddWidgets(window,
                    TXT_NewSeparator("Visual"),
-                   TXT_NewCheckBox("Enable high color rendering",
-                                   &crispy_highcolor),
                    TXT_NewCheckBox("Colorize Status Bar and Texts",
                                    &crispy_coloredhud),
                    TXT_NewCheckBox("Enable Translucency",
@@ -126,7 +123,6 @@ void BindCompatibilityVariables(void)
         M_BindVariable("crispy_flipcorpses",     &crispy_flipcorpses);
         M_BindVariable("crispy_freeaim",         &crispy_freeaim);
         M_BindVariable("crispy_freelook",        &crispy_freelook);
-        M_BindVariable("crispy_highcolor",       &crispy_highcolor);
         M_BindVariable("crispy_jump",            &crispy_jump);
         M_BindVariable("crispy_mouselook",       &crispy_mouselook);
         M_BindVariable("crispy_overunder",       &crispy_overunder);

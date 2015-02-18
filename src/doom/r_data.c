@@ -925,92 +925,55 @@ void R_InitSpriteLumps (void)
 //
 void R_InitColormaps (int pal)
 {
-    // 5 gamma levels, 14 palettes, 32 colormaps + inverse, 256 indexed colors
-    static lighttable_t colormaptable[5][14][NUMCOLORMAPS+1][256] = {{{{0}}}};
-    byte *doompalette, *doomcolormap;
+    byte *doompalette, *playpal;
 
-    int gamma, p, c, i;
-    byte a, r, g, b;
+    int c, i, j;
+    byte r, g, b;
     float scale;
 
-    if (!colormaptable[0][0][0][0] || pal == INT_MAX)
+    if (!colormaps)
     {
-	pal = 0;
+	colormaps = (lighttable_t*) Z_Malloc((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+    }
 
-	for (gamma = 0; gamma < 5; gamma++)
+    doompalette = W_CacheLumpName("PLAYPAL", PU_STATIC);
+    playpal = doompalette + 256 * 3 * pal;
+
+    for (c = j = 0; c < NUMCOLORMAPS; c++)
+    {
+	scale = 1. - 1. * c / NUMCOLORMAPS;
+
+	for (i = 0; i < 256; i++)
 	{
-	    doompalette = W_CacheLumpName("PLAYPAL", PU_CACHE);
+	    r = gammatable[usegamma][playpal[3 * i + 0]] * scale + gammatable[usegamma][0] * (1. - scale);
+	    g = gammatable[usegamma][playpal[3 * i + 1]] * scale + gammatable[usegamma][0] * (1. - scale);
+	    b = gammatable[usegamma][playpal[3 * i + 2]] * scale + gammatable[usegamma][0] * (1. - scale);
 
-	    for (p = 0; p < 14; p++)
-	    {
-		if (!crispy_highcolor)
-		{
-		    doomcolormap = W_CacheLumpName("COLORMAP", PU_CACHE);
-
-		    for (c = 0; c <= NUMCOLORMAPS; c++)
-		    {
-			for (i = 0; i < 256; i++)
-			{
-			    r = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 0]];
-			    g = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 1]];
-			    b = gammatable[gamma][doompalette[3 * doomcolormap[c * 256 + i] + 2]];
-
-			    colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
-			}
-		    }
-		}
-		else
-		{
-		    for (c = 0; c < NUMCOLORMAPS; c++)
-		    {
-			// TODO: scale down to the darkest color in the current gamma
-			scale = 1. - 1. * c / NUMCOLORMAPS;
-
-			for (i = 0; i < 256; i++)
-			{
-			    r = gammatable[gamma][doompalette[3 * i + 0]] * scale + (1. - scale) * gamma;
-			    g = gammatable[gamma][doompalette[3 * i + 1]] * scale + (1. - scale) * gamma;
-			    b = gammatable[gamma][doompalette[3 * i + 2]] * scale + (1. - scale) * gamma;
-
-			    colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
-			}
-		    }
-
-		    // Invulnerability
-		    for (i = 0; i < 256; i++)
-		    {
-			a = 255 - (doompalette[3 * i + 0] +
-			           doompalette[3 * i + 1] +
-			           doompalette[3 * i + 2]) / 3;
-			r = g = b = gammatable[gamma][a];
-
-			colormaptable[gamma][p][c][i] = 0xff000000 + (r << 16) + (g << 8) + b;
-		    }
-		}
-
-	    doompalette += 768;
-	    }
-	}
-
-	if (!colormaps)
-	{
-	    colormaps = (lighttable_t*) Z_Malloc ((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+	    colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
 	}
     }
 
-    memcpy(colormaps, *colormaptable[usegamma][pal], (NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t));
+    // [crispy] Invulnerability (c == COLORMAPS)
+    for (i = 0; i < 256; i++)
+    {
+	r = 255 - (playpal[3 * i + 0] +
+	           playpal[3 * i + 1] +
+	           playpal[3 * i + 2]) / 3;
+	r = g = b = gammatable[usegamma][r];
+
+	colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
+    }
 
     // [crispy] initialize color translation and color strings tables
+    if (!crstr)
     {
-	byte *playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
 	char c[3];
-	int i, j;
 	boolean keepgray = false;
+
 	extern char *iwadfile;
 	extern byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
 
-	if (!crstr)
-	    crstr = malloc(CRMAX * sizeof(*crstr));
+	crstr = malloc(CRMAX * sizeof(*crstr));
 
 	// [crispy] check for status bar graphics replacements
 	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'
@@ -1020,15 +983,15 @@ void R_InitColormaps (int pal)
 	{
 	    for (j = 0; j < 256; j++)
 	    {
-		cr[i][j] = V_Colorize(playpal, i, j, keepgray);
+		cr[i][j] = V_Colorize(doompalette, i, j, keepgray);
 	    }
 
 	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);
 	    crstr[i] = M_StringDuplicate(c);
 	}
-
-	Z_ChangeTag(playpal, PU_CACHE);
     }
+
+    Z_ChangeTag(doompalette, PU_CACHE);
 }
 
 

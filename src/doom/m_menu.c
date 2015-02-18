@@ -207,7 +207,6 @@ static void M_CrispyToggleCrosshair2(int choice);
 static void M_CrispyToggleFlipcorpses(int choice);
 static void M_CrispyToggleFreeaim(int choice);
 static void M_CrispyToggleFreelook(int choice);
-static void M_CrispyToggleHighcolor(int choice);
 static void M_CrispyToggleJumping(int choice);
 static void M_CrispyToggleOverunder(int choice);
 static void M_CrispyTogglePitch(int choice);
@@ -459,7 +458,6 @@ static menu_t  MouseDef =
 enum
 {
     crispness_sep_visual,
-    crispness_highcolor,
     crispness_coloredhud,
     crispness_translucency,
     crispness_coloredblood,
@@ -481,7 +479,6 @@ enum
 static menuitem_t CrispnessMenu[]=
 {
     {-1,"",0,'\0'},
-    {1,"",	M_CrispyToggleHighcolor,'t'},
     {1,"",	M_CrispyToggleColoredhud,'c'},
     {1,"",	M_CrispyToggleTranslucency,'t'},
     {1,"",	M_CrispyToggleColoredblood,'e'},
@@ -1339,7 +1336,6 @@ static void M_DrawCrispness(void)
 
     M_DrawCrispnessSeparator(crispness_sep_visual, "Visual");
 
-    M_DrawCrispnessItem(crispness_highcolor, "sEnable High Color Rendering", crispy_highcolor, true);
     M_DrawCrispnessItem(crispness_coloredhud, "Colorize Status Bar and Texts", crispy_coloredhud, true);
     M_DrawCrispnessItem(crispness_translucency, "Enable Translucency", crispy_translucency, true);
     M_DrawCrispnessItem(crispness_coloredblood, "Enable Colored Blood", crispy_coloredblood, true);
@@ -1630,14 +1626,6 @@ static void M_MouseLook(int choice)
     crispy_mouselook = 1 - !!crispy_mouselook;
 
     players2[consoleplayer].lookdir = 0;
-}
-
-static void M_CrispyToggleHighcolor(int choice)
-{
-    choice = 0;
-    crispy_highcolor = 1 - crispy_highcolor;
-
-    R_InitColormaps(INT_MAX);
 }
 
 static void M_CrispyToggleTranslucency(int choice)
