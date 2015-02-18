@@ -217,13 +217,11 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 
 	if (cr == CR_GREEN)
 	{
-//	    hsv.x = ((16.216 * hsv.z) + 100.784)/360.;
 	    hsv.x = 140./360.;
 	}
 	else
 	if (cr == CR_GOLD)
 	{
-//	    hsv.x = ((51.351 * hsv.z) + 8.648)/360.;
 	    hsv.x = 45./360.;
 	}
 	else
@@ -244,6 +242,5 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
     rgb.y *= 255.;
     rgb.z *= 255.;
 
-//    return FindNearestColor(playpal, (int) rgb.x, (int) rgb.y, (int) rgb.z);
     return 0xff000000 + ((byte) rgb.x << 16) + ((byte) rgb.y << 8) + (byte) rgb.z;
 }
