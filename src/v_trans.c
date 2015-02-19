@@ -190,10 +190,12 @@ static void rgb_to_hsv(vect *rgb, vect *hsv)
 pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 {
     vect rgb, hsv;
+    extern const byte gammatable[5][256];
+    extern int usegamma;
 
-    rgb.x = playpal[3 * source + 0];
-    rgb.y = playpal[3 * source + 1];
-    rgb.z = playpal[3 * source + 2];
+    rgb.x = gammatable[usegamma][playpal[3 * source + 0]];
+    rgb.y = gammatable[usegamma][playpal[3 * source + 1]];
+    rgb.z = gammatable[usegamma][playpal[3 * source + 2]];
 
     // [crispy] preserve gray drop shadow in IWAD status bar numbers
     if (cr == CR_NONE || (keepgray109 && source == 109))

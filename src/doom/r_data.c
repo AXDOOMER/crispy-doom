@@ -956,16 +956,15 @@ void R_InitColormaps (int pal)
     // [crispy] Invulnerability (c == COLORMAPS)
     for (i = 0; i < 256; i++)
     {
-	r = 255 - (playpal[3 * i + 0] +
-	           playpal[3 * i + 1] +
-	           playpal[3 * i + 2]) / 3;
-	r = g = b = gammatable[usegamma][r];
+	r = g = b = 
+	255 - (0.299 * gammatable[4 - usegamma][playpal[3 * i + 0]] +
+	       0.587 * gammatable[4 - usegamma][playpal[3 * i + 1]] +
+	       0.144 * gammatable[4 - usegamma][playpal[3 * i + 2]]);
 
 	colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
     }
 
     // [crispy] initialize color translation and color strings tables
-    if (!crstr)
     {
 	char c[3];
 	boolean keepgray = false;
@@ -973,7 +972,8 @@ void R_InitColormaps (int pal)
 	extern char *iwadfile;
 	extern pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
 
-	crstr = malloc(CRMAX * sizeof(*crstr));
+	if (!crstr)
+	    crstr = malloc(CRMAX * sizeof(*crstr));
 
 	// [crispy] check for status bar graphics replacements
 	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'
@@ -983,7 +983,7 @@ void R_InitColormaps (int pal)
 	{
 	    for (j = 0; j < 256; j++)
 	    {
-		cr[i][j] = V_Colorize(doompalette, i, j, keepgray);
+		cr[i][j] = V_Colorize(playpal, i, j, keepgray);
 	    }
 
 	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);

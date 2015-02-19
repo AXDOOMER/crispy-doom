@@ -1306,7 +1306,8 @@ void ST_doPaletteStuff(void)
     if (palette != st_palette)
     {
 	st_palette = palette;
-	R_InitColormaps(palette);
+//	R_InitColormaps(palette);
+	I_ApplyColorMod(palette);
 	st_firsttime = true;
     }
 
@@ -1853,8 +1854,9 @@ void ST_Stop (void)
     if (st_stopped)
 	return;
 
-    R_InitColormaps(0);
-
+//    R_InitColormaps(0);
+    I_ApplyColorMod(0);
+    
     st_stopped = true;
 }
 

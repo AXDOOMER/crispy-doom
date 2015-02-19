@@ -155,14 +155,23 @@ static char *window_title = "";
 // SDL releases. It surely is in 2.0.2, i.e. it is currently impossible to
 // update the texture with the pixels from the 8-bit paletted buffer.
 
+/* hicolor
 static SDL_Surface *screenbuffer = NULL;
+*/
 static SDL_Surface *rgbabuffer = NULL;
+static SDL_Surface *curpane = NULL;
+static SDL_Surface *redpane = NULL;
+static SDL_Surface *yelpane = NULL;
+static SDL_Surface *grnpane = NULL;
 static SDL_Texture *texture = NULL;
+static SDL_Texture *texture_pane = NULL;
+static int pitch, a_pane;
+static void *pixels;
 
 // palette
 
 static SDL_Color palette[256];
-static boolean palette_to_set;
+static uint32_t palette_to_set;
 
 // display has been set up?
 
@@ -1097,11 +1106,13 @@ void I_FinishUpdate (void)
     BlitArea(0, 0, SCREENWIDTH, SCREENHEIGHT);
 #endif
 
+/* hicolor
     if (palette_to_set)
     {
         SDL_SetPaletteColors(screenbuffer->format->palette, palette, 0, 256);
         palette_to_set = false;
     }
+*/
 
 #if 0 // obsolete software scaling routines
     // Blit from the fake 8-bit screen buffer to the real screen
@@ -1126,12 +1137,23 @@ void I_FinishUpdate (void)
     // Update the texture with the content of the 32-bit RGBA buffer
     // (the last argument is the pitch, i.e. 320 pixels of 4 RGBA-bytes)
 
-    SDL_UpdateTexture(texture, NULL, rgbabuffer->pixels,
-                      SCREENWIDTH * sizeof(Uint32));
+//    SDL_UpdateTexture(texture, NULL, rgbabuffer->pixels,
+//                      SCREENWIDTH * sizeof(Uint32));
+    SDL_LockTexture(texture, NULL, &pixels, &pitch);
+    memcpy(pixels, rgbabuffer->pixels, SCREENHEIGHT*pitch);
+    SDL_UnlockTexture(texture);
 
     // Render the texture into the window
 
+    SDL_SetTextureAlphaMod(texture, curpane ? 0xff - a_pane : 0xff);
     SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+    if (curpane)
+    {
+	SDL_SetTextureAlphaMod(texture_pane, a_pane);
+	SDL_UpdateTexture(texture_pane, NULL, curpane->pixels, SCREENWIDTH * sizeof(Uint32));
+	SDL_RenderCopy(renderer, texture_pane, NULL, NULL);
+    }
 
     // Draw!
 
@@ -1763,11 +1785,13 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     // If we are already running, we need to free the screenbuffer
     // surface before setting the new mode.
 
+/* hicolor
     if (screenbuffer != NULL)
     {
         SDL_FreeSurface(screenbuffer);
         screenbuffer = NULL;
     }
+*/
 
     // Close the current window.
 
@@ -1864,17 +1888,34 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     }
 #endif
 
+/* hicolor
     // Create the fake 8-bit paletted and the 32-bit RGBA screenbuffer surfaces.
 
     screenbuffer = SDL_CreateRGBSurface(0,
                                         SCREENWIDTH, SCREENHEIGHT, 8,
                                         0, 0, 0, 0);
     SDL_FillRect(screenbuffer, NULL, 0);
+*/
 
     rgbabuffer = SDL_CreateRGBSurface(0,
                                       SCREENWIDTH, SCREENHEIGHT, 32,
                                       0, 0, 0, 0);
     SDL_FillRect(rgbabuffer, NULL, 0);
+
+    redpane = SDL_CreateRGBSurface(0,
+                                   SCREENWIDTH, SCREENHEIGHT, 32,
+                                   0, 0, 0, 0);
+    SDL_FillRect(redpane, NULL, SDL_MapRGBA(redpane->format, 255, 0, 0, 255));
+
+    yelpane = SDL_CreateRGBSurface(0,
+                                   SCREENWIDTH, SCREENHEIGHT, 32,
+                                   0, 0, 0, 0);
+    SDL_FillRect(yelpane, NULL, SDL_MapRGBA(yelpane->format, 215, 186, 69, 255));
+
+    grnpane = SDL_CreateRGBSurface(0,
+                                   SCREENWIDTH, SCREENHEIGHT, 32,
+                                   0, 0, 0, 0);
+    SDL_FillRect(grnpane, NULL, SDL_MapRGBA(grnpane->format, 0, 255, 0, 255));
 
     // Create the texture that the RGBA surface gets loaded into.
     // SDL_TEXTUREACCESS_STREAMING means that this texture's content
@@ -1884,6 +1925,15 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
                                 SDL_PIXELFORMAT_ARGB8888,
                                 SDL_TEXTUREACCESS_STREAMING,
                                 SCREENWIDTH, SCREENHEIGHT);
+
+
+    texture_pane = SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ARGB8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                SCREENWIDTH, SCREENHEIGHT);
+
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureBlendMode(texture_pane, SDL_BLENDMODE_BLEND);
 
     // Save screen mode.
 
@@ -1921,7 +1971,9 @@ static void ApplyWindowResize(unsigned int w, unsigned int h)
 void I_InitGraphics(void)
 {
     SDL_Event dummy;
+/* hicolor
     byte *doompal;
+*/
     char *env;
 
     // [crispy] disable special lock-key behavior
@@ -2006,6 +2058,7 @@ void I_InitGraphics(void)
         SetVideoMode(screen_mode, w, h);
     }
 
+/* hicolor
     // Start with a clear black screen
     // (screen will be flipped after we set the palette)
 
@@ -2016,6 +2069,7 @@ void I_InitGraphics(void)
     doompal = W_CacheLumpName(DEH_String("PLAYPAL"), PU_CACHE);
     I_SetPalette(doompal);
     SDL_SetPaletteColors(screenbuffer->format->palette, palette, 0, 256);
+*/
 
     CreateCursors();
 
@@ -2121,3 +2175,30 @@ pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
 
     return 0xff000000 + (rr << 16) + (gr << 8) + br;
 }
+
+void I_ApplyColorMod (int palette)
+{
+
+    if (!palette)
+	curpane = NULL;
+    if (palette >= 1 && palette < 9)
+    {
+	curpane = redpane;
+	a_pane = 0xff * palette / 9;
+    }
+    else
+    if (palette >= 9 && palette < 13)
+    {
+	curpane = yelpane;
+	a_pane = 0xff * (palette - 8) / 8;
+    }
+    else
+    if (palette == 13)
+    {
+	curpane = grnpane;
+	a_pane = 0xff * 125 / 1000;
+    }
+
+}
+
+
