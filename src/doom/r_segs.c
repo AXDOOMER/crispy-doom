@@ -281,7 +281,7 @@ R_RenderMaskedSegRange
 		    t > (int64_t) SCREENHEIGHT << FRACBITS*2)
 			continue; // skip if the texture is out of screen's range
 
-		sprtopscreen = (long)(t >> FRACBITS);
+		sprtopscreen = (int64_t)(t >> FRACBITS);
 	    }
 
 	    dc_iscale = 0xffffffffu / (unsigned)spryscale;
@@ -518,7 +518,7 @@ R_StoreWallRange
 ( int	start,
   int	stop )
 {
-    angle_t		distangle, offsetangle;
+    angle_t		offsetangle;
     fixed_t		vtop;
     int			lightnum;
     int64_t		dx, dy, dx1, dy1; // [crispy] fix long wall wobble
@@ -560,7 +560,6 @@ R_StoreWallRange
     if (offsetangle > ANG90)
 	offsetangle = ANG90;
 
-    distangle = ANG90 - offsetangle;
     // [crispy] fix long wall wobble
     // thank you very much Linguica, e6y and kb1
     // http://www.doomworld.com/vb/post/1340718

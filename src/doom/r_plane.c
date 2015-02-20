@@ -118,10 +118,12 @@ R_MapPlane
   int		x1,
   int		x2 )
 {
-    angle_t	angle;
+// [crispy] see below
+//    angle_t	angle;
     fixed_t	distance;
-    fixed_t	length;
+//    fixed_t	length;
     unsigned	index;
+    int dx, dy;
 	
 #ifdef RANGECHECK
     if (x2 < x1
@@ -133,6 +135,22 @@ R_MapPlane
     }
 #endif
 
+// [crispy] visplanes with the same flats now match up far better than before
+// adapted from prboom-plus/src/r_plane.c:191-239, translated to fixed-point math
+
+    if (!(dy = abs(centery - y)))
+	return;
+
+    distance = FixedMul(planeheight, yslope[y]);
+    dx = x1 - centerx;
+
+    ds_xstep = FixedMul(viewsin, planeheight) / dy;
+    ds_ystep = FixedMul(viewcos, planeheight) / dy;
+
+    ds_xfrac =  viewx + FixedMul(viewcos, distance) + dx * ds_xstep;
+    ds_yfrac = -viewy - FixedMul(viewsin, distance) + dx * ds_ystep;
+
+/*
     if (planeheight != cachedheight[y])
     {
 	cachedheight[y] = planeheight;
@@ -151,6 +169,7 @@ R_MapPlane
     angle = (viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
     ds_xfrac = viewx + FixedMul(finecosine[angle], length);
     ds_yfrac = -viewy - FixedMul(finesine[angle], length);
+*/
 
     if (fixedcolormap)
 	ds_colormap = fixedcolormap;
