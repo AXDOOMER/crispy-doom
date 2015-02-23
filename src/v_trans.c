@@ -234,7 +234,7 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 	else
 	if (cr == CR_BLUE)
 	{
-	    hsv.x = 220./360.;
+	    hsv.x = 240./360.;
 	}
     }
 
