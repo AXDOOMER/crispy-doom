@@ -157,6 +157,7 @@ boolean         crispy_havee1m10 = false;
 boolean         crispy_havemap33 = false;
 boolean         crispy_havessg = false;
 boolean         crispy_nwtmerge = false;
+boolean         crispy_redrawall = false;
 
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
@@ -332,9 +333,7 @@ void D_Display (void)
 	AM_Drawer ();
 	HU_Drawer ();
 
-	// [crispy] force redraw of status bar and border
-	viewactivestate = false;
-	inhelpscreensstate = true;
+	crispy_redrawall = true;
     }
 
     // [crispy] shade background when a menu is active or the game is paused
@@ -346,13 +345,20 @@ void D_Display (void)
 	if (menushade < 16)
 	    menushade++;
 
-	// [crispy] force redraw of status bar and border
-	viewactivestate = false;
-	inhelpscreensstate = true;
+	crispy_redrawall = true;
     }
     else
     if (menushade)
 	menushade = 0;
+
+    // [crispy] force redraw of status bar and border
+    if (crispy_redrawall)
+    {
+	viewactivestate = false;
+	inhelpscreensstate = true;
+
+	crispy_redrawall = false;
+    }
 
     // draw pause pic
     if (paused)

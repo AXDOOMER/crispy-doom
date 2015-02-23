@@ -1141,19 +1141,19 @@ void I_FinishUpdate (void)
 
 //    SDL_UpdateTexture(texture, NULL, rgbabuffer->pixels,
 //                      SCREENWIDTH * sizeof(Uint32));
+
     SDL_LockTexture(texture, NULL, &pixels, &pitch);
     memcpy(pixels, rgbabuffer->pixels, SCREENHEIGHT*pitch);
     SDL_UnlockTexture(texture);
 
     // Render the texture into the window
 
-    SDL_SetTextureAlphaMod(texture, curpane ? 0xff - a_pane : 0xff);
     SDL_RenderCopy(renderer, texture, NULL, NULL);
 
     if (curpane)
     {
-	SDL_SetTextureAlphaMod(texture_pane, a_pane);
 	SDL_UpdateTexture(texture_pane, NULL, curpane->pixels, SCREENWIDTH * sizeof(Uint32));
+	SDL_SetTextureAlphaMod(texture_pane, a_pane);
 	SDL_RenderCopy(renderer, texture_pane, NULL, NULL);
     }
 
@@ -1907,17 +1907,17 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     redpane = SDL_CreateRGBSurface(0,
                                    SCREENWIDTH, SCREENHEIGHT, 32,
                                    0, 0, 0, 0);
-    SDL_FillRect(redpane, NULL, SDL_MapRGBA(redpane->format, 255, 0, 0, 255));
+    SDL_FillRect(redpane, NULL, 0xffff0000);
 
     yelpane = SDL_CreateRGBSurface(0,
                                    SCREENWIDTH, SCREENHEIGHT, 32,
                                    0, 0, 0, 0);
-    SDL_FillRect(yelpane, NULL, SDL_MapRGBA(yelpane->format, 215, 186, 69, 255));
+    SDL_FillRect(yelpane, NULL, 0xffd7ba45);
 
     grnpane = SDL_CreateRGBSurface(0,
                                    SCREENWIDTH, SCREENHEIGHT, 32,
                                    0, 0, 0, 0);
-    SDL_FillRect(grnpane, NULL, SDL_MapRGBA(grnpane->format, 0, 255, 0, 255));
+    SDL_FillRect(grnpane, NULL, 0xff00ff00);
 
     // Create the texture that the RGBA surface gets loaded into.
     // SDL_TEXTUREACCESS_STREAMING means that this texture's content
@@ -1934,8 +1934,7 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
                                 SDL_TEXTUREACCESS_STREAMING,
                                 SCREENWIDTH, SCREENHEIGHT);
 
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-	SDL_SetTextureBlendMode(texture_pane, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureBlendMode(texture_pane, SDL_BLENDMODE_BLEND);
 
     // Save screen mode.
 

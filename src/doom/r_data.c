@@ -926,7 +926,6 @@ void R_InitSpriteLumps (void)
 void R_InitColormaps (int pal)
 {
     byte *doompalette, *playpal;
-
     int c, i, j;
     byte r, g, b;
     float scale;
@@ -977,7 +976,7 @@ void R_InitColormaps (int pal)
 
 	// [crispy] check for status bar graphics replacements
 	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'
-	keepgray = (i >= 0 && !strcmp(lumpinfo[i].wad_file->path, M_BaseName(iwadfile)));
+	keepgray = (i >= 0 && lumpinfo[i].wad_file->path == M_BaseName(iwadfile));
 
 	for (i = 0; i < CRMAX; i++)
 	{
