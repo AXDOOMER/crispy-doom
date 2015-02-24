@@ -231,7 +231,7 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 	else
 	if (cr == CR_GOLD)
 	{
-	    hsv.x = 45./360.;
+	    hsv.x = 40./360.;
 /*
 	    // Doom Palette Index 176 -> 160; 191 -> 167
 	    // HSV 0,1,1 -> 60,0.55,1; 0,1,0.26 -> 22,1,0.45
