@@ -159,12 +159,11 @@ static char *window_title = "";
 static SDL_Surface *screenbuffer = NULL;
 */
 static SDL_Surface *rgbabuffer = NULL;
-static SDL_Surface *curpane = NULL;
-static SDL_Surface *redpane = NULL;
-static SDL_Surface *yelpane = NULL;
-static SDL_Surface *grnpane = NULL;
+static SDL_Texture *curpane = NULL;
+static SDL_Texture *redpane = NULL;
+static SDL_Texture *yelpane = NULL;
+static SDL_Texture *grnpane = NULL;
 static SDL_Texture *texture = NULL;
-static SDL_Texture *texture_pane = NULL;
 static int pitch, a_pane;
 static void *pixels;
 
@@ -1152,9 +1151,8 @@ void I_FinishUpdate (void)
 
     if (curpane)
     {
-	SDL_UpdateTexture(texture_pane, NULL, curpane->pixels, SCREENWIDTH * sizeof(Uint32));
-	SDL_SetTextureAlphaMod(texture_pane, a_pane);
-	SDL_RenderCopy(renderer, texture_pane, NULL, NULL);
+	SDL_SetTextureAlphaMod(curpane, a_pane);
+	SDL_RenderCopy(renderer, curpane, NULL, NULL);
     }
 
     // Draw!
@@ -1902,22 +1900,20 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     rgbabuffer = SDL_CreateRGBSurface(0,
                                       SCREENWIDTH, SCREENHEIGHT, 32,
                                       0, 0, 0, 0);
+
+    SDL_FillRect(rgbabuffer, NULL, 0xffff0000);
+    redpane = SDL_CreateTextureFromSurface(renderer, rgbabuffer);
+    SDL_SetTextureBlendMode(redpane, SDL_BLENDMODE_BLEND);
+
+    SDL_FillRect(rgbabuffer, NULL, 0xffd7ba45);
+    yelpane = SDL_CreateTextureFromSurface(renderer, rgbabuffer);
+    SDL_SetTextureBlendMode(yelpane, SDL_BLENDMODE_BLEND);
+
+    SDL_FillRect(rgbabuffer, NULL, 0xff00ff00);
+    grnpane = SDL_CreateTextureFromSurface(renderer, rgbabuffer);
+    SDL_SetTextureBlendMode(grnpane, SDL_BLENDMODE_BLEND);
+
     SDL_FillRect(rgbabuffer, NULL, 0);
-
-    redpane = SDL_CreateRGBSurface(0,
-                                   SCREENWIDTH, SCREENHEIGHT, 32,
-                                   0, 0, 0, 0);
-    SDL_FillRect(redpane, NULL, 0xffff0000);
-
-    yelpane = SDL_CreateRGBSurface(0,
-                                   SCREENWIDTH, SCREENHEIGHT, 32,
-                                   0, 0, 0, 0);
-    SDL_FillRect(yelpane, NULL, 0xffd7ba45);
-
-    grnpane = SDL_CreateRGBSurface(0,
-                                   SCREENWIDTH, SCREENHEIGHT, 32,
-                                   0, 0, 0, 0);
-    SDL_FillRect(grnpane, NULL, 0xff00ff00);
 
     // Create the texture that the RGBA surface gets loaded into.
     // SDL_TEXTUREACCESS_STREAMING means that this texture's content
@@ -1927,14 +1923,6 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
                                 SDL_PIXELFORMAT_ARGB8888,
                                 SDL_TEXTUREACCESS_STREAMING,
                                 SCREENWIDTH, SCREENHEIGHT);
-
-
-    texture_pane = SDL_CreateTexture(renderer,
-                                SDL_PIXELFORMAT_ARGB8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                SCREENWIDTH, SCREENHEIGHT);
-
-    SDL_SetTextureBlendMode(texture_pane, SDL_BLENDMODE_BLEND);
 
     // Save screen mode.
 
