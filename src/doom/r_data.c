@@ -940,7 +940,7 @@ void R_InitColormaps (int pal)
 
     for (c = j = 0; c < NUMCOLORMAPS; c++)
     {
-	scale = 1. - 1. * c / NUMCOLORMAPS;
+	scale = 1. - 1. * c / (NUMCOLORMAPS - 1);
 
 	for (i = 0; i < 256; i++)
 	{
@@ -963,16 +963,12 @@ void R_InitColormaps (int pal)
 	colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
     }
 
-    // [crispy] initialize color translation and color strings tables
+    // [crispy] initialize color translation tables
     {
-	char c[3];
 	boolean keepgray = false;
 
 	extern char *iwadfile;
 	extern pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
-
-	if (!crstr)
-	    crstr = malloc(CRMAX * sizeof(*crstr));
 
 	// [crispy] check for status bar graphics replacements
 	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'
@@ -984,7 +980,18 @@ void R_InitColormaps (int pal)
 	    {
 		cr[i][j] = V_Colorize(playpal, i, j, keepgray);
 	    }
+	}
+    }
 
+    // [crispy] initialize color strings tables
+    if (!crstr)
+    {
+	char c[3];
+
+	crstr = malloc(CRMAX * sizeof(*crstr));
+
+	for (i = 0; i < CRMAX; i++)
+	{
 	    M_snprintf(c, sizeof(c), "\x1b%c", '0' + i);
 	    crstr[i] = M_StringDuplicate(c);
 	}
