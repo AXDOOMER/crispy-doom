@@ -219,18 +219,25 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 
 	if (cr == CR_GREEN)
 	{
+	    hsv.x = 120./360.;
+	    hsv.y = 0.7;
+/*
 	    // Doom Palette Index 176 -> 112; 191 -> 127
 	    // HSV 0,1,1 -> 117,0.56,1; 0,1,0.26 -> 107,0.7,0.09
 	    hsv.x = ((16.216 * hsv.z) + 100.784)/360.;
 	    hsv.y = -0.189 * hsv.z + 0.749;
+*/
 	}
 	else
 	if (cr == CR_GOLD)
 	{
+	    hsv.x = 45./360.;
+/*
 	    // Doom Palette Index 176 -> 160; 191 -> 167
 	    // HSV 0,1,1 -> 60,0.55,1; 0,1,0.26 -> 22,1,0.45
 	    hsv.x = ((51.351 * hsv.z) + 8.648)/360.;
 	    hsv.y = -0.608 * hsv.z + 1.158;
+*/
 	}
 	else
 	if (cr == CR_RED)
