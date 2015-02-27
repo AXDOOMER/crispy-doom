@@ -956,9 +956,14 @@ void R_InitColormaps (int pal)
     for (i = 0; i < 256; i++)
     {
 	r = g = b = 
+/*
 	255 - (0.299 * gammatable[4 - usegamma][playpal[3 * i + 0]] +
 	       0.587 * gammatable[4 - usegamma][playpal[3 * i + 1]] +
 	       0.144 * gammatable[4 - usegamma][playpal[3 * i + 2]]);
+*/
+	255 - (gammatable[4 - usegamma][playpal[3 * i + 0]] +
+	       gammatable[4 - usegamma][playpal[3 * i + 1]] +
+	       gammatable[4 - usegamma][playpal[3 * i + 2]])/3;
 
 	colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
     }
