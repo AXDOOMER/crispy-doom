@@ -2459,8 +2459,6 @@ boolean M_Responder (event_t* ev)
 	    players[consoleplayer].message = DEH_String(gammamsg[usegamma]);
 
 	    R_InitColormaps(0);
-	    I_ApplyColorMod(0); // [crispy] gamma correction resets palette
-	    R_FillBackScreen ();
 
 	    crispy_redrawall = true;
 
