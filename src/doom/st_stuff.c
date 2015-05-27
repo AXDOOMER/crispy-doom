@@ -1326,7 +1326,7 @@ enum
 } hudcolor_t;
 
 // [crispy] return ammo/health/armor widget color
-static pixel_t* ST_WidgetColor(int i)
+static byte* ST_WidgetColor(int i)
 {
     if (!crispy_coloredhud)
         return NULL;

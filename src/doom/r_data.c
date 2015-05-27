@@ -977,7 +977,7 @@ void R_InitColormaps (int pal)
 	boolean keepgray = false;
 
 	extern char *iwadfile;
-	extern pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
+	extern byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
 
 	// [crispy] check for status bar graphics replacements
 	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'

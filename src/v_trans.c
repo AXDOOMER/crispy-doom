@@ -26,24 +26,24 @@
 // by means of actual color space conversions in r_data:R_InitColormaps().
 
 // this one will be the identity matrix
-static pixel_t cr_none[256];
+static byte cr_none[256];
 // this one will be the ~50% darker matrix
-static pixel_t cr_dark[256];
-static pixel_t cr_gray[256];
-static pixel_t cr_green[256];
-static pixel_t cr_gold[256];
-static pixel_t cr_red[256];
-static pixel_t cr_blue[256];
+static byte cr_dark[256];
+static byte cr_gray[256];
+static byte cr_green[256];
+static byte cr_gold[256];
+static byte cr_red[256];
+static byte cr_blue[256];
 
-pixel_t *cr[] =
+byte *cr[] =
 {
-    (pixel_t *) &cr_none,
-    (pixel_t *) &cr_dark,
-    (pixel_t *) &cr_gray,
-    (pixel_t *) &cr_green,
-    (pixel_t *) &cr_gold,
-    (pixel_t *) &cr_red,
-    (pixel_t *) &cr_blue
+    (byte *) &cr_none,
+    (byte *) &cr_dark,
+    (byte *) &cr_gray,
+    (byte *) &cr_green,
+    (byte *) &cr_gold,
+    (byte *) &cr_red,
+    (byte *) &cr_blue
 };
 
 char **crstr = 0;
@@ -187,23 +187,18 @@ static void rgb_to_hsv(vect *rgb, vect *hsv)
     hsv->z = v;
 }
 
-pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
+byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 {
     vect rgb, hsv;
-    extern const byte gammatable[5][256];
-    extern int usegamma;
-
-    rgb.x = gammatable[usegamma][playpal[3 * source + 0]];
-    rgb.y = gammatable[usegamma][playpal[3 * source + 1]];
-    rgb.z = gammatable[usegamma][playpal[3 * source + 2]];
+    extern int FindNearestColor(byte *palette, int r, int g, int b);
 
     // [crispy] preserve gray drop shadow in IWAD status bar numbers
     if (cr == CR_NONE || (keepgray109 && source == 109))
-	return 0xff000000 + ((byte) rgb.x << 16) + ((byte) rgb.y << 8) + (byte) rgb.z;
+	return source;
 
-    rgb.x /= 255.;
-    rgb.y /= 255.;
-    rgb.z /= 255.;
+    rgb.x = playpal[3 * source + 0] / 255.;
+    rgb.y = playpal[3 * source + 1] / 255.;
+    rgb.z = playpal[3 * source + 2] / 255.;
 
     rgb_to_hsv(&rgb, &hsv);
 
@@ -219,19 +214,12 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 
 	if (cr == CR_GREEN)
 	{
-	    hsv.x = 120./360.;
-	    hsv.y = 0.7;
-/*
-	    // Doom Palette Index 176 -> 112; 191 -> 127
-	    // HSV 0,1,1 -> 117,0.56,1; 0,1,0.26 -> 107,0.7,0.09
-	    hsv.x = ((16.216 * hsv.z) + 100.784)/360.;
-	    hsv.y = -0.189 * hsv.z + 0.749;
-*/
+	    hsv.x = 135./360.;
 	}
 	else
 	if (cr == CR_GOLD)
 	{
-	    hsv.x = 40./360.;
+	    hsv.x = 45./360.;
 /*
 	    // Doom Palette Index 176 -> 160; 191 -> 167
 	    // HSV 0,1,1 -> 60,0.55,1; 0,1,0.26 -> 22,1,0.45
@@ -257,5 +245,5 @@ pixel_t V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
     rgb.y *= 255.;
     rgb.z *= 255.;
 
-    return 0xff000000 + ((byte) rgb.x << 16) + ((byte) rgb.y << 8) + (byte) rgb.z;
+    return FindNearestColor(playpal, (int) rgb.x, (int) rgb.y, (int) rgb.z);
 }
