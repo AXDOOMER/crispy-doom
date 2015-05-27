@@ -32,7 +32,7 @@
 
 
 // Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP		NUMCOLORMAPS
+#define INVERSECOLORMAP		32
 
 
 //
