@@ -87,7 +87,6 @@ void P_DropWeapon (player_t* player);
 //
 #define MLOOKUNIT	8
 void	P_PlayerThink (player_t* player);
-player2_t* p2fromp (player_t* player);
 
 
 //
@@ -263,8 +262,8 @@ P_RadiusAttack
 // P_SETUP
 //
 extern byte*		rejectmatrix;	// for fast sight rejection
-extern long*		blockmaplump;	// offsets in blockmap are from here // [crispy] BLOCKMAP limit
-extern long*		blockmap; // [crispy] BLOCKMAP limit
+extern int64_t*	blockmaplump;	// offsets in blockmap are from here // [crispy] BLOCKMAP limit
+extern int64_t*	blockmap; // [crispy] BLOCKMAP limit
 extern int		bmapwidth;
 extern int		bmapheight;	// in mapblocks
 extern fixed_t		bmaporgx;

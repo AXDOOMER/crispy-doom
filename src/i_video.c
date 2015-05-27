@@ -1041,6 +1041,9 @@ void I_EndRead(void)
 */
 }
 
+int crispy_fps = 0;
+boolean crispy_showfps = false;
+
 //
 // I_FinishUpdate
 //
@@ -1053,6 +1056,10 @@ void I_FinishUpdate (void)
 #endif
     int tics;
     int i;
+
+    static int	lastmili;
+    static int	fpscount;
+    int		mili;
 
     if (!initialized)
         return;

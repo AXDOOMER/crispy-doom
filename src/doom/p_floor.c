@@ -50,6 +50,11 @@ T_MovePlane
     boolean	flag;
     fixed_t	lastpos;
 	
+    // [AM] Store old sector heights for interpolation.
+    sector->oldfloorheight = sector->floorheight;
+    sector->oldceilingheight = sector->ceilingheight;
+    sector->oldgametic = gametic;
+
     switch(floorOrCeiling)
     {
       case 0:
@@ -493,6 +498,9 @@ EV_BuildStairs
 	floor->speed = speed;
 	height = sec->floorheight + stairsize;
 	floor->floordestheight = height;
+	// Initialize
+	floor->type = lowerFloor;
+	floor->crush = true;
 		
 	texture = sec->floorpic;
 	
@@ -536,6 +544,9 @@ EV_BuildStairs
 		floor->sector = sec;
 		floor->speed = speed;
 		floor->floordestheight = height;
+		// Initialize
+		floor->type = lowerFloor;
+		floor->crush = true;
 		ok = 1;
 		break;
 	    }

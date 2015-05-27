@@ -419,6 +419,7 @@ cheatseq_t cheat_hom = CHEAT("tnthom", 0);
 cheatseq_t cheat_notarget = CHEAT("notarget", 0);
 cheatseq_t cheat_spechits = CHEAT("spechits", 0);
 cheatseq_t cheat_nomomentum = CHEAT("nomomentum", 0);
+cheatseq_t cheat_showfps = CHEAT("showfps", 0);
 
 //
 // STATUS BAR CODE
@@ -597,7 +598,7 @@ ST_Responder (event_t* ev)
 
 	    mt.x = plyr->mo->x >> FRACBITS;
 	    mt.y = plyr->mo->y >> FRACBITS;
-	    mt.angle = plyr->mo->angle*(uint64_t)45/ANG45;
+	    mt.angle = (plyr->mo->angle + ANG45/2)*(uint64_t)45/ANG45;
 	    mt.type = consoleplayer + 1;
 	    P_SpawnPlayer(&mt);
 
@@ -781,6 +782,11 @@ ST_Responder (event_t* ev)
 	           (plyr->cheats & CF_NOMOMENTUM) ? "ON" : "OFF");
 	plyr->message = msg;
       }
+      // [crispy] implement Crispy Doom's "showfps" cheat, ne debug aid
+      else if (cht_CheckCheat(&cheat_showfps, ev->data2))
+      {
+	crispy_showfps ^= 1;
+      }
       // 'behold?' power-up cheats
       for (i=0;i<6;i++)
       {
@@ -879,7 +885,7 @@ ST_Responder (event_t* ev)
                    players[consoleplayer].mo->y);
         plyr->message = buf;
 */
-        p2fromp(plyr)->mapcoords ^= 1;
+        plyr->mapcoords ^= 1;
       }
     }
     
@@ -1861,6 +1867,21 @@ void ST_Stop (void)
 
 void ST_Init (void)
 {
+    // [crispy] colorize the confusing 'behold' power-up menu
+    if (!strcmp(STSTR_BEHOLD, DEH_String(STSTR_BEHOLD)))
+    {
+	char str_behold[80];
+	M_snprintf(str_behold, sizeof(str_behold),
+	           "in%sV%suln, %sS%str, %sI%snviso, %sR%sad, %sA%sllmap, or %sL%site-amp",
+	           crstr[CR_GOLD], crstr[CR_NONE],
+	           crstr[CR_GOLD], crstr[CR_NONE],
+	           crstr[CR_GOLD], crstr[CR_NONE],
+	           crstr[CR_GOLD], crstr[CR_NONE],
+	           crstr[CR_GOLD], crstr[CR_NONE],
+	           crstr[CR_GOLD], crstr[CR_NONE]);
+	DEH_AddStringReplacement(STSTR_BEHOLD, str_behold);
+    }
+
     ST_loadData();
     st_backing_screen = (pixel_t *) Z_Malloc((ST_WIDTH << hires) * (ST_HEIGHT << hires) * sizeof(pixel_t), PU_STATIC, 0);
 }

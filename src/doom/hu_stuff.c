@@ -90,7 +90,6 @@ char*	player_names[] =
 
 char			chat_char; // remove later.
 static player_t*	plr;
-static player2_t*	plr2;
 patch_t*		hu_font[HU_FONTSIZE];
 static hu_textline_t	w_title;
 static hu_textline_t	w_map;
@@ -101,6 +100,7 @@ static hu_textline_t	w_ltime;
 static hu_textline_t	w_coordx;
 static hu_textline_t	w_coordy;
 static hu_textline_t	w_coorda;
+static hu_textline_t	w_fps;
 boolean			chat_on;
 static hu_itext_t	w_chat;
 static boolean		always_off = false;
@@ -347,7 +347,6 @@ void HU_Start(void)
 	HU_Stop();
 
     plr = &players[consoleplayer];
-    plr2 = &players2[consoleplayer];
     message_on = false;
     message_dontfuckwithme = false;
     message_nottobefuckedwith = false;
@@ -411,6 +410,11 @@ void HU_Start(void)
 
     HUlib_initTextLine(&w_coorda,
 		       HU_COORDX, HU_MSGY + 3 * 8,
+		       hu_font,
+		       HU_FONTSTART);
+
+    HUlib_initTextLine(&w_fps,
+		       HU_COORDX, HU_MSGY,
 		       hu_font,
 		       HU_FONTSTART);
 
@@ -641,6 +645,18 @@ void HU_Drawer(void)
 	HUlib_drawTextLine(&w_coorda, false);
     }
 
+    if (crispy_showfps)
+    {
+	extern int crispy_fps;
+
+	M_snprintf(str, sizeof(str), "%s%-4d %sFPS", crstr[CR_GRAY], crispy_fps, crstr[CR_GREEN]);
+	HUlib_clearTextLine(&w_fps);
+	s = str;
+	while (*s)
+	    HUlib_addCharToTextLine(&w_fps, *(s++));
+	HUlib_drawTextLine(&w_fps, false);
+    }
+
     V_ClearDPTranslation();
 
     if (crispy_crosshair && !crispy_crosshair2)
@@ -664,6 +680,7 @@ void HU_Erase(void)
     HUlib_eraseTextLine(&w_coordx);
     HUlib_eraseTextLine(&w_coordy);
     HUlib_eraseTextLine(&w_coorda);
+    HUlib_eraseTextLine(&w_fps);
 
 }
 
@@ -694,18 +711,18 @@ void HU_Ticker(void)
     {
 
 	// [crispy] display centered message
-	if (plr2->centermessage)
+	if (plr->centermessage)
 	{
-	    HUlib_addMessageToSText(&w_secret, 0, plr2->centermessage);
-	    plr2->centermessage = 0;
+	    HUlib_addMessageToSText(&w_secret, 0, plr->centermessage);
+	    plr->centermessage = 0;
 	    secret_on = true;
 	    secret_counter = HU_MSGTIMEOUT >> 1;
 	}
 
 	// [crispy] display map coordinates
-	if (plr2->mapcoords)
+	if (plr->mapcoords)
 	{
-	    plr2->mapcoords = 0;
+	    plr->mapcoords = 0;
 	    coord_on = true;
 	    coord_counter = HU_MSGTIMEOUT << 1;
 	}

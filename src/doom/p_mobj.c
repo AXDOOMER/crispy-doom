@@ -316,7 +316,7 @@ void P_ZMovement (mobj_t* mo)
 	{
 	    // [crispy] delay next jump
 	    if (mo->player)
-		p2fromp(mo->player)->jumpTics = 7;
+		mo->player->jumpTics = 7;
 	    if (mo->player
 		&& mo->momz < -GRAVITY*8)	
 	    {
@@ -327,7 +327,7 @@ void P_ZMovement (mobj_t* mo)
 		mo->player->deltaviewheight = mo->momz>>3;
 		// [crispy] center view if not using permanent mouselook
 		if (!crispy_mouselook)
-		    p2fromp(mo->player)->centering = true;
+		    mo->player->centering = true;
 		S_StartSound (mo, sfx_oof);
 	    }
 	    mo->momz = 0;
@@ -451,6 +451,20 @@ P_NightmareRespawn (mobj_t* mobj)
 //
 void P_MobjThinker (mobj_t* mobj)
 {
+    // [AM] Handle interpolation unless we're an active player.
+    if (!(mobj->player != NULL && mobj == mobj->player->mo))
+    {
+        // Assume we can interpolate at the beginning
+        // of the tic.
+        mobj->interp = true;
+
+        // Store starting position for mobj interpolation.
+        mobj->oldx = mobj->x;
+        mobj->oldy = mobj->y;
+        mobj->oldz = mobj->z;
+        mobj->oldangle = mobj->angle;
+    }
+
     // momentum movement
     if (mobj->momx
 	|| mobj->momy
@@ -562,6 +576,15 @@ P_SpawnMobj
 	mobj->z = mobj->ceilingz - mobj->info->height;
     else 
 	mobj->z = z;
+
+    // [AM] Do not interpolate on spawn.
+    mobj->interp = false;
+
+    // [AM] Just in case interpolation is attempted...
+    mobj->oldx = mobj->x;
+    mobj->oldy = mobj->y;
+    mobj->oldz = mobj->z;
+    mobj->oldangle = mobj->angle;
 
     mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
 	
@@ -1057,7 +1080,7 @@ P_SpawnPlayerMissile
 	{
 	    an = source->angle;
 	    if (singleplayer && crispy_freeaim)
-               slope = ((p2fromp(source->player)->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+               slope = ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
 	    else
 	    slope = 0;
 	}

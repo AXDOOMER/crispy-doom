@@ -13,10 +13,8 @@ f_finale.c                            \
 g_game.c                              \
                     h2def.h           \
 h2_main.c                             \
-                    i_header.h        \
 info.c              info.h            \
 in_lude.c                             \
-m_misc.c                              \
 m_random.c          m_random.h        \
 mn_menu.c                             \
 p_acs.c                               \
@@ -59,9 +57,5 @@ st_start.c          st_start.h        \
 sv_save.c                             \
                     textdefs.h        \
                     xddefs.h
-
-EXTRA_DIST=                           \
-i_ibm.c                               \
-i_sound.c
 
 libhexen_a_SOURCES=$(SOURCE_FILES)

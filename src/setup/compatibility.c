@@ -22,6 +22,8 @@
 
 #include "compatibility.h"
 
+#define WINDOW_HELP_URL "http://www.chocolate-doom.org/setup-compat"
+
 int vanilla_savegame_limit = 0;
 int vanilla_demo_limit = 0;
 
@@ -43,6 +45,7 @@ int crispy_pitch = 0;
 int crispy_recoil = 0;
 int crispy_secretmessage = 0;
 int crispy_translucency = 0;
+int crispy_uncapped = 0;
 
 void CompatibilitySettings(void)
 {
@@ -56,14 +59,16 @@ void CompatibilitySettings(void)
 
     TXT_AddWidgets(window,
                    TXT_NewSeparator("Visual"),
+                   TXT_NewCheckBox("Uncapped Framerate",
+                                   &crispy_uncapped),
                    TXT_NewCheckBox("Colorize Status Bar and Texts",
                                    &crispy_coloredhud),
                    TXT_NewCheckBox("Enable Translucency",
                                    &crispy_translucency),
                    TXT_NewCheckBox("Enable Colored Blood",
                                    &crispy_coloredblood),
-                   TXT_NewCheckBox("Fix Spectre and Lost Soul Blood",
-                                   &crispy_coloredblood2),
+//                   TXT_NewCheckBox("Fix Spectre and Lost Soul Blood",
+//                                   &crispy_coloredblood2),
                    TXT_NewCheckBox("Randomly Mirrored Corpses",
                                    &crispy_flipcorpses),
                    TXT_NewSeparator("Tactical"),
@@ -73,12 +78,12 @@ void CompatibilitySettings(void)
                                    &crispy_mouselook),
                    TXT_NewCheckBox("Draw Crosshair",
                                    &crispy_crosshair),
-                   TXT_NewCheckBox("Project Crosshair into Scene",
-                                   &crispy_crosshair2),
-                   TXT_NewCheckBox("Center Weapon when Firing",
-                                   &crispy_centerweapon),
-                   TXT_NewCheckBox("Enable Weapon Pitch",
-                                   &crispy_pitch),
+//                   TXT_NewCheckBox("Project Crosshair into Scene",
+//                                   &crispy_crosshair2),
+//                   TXT_NewCheckBox("Center Weapon when Firing",
+//                                   &crispy_centerweapon),
+//                   TXT_NewCheckBox("Enable Weapon Recoil Pitch",
+//                                   &crispy_pitch),
                    TXT_NewCheckBox("Show Revealed Secrets",
                                    &crispy_secretmessage),
                    TXT_NewCheckBox("Show Level Stats in Automap",
@@ -90,7 +95,7 @@ void CompatibilitySettings(void)
                                    &crispy_freeaim),
                    TXT_NewCheckBox("Walk over/under Monsters",
                                    &crispy_overunder),
-                   TXT_NewCheckBox("Enable Weapon Recoil",
+                   TXT_NewCheckBox("Enable Weapon Recoil Thrust",
                                    &crispy_recoil),
                    NULL);
     }
@@ -98,7 +103,9 @@ void CompatibilitySettings(void)
     {
     window = TXT_NewWindow("Compatibility");
 
-    TXT_AddWidgets(window, 
+    TXT_SetWindowHelpURL(window, WINDOW_HELP_URL);
+
+    TXT_AddWidgets(window,
                    TXT_NewCheckBox("Vanilla savegame limit",
                                    &vanilla_savegame_limit),
                    TXT_NewCheckBox("Vanilla demo limit",
@@ -133,6 +140,7 @@ void BindCompatibilityVariables(void)
         M_BindIntVariable("crispy_recoil",          &crispy_recoil);
         M_BindIntVariable("crispy_secretmessage",   &crispy_secretmessage);
         M_BindIntVariable("crispy_translucency",    &crispy_translucency);
+        M_BindIntVariable("crispy_uncapped",        &crispy_uncapped);
         }
     }
 }

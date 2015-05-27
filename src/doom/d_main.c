@@ -476,6 +476,7 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_recoil",          &crispy_recoil);
     M_BindIntVariable("crispy_secretmessage",   &crispy_secretmessage);
     M_BindIntVariable("crispy_translucency",    &crispy_translucency);
+    M_BindIntVariable("crispy_uncapped",        &crispy_uncapped);
 }
 
 //
@@ -1310,6 +1311,11 @@ static void LoadNerveWad(void)
     }
 }
 
+static void G_CheckDemoStatusAtExit (void)
+{
+    G_CheckDemoStatus();
+}
+
 //
 // D_DoomMain
 //
@@ -1633,7 +1639,7 @@ void D_DoomMain (void)
 
     // [crispy] PWAD files in the config directory following
     // the preload?.wad naming scheme are preloaded at game startup
-    if (!M_ParmExists("-noload"))
+    if (!M_ParmExists("-noload") && gamemode != shareware)
     {
 	int i;
 	char file[16], *path;
@@ -1665,7 +1671,7 @@ void D_DoomMain (void)
     // merges PWADs into the main IWAD and writes the merged data into <file>
     //
 
-    p = M_CheckParmWithArgs ("-mergeout", 1);
+    p = M_CheckParmWithArgs ("-mergedump", 1);
 
     if (p)
     {
@@ -1678,7 +1684,7 @@ void D_DoomMain (void)
 	    DEH_snprintf(file, sizeof(file), "%s.wad", myargv[p+1]);
 	}
 
-	if (W_MergeOut(file))
+	if (W_MergeDump(file))
 	{
 	    printf("Merging into file %s.\n", file);
 	    I_Quit();
@@ -1714,9 +1720,12 @@ void D_DoomMain (void)
 
     if (p)
     {
+        char *uc_filename = strdup(myargv[p + 1]);
+        M_ForceUppercase(uc_filename);
+
         // With Vanilla you have to specify the file without extension,
         // but make that optional.
-        if (M_StringEndsWith(myargv[p + 1], ".lmp"))
+        if (M_StringEndsWith(uc_filename, ".LMP"))
         {
             M_StringCopy(file, myargv[p + 1], sizeof(file));
         }
@@ -1724,6 +1733,8 @@ void D_DoomMain (void)
         {
             DEH_snprintf(file, sizeof(file), "%s.lmp", myargv[p+1]);
         }
+
+        free(uc_filename);
 
         if (D_AddFile(file))
         {
@@ -1742,7 +1753,7 @@ void D_DoomMain (void)
         printf("Playing demo %s.\n", file);
     }
 
-    I_AtExit((atexit_func_t) G_CheckDemoStatus, true);
+    I_AtExit(G_CheckDemoStatusAtExit, true);
 
     // Generate the WAD hash table.  Speed things up a bit.
     W_GenerateHashTable();
@@ -1872,6 +1883,12 @@ void D_DoomMain (void)
     // [crispy] check for presence of MAP33
     crispy_havemap33 = (W_CheckNumForName("map33") != -1) &&
                        (W_CheckNumForName("cwilv32") != -1);
+
+    // [crispy] change level name for MAP33 if not already changed
+    if (crispy_havemap33 && !strcmp(PHUSTR_1, DEH_String(PHUSTR_1)))
+    {
+        DEH_AddStringReplacement(PHUSTR_1, "level 33: betray");
+    }
 
     // [crispy] check for NWT-style merging
     crispy_nwtmerge =

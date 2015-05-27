@@ -160,18 +160,19 @@ typedef struct player_s
     // True if secret level has been done.
     boolean		didsecret;	
 
-} player_t;
+    // [AM] Previous position of viewz before think.
+    //      Used to interpolate between camera positions.
+    angle_t		oldviewz;
 
-// [crispy] overcome the limitations of the original player_t
-typedef struct player2_s
-{
+    // [crispy] additional fields for crispy features
     char*	centermessage;
     int	lookdir;
     boolean	centering;
     unsigned int	jumpTics;
     boolean	mapcoords;
     fixed_t	recoilpitch;
-} player2_t;
+} player_t;
+
 
 //
 // INTERMISSION

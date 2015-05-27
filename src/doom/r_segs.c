@@ -71,15 +71,15 @@ int		worldbottom;
 int		worldhigh;
 int		worldlow;
 
-fixed_t		pixhigh;
-fixed_t		pixlow;
+int64_t		pixhigh; // [crispy] WiggleFix
+int64_t		pixlow; // [crispy] WiggleFix
 fixed_t		pixhighstep;
 fixed_t		pixlowstep;
 
-fixed_t		topfrac;
+int64_t		topfrac; // [crispy] WiggleFix
 fixed_t		topstep;
 
-fixed_t		bottomfrac;
+int64_t		bottomfrac; // [crispy] WiggleFix
 fixed_t		bottomstep;
 
 
@@ -152,7 +152,7 @@ static const struct
 void R_FixWiggle (sector_t *sector)
 {
     static int	lastheight = 0;
-    int		height = (sector->ceilingheight - sector->floorheight) >> FRACBITS;
+    int		height = (sector->interpceilingheight - sector->interpfloorheight) >> FRACBITS;
 
     // disallow negative heights. using 1 forces cache initialization
     if (height < 1)
@@ -230,14 +230,14 @@ R_RenderMaskedSegRange
     // find positioning
     if (curline->linedef->flags & ML_DONTPEGBOTTOM)
     {
-	dc_texturemid = frontsector->floorheight > backsector->floorheight
-	    ? frontsector->floorheight : backsector->floorheight;
+	dc_texturemid = frontsector->interpfloorheight > backsector->interpfloorheight
+	    ? frontsector->interpfloorheight : backsector->interpfloorheight;
 	dc_texturemid = dc_texturemid + textureheight[texnum] - viewz;
     }
     else
     {
-	dc_texturemid =frontsector->ceilingheight<backsector->ceilingheight
-	    ? frontsector->ceilingheight : backsector->ceilingheight;
+	dc_texturemid =frontsector->interpceilingheight<backsector->interpceilingheight
+	    ? frontsector->interpceilingheight : backsector->interpceilingheight;
 	dc_texturemid = dc_texturemid - viewz;
     }
     dc_texturemid += curline->sidedef->rowoffset;
@@ -281,7 +281,7 @@ R_RenderMaskedSegRange
 		    t > (int64_t) SCREENHEIGHT << FRACBITS*2)
 			continue; // skip if the texture is out of screen's range
 
-		sprtopscreen = (int64_t)(t >> FRACBITS);
+		sprtopscreen = (int64_t)(t >> FRACBITS); // [crispy] WiggleFix
 	    }
 
 	    dc_iscale = 0xffffffffu / (unsigned)spryscale;
@@ -326,7 +326,7 @@ void R_RenderSegLoop (void)
     for ( ; rw_x < rw_stopx ; rw_x++)
     {
 	// mark floor / ceiling areas
-	yl = (topfrac+heightunit-1)>>heightbits;
+	yl = (int)((topfrac+heightunit-1)>>heightbits); // [crispy] WiggleFix
 
 	// no space above wall?
 	if (yl < ceilingclip[rw_x]+1)
@@ -347,7 +347,7 @@ void R_RenderSegLoop (void)
 	    }
 	}
 		
-	yh = bottomfrac>>heightbits;
+	yh = (int)(bottomfrac>>heightbits); // [crispy] WiggleFix
 
 	if (yh >= floorclip[rw_x])
 	    yh = floorclip[rw_x]-1;
@@ -408,7 +408,7 @@ void R_RenderSegLoop (void)
 	    if (toptexture)
 	    {
 		// top wall
-		mid = pixhigh>>heightbits;
+		mid = (int)(pixhigh>>heightbits); // [crispy] WiggleFix
 		pixhigh += pixhighstep;
 
 		if (mid >= floorclip[rw_x])
@@ -437,7 +437,7 @@ void R_RenderSegLoop (void)
 	    if (bottomtexture)
 	    {
 		// bottom wall
-		mid = (pixlow+heightunit-1)>>heightbits;
+		mid = (int)((pixlow+heightunit-1)>>heightbits); // [crispy] WiggleFix
 		pixlow += pixlowstep;
 
 		// no space above wall?
@@ -518,7 +518,6 @@ R_StoreWallRange
 ( int	start,
   int	stop )
 {
-    angle_t		offsetangle;
     fixed_t		vtop;
     int			lightnum;
     int64_t		dx, dy, dx1, dy1; // [crispy] fix long wall wobble
@@ -554,12 +553,8 @@ R_StoreWallRange
         return;
 
     // calculate rw_distance for scale calculation
-    rw_normalangle = curline->angle + ANG90;
-    offsetangle = abs(rw_normalangle-rw_angle1);
+    rw_normalangle = curline->pangle + ANG90; // [crispy] use re-calculated angle
     
-    if (offsetangle > ANG90)
-	offsetangle = ANG90;
-
     // [crispy] fix long wall wobble
     // thank you very much Linguica, e6y and kb1
     // http://www.doomworld.com/vb/post/1340718
@@ -611,8 +606,8 @@ R_StoreWallRange
     
     // calculate texture boundaries
     //  and decide if floor / ceiling marks are needed
-    worldtop = frontsector->ceilingheight - viewz;
-    worldbottom = frontsector->floorheight - viewz;
+    worldtop = frontsector->interpceilingheight - viewz;
+    worldbottom = frontsector->interpfloorheight - viewz;
 	
     midtexture = toptexture = bottomtexture = maskedtexture = 0;
     ds_p->maskedtexturecol = NULL;
@@ -625,7 +620,7 @@ R_StoreWallRange
 	markfloor = markceiling = true;
 	if (linedef->flags & ML_DONTPEGBOTTOM)
 	{
-	    vtop = frontsector->floorheight +
+	    vtop = frontsector->interpfloorheight +
 		textureheight[sidedef->midtexture];
 	    // bottom of texture at bottom
 	    rw_midtexturemid = vtop - viewz;	
@@ -649,46 +644,46 @@ R_StoreWallRange
 	ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
 	ds_p->silhouette = 0;
 	
-	if (frontsector->floorheight > backsector->floorheight)
+	if (frontsector->interpfloorheight > backsector->interpfloorheight)
 	{
 	    ds_p->silhouette = SIL_BOTTOM;
-	    ds_p->bsilheight = frontsector->floorheight;
+	    ds_p->bsilheight = frontsector->interpfloorheight;
 	}
-	else if (backsector->floorheight > viewz)
+	else if (backsector->interpfloorheight > viewz)
 	{
 	    ds_p->silhouette = SIL_BOTTOM;
 	    ds_p->bsilheight = INT_MAX;
 	    // ds_p->sprbottomclip = negonearray;
 	}
 	
-	if (frontsector->ceilingheight < backsector->ceilingheight)
+	if (frontsector->interpceilingheight < backsector->interpceilingheight)
 	{
 	    ds_p->silhouette |= SIL_TOP;
-	    ds_p->tsilheight = frontsector->ceilingheight;
+	    ds_p->tsilheight = frontsector->interpceilingheight;
 	}
-	else if (backsector->ceilingheight < viewz)
+	else if (backsector->interpceilingheight < viewz)
 	{
 	    ds_p->silhouette |= SIL_TOP;
 	    ds_p->tsilheight = INT_MIN;
 	    // ds_p->sprtopclip = screenheightarray;
 	}
 		
-	if (backsector->ceilingheight <= frontsector->floorheight)
+	if (backsector->interpceilingheight <= frontsector->interpfloorheight)
 	{
 	    ds_p->sprbottomclip = negonearray;
 	    ds_p->bsilheight = INT_MAX;
 	    ds_p->silhouette |= SIL_BOTTOM;
 	}
 	
-	if (backsector->floorheight >= frontsector->ceilingheight)
+	if (backsector->interpfloorheight >= frontsector->interpceilingheight)
 	{
 	    ds_p->sprtopclip = screenheightarray;
 	    ds_p->tsilheight = INT_MIN;
 	    ds_p->silhouette |= SIL_TOP;
 	}
 	
-	worldhigh = backsector->ceilingheight - viewz;
-	worldlow = backsector->floorheight - viewz;
+	worldhigh = backsector->interpceilingheight - viewz;
+	worldlow = backsector->interpfloorheight - viewz;
 		
 	// hack to allow height changes in outdoor areas
 	if (frontsector->ceilingpic == skyflatnum 
@@ -723,8 +718,8 @@ R_StoreWallRange
 	    markceiling = false;
 	}
 	
-	if (backsector->ceilingheight <= frontsector->floorheight
-	    || backsector->floorheight >= frontsector->ceilingheight)
+	if (backsector->interpceilingheight <= frontsector->interpfloorheight
+	    || backsector->interpfloorheight >= frontsector->interpceilingheight)
 	{
 	    // closed door
 	    markceiling = markfloor = true;
@@ -743,7 +738,7 @@ R_StoreWallRange
 	    else
 	    {
 		vtop =
-		    backsector->ceilingheight
+		    backsector->interpceilingheight
 		    + textureheight[sidedef->toptexture];
 		
 		// bottom of texture
@@ -782,14 +777,7 @@ R_StoreWallRange
 
     if (segtextured)
     {
-	offsetangle = rw_normalangle-rw_angle1;
 	
-	if (offsetangle > ANG180)
-	    offsetangle = -offsetangle;
-
-	if (offsetangle > ANG90)
-	    offsetangle = ANG90;
-
 	// [crispy] fix long wall wobble
 	rw_offset = (fixed_t)((dx*dx1 + dy*dy1) / curline->length);
 	rw_offset += sidedef->textureoffset + curline->offset;
@@ -822,13 +810,13 @@ R_StoreWallRange
     //  and doesn't need to be marked.
     
   
-    if (frontsector->floorheight >= viewz)
+    if (frontsector->interpfloorheight >= viewz)
     {
 	// above view plane
 	markfloor = false;
     }
     
-    if (frontsector->ceilingheight <= viewz 
+    if (frontsector->interpceilingheight <= viewz
 	&& frontsector->ceilingpic != skyflatnum)
     {
 	// below view plane
@@ -841,10 +829,10 @@ R_StoreWallRange
     worldbottom >>= invhgtbits;
 	
     topstep = -FixedMul (rw_scalestep, worldtop);
-    topfrac = (centeryfrac>>invhgtbits) - FixedMul (worldtop, rw_scale);
+    topfrac = ((int64_t)centeryfrac>>invhgtbits) - (((int64_t)worldtop * rw_scale)>>FRACBITS); // [crispy] WiggleFix
 
     bottomstep = -FixedMul (rw_scalestep,worldbottom);
-    bottomfrac = (centeryfrac>>invhgtbits) - FixedMul (worldbottom, rw_scale);
+    bottomfrac = ((int64_t)centeryfrac>>invhgtbits) - (((int64_t)worldbottom * rw_scale)>>FRACBITS); // [crispy] WiggleFix
 	
     if (backsector)
     {	
@@ -853,13 +841,13 @@ R_StoreWallRange
 
 	if (worldhigh < worldtop)
 	{
-	    pixhigh = (centeryfrac>>invhgtbits) - FixedMul (worldhigh, rw_scale);
+	    pixhigh = ((int64_t)centeryfrac>>invhgtbits) - (((int64_t)worldhigh * rw_scale)>>FRACBITS); // [crispy] WiggleFix
 	    pixhighstep = -FixedMul (rw_scalestep,worldhigh);
 	}
 	
 	if (worldlow > worldbottom)
 	{
-	    pixlow = (centeryfrac>>invhgtbits) - FixedMul (worldlow, rw_scale);
+	    pixlow = ((int64_t)centeryfrac>>invhgtbits) - (((int64_t)worldlow * rw_scale)>>FRACBITS); // [crispy] WiggleFix
 	    pixlowstep = -FixedMul (rw_scalestep,worldlow);
 	}
     }

@@ -36,7 +36,7 @@
 #include "doomstat.h"
 
 #include "v_trans.h" // [crispy] colored blood sprites
-#include "p_local.h" // [crispy] p2fromp(), MLOOKUNIT
+#include "p_local.h" // [crispy] MLOOKUNIT
 
 
 #define MINZ				(FRACUNIT*4)
@@ -366,12 +366,12 @@ int*		mfloorclip; // [crispy] 32-bit integer math
 int*		mceilingclip; // [crispy] 32-bit integer math
 
 fixed_t		spryscale;
-int64_t		sprtopscreen;
+int64_t		sprtopscreen; // [crispy] WiggleFix
 
 void R_DrawMaskedColumn (column_t* column)
 {
-    int64_t	topscreen;
-    int64_t 	bottomscreen;
+    int64_t	topscreen; // [crispy] WiggleFix
+    int64_t 	bottomscreen; // [crispy] WiggleFix
     fixed_t	basetexturemid;
 	
     basetexturemid = dc_texturemid;
@@ -384,8 +384,8 @@ void R_DrawMaskedColumn (column_t* column)
 	topscreen = sprtopscreen + spryscale*column->topdelta;
 	bottomscreen = topscreen + spryscale*column->length;
 
-	dc_yl = (int)((topscreen+FRACUNIT-1)>>FRACBITS);
-	dc_yh = (int)((bottomscreen-1)>>FRACBITS);
+	dc_yl = (int)((topscreen+FRACUNIT-1)>>FRACBITS); // [crispy] WiggleFix
+	dc_yh = (int)((bottomscreen-1)>>FRACBITS); // [crispy] WiggleFix
 		
 	if (dc_yh >= mfloorclip[dc_x])
 	    dc_yh = mfloorclip[dc_x]-1;
@@ -409,6 +409,8 @@ void R_DrawMaskedColumn (column_t* column)
 }
 
 
+// [crispy] invisibility is rendered translucently
+#define crispy_transshadow 0
 
 //
 // R_DrawVisSprite
@@ -448,7 +450,9 @@ R_DrawVisSprite
 	dc_translation = vis->translation;
     }
     // [crispy] translucent sprites
-    if (crispy_translucency && (vis->mobjflags & MF_TRANSLUCENT) && dc_colormap)
+    if (crispy_translucency && dc_colormap &&
+        ((vis->mobjflags & MF_TRANSLUCENT) ||
+        ((vis->mobjflags & MF_SHADOW) && crispy_transshadow)))
     {
 	colfunc = tlcolfunc;
     }
@@ -511,9 +515,36 @@ void R_ProjectSprite (mobj_t* thing)
     angle_t		ang;
     fixed_t		iscale;
     
+    fixed_t             interpx;
+    fixed_t             interpy;
+    fixed_t             interpz;
+    fixed_t             interpangle;
+
+    // [AM] Interpolate between current and last position,
+    //      if prudent.
+    if (crispy_uncapped &&
+        // Don't interpolate if the mobj did something
+        // that would necessitate turning it off for a tic.
+        thing->interp == true &&
+        // Don't interpolate during a paused state.
+        !paused && !menuactive)
+    {
+        interpx = thing->oldx + FixedMul(thing->x - thing->oldx, fractionaltic);
+        interpy = thing->oldy + FixedMul(thing->y - thing->oldy, fractionaltic);
+        interpz = thing->oldz + FixedMul(thing->z - thing->oldz, fractionaltic);
+        interpangle = R_InterpolateAngle(thing->oldangle, thing->angle, fractionaltic);
+    }
+    else
+    {
+        interpx = thing->x;
+        interpy = thing->y;
+        interpz = thing->z;
+        interpangle = thing->angle;
+    }
+
     // transform the origin point
-    tr_x = thing->x - viewx;
-    tr_y = thing->y - viewy;
+    tr_x = interpx - viewx;
+    tr_y = interpy - viewy;
 	
     gxt = FixedMul(tr_x,viewcos); 
     gyt = -FixedMul(tr_y,viewsin);
@@ -551,8 +582,8 @@ void R_ProjectSprite (mobj_t* thing)
     if (sprframe->rotate)
     {
 	// choose a different rotation based on player view
-	ang = R_PointToAngle (thing->x, thing->y);
-	rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>29;
+	ang = R_PointToAngle (interpx, interpy);
+	rot = (ang-interpangle+(unsigned)(ANG45/2)*9)>>29;
 	lump = sprframe->lump[rot];
 	flip = (boolean)sprframe->flip[rot];
     }
@@ -583,10 +614,10 @@ void R_ProjectSprite (mobj_t* thing)
     vis->translation = NULL; // [crispy] no color translation
     vis->mobjflags = thing->flags;
     vis->scale = xscale<<(detailshift && !hires);
-    vis->gx = thing->x;
-    vis->gy = thing->y;
-    vis->gz = thing->z;
-    vis->gzt = thing->z + spritetopoffset[lump];
+    vis->gx = interpx;
+    vis->gy = interpy;
+    vis->gz = interpz;
+    vis->gzt = interpz + spritetopoffset[lump];
     vis->texturemid = vis->gzt - viewz;
     vis->x1 = x1 < 0 ? 0 : x1;
     vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;	
@@ -617,7 +648,8 @@ void R_ProjectSprite (mobj_t* thing)
     vis->patch = lump;
     
     // get light level
-    if (thing->flags & MF_SHADOW)
+    // [crispy] do not invalidate colormap if invisibility is rendered translucently
+    if (thing->flags & MF_SHADOW && !crispy_transshadow)
     {
 	// shadow draw
 	vis->colormap = NULL;
@@ -697,8 +729,8 @@ static void R_DrawLSprite (void)
     }
 
     crispy_crosshair = 2; // [crispy] intercepts overflow guard
-    P_LineLaser(viewplayer->mo, viewplayer->mo->angle,
-                16*64*FRACUNIT, ((p2fromp(viewplayer)->lookdir/MLOOKUNIT)<<FRACBITS)/173);
+    P_LineLaser(viewplayer->mo, viewangle,
+                16*64*FRACUNIT, ((viewplayer->lookdir/MLOOKUNIT)<<FRACBITS)/173);
     crispy_crosshair = 1; // [crispy] intercepts overflow guard
 
     if (!laserspot->x &&
@@ -857,8 +889,10 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 
     vis->patch = lump;
 
-    if (viewplayer->powers[pw_invisibility] > 4*32
+    // [crispy] do not invalidate colormap if invisibility is rendered translucently
+    if ((viewplayer->powers[pw_invisibility] > 4*32
 	|| viewplayer->powers[pw_invisibility] & 8)
+	&& !crispy_transshadow)
     {
 	// shadow draw
 	vis->colormap = NULL;
@@ -879,6 +913,14 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 	vis->colormap = spritelights[MAXLIGHTSCALE-1];
     }
 	
+    // [crispy] invisibility is rendered translucently
+    if ((viewplayer->powers[pw_invisibility] > 4*32 ||
+        viewplayer->powers[pw_invisibility] & 8) &&
+        crispy_transshadow)
+    {
+	vis->mobjflags |= MF_TRANSLUCENT;
+    }
+
     // [crispy] translucent gun flash sprites
     if (psprnum == ps_flash)
         vis->mobjflags |= MF_TRANSLUCENT;
