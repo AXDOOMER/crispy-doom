@@ -968,10 +968,6 @@ void R_InitColormaps (int pal)
 	colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
     }
 
-    // [crispy] gamma correction resets palette
-    I_ApplyColorMod(0);
-    R_FillBackScreen ();
-
     // [crispy] initialize color translation tables
     {
 	boolean keepgray = false;
