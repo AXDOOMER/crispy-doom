@@ -1295,26 +1295,26 @@ static void M_DrawMouse(void)
 // [crispy] crispness menu
 static void M_DrawCrispnessBackground(void)
 {
-    byte *src, *dest;
-    static byte *sdest;
+    byte *src;
+    static pixel_t *dest, *sdest;
     int x, y;
 
     if (!sdest)
     {
 	src = W_CacheLumpName("FLOOR4_6" , PU_CACHE);
-	dest = (unsigned char *) Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
+	dest = (pixel_t *) Z_Malloc (SCREENWIDTH * SCREENHEIGHT * sizeof(pixel_t), PU_STATIC, NULL);
 	sdest = dest;
 
 	for (y = 0; y < SCREENHEIGHT; y++)
 	{
 	    for (x = 0; x < SCREENWIDTH; x++)
 	    {
-		*dest++ = src[(y & 63) * 64 + (x & 63)];
+		*dest++ = colormaps[src[(y & 63) * 64 + (x & 63)]];
 	    }
 	}
     }
 
-    memcpy(I_VideoBuffer, sdest, SCREENWIDTH * SCREENHEIGHT);
+    memcpy(I_VideoBuffer, sdest, SCREENWIDTH * SCREENHEIGHT * sizeof(pixel_t));
 }
 
 static void M_DrawCrispnessHeader(char *item)
