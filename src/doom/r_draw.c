@@ -517,7 +517,7 @@ void R_DrawFuzzColumnLow (void)
 //  of the BaronOfHell, the HellKnight, uses
 //  identical sprites, kinda brightened up.
 //
-pixel_t*	dc_translation;
+byte*	dc_translation;
 byte*	translationtables;
 
 void R_DrawTranslatedColumn (void) 
@@ -557,7 +557,7 @@ void R_DrawTranslatedColumn (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	*dest = dc_translation[dc_source[frac>>FRACBITS]];
+	*dest = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
 	dest += SCREENWIDTH;
 	
 	frac += fracstep; 
@@ -611,14 +611,14 @@ void R_DrawTranslatedColumnLow (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	*dest = dc_translation[dc_source[frac>>FRACBITS]];
-	*dest2 = dc_translation[dc_source[frac>>FRACBITS]];
+	*dest = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
+	*dest2 = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
-	    *dest3 = dc_translation[dc_source[frac>>FRACBITS]];
-	    *dest4 = dc_translation[dc_source[frac>>FRACBITS]];
+	    *dest3 = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
+	    *dest4 = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
