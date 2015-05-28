@@ -143,6 +143,7 @@ void I_StartTic (void);
 void I_EnableLoadingDisk(void);
 
 pixel_t I_AlphaBlend (pixel_t a, pixel_t b);
+pixel_t I_DarkBlend (pixel_t a, int b);
 void I_ApplyColorMod (int palette);
 
 extern char *video_driver;

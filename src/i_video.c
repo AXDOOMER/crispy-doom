@@ -2170,23 +2170,43 @@ void I_BindVideoVariables(void)
 
 pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
 {
-    byte a1, r1, r2, g1, g2, b1, b2;
+    byte a1, r1, g1, b1
+    byte     r2, g2, b2;
+    byte     rr, gr, br;
+
+    a1 =  a >> 24;
+    r1 = (a >> 16) & 0xff;
+    g1 = (a >>  8) & 0xff;
+    b1 =  a        & 0xff;
+
+    r2 = (b >> 16) & 0xff;
+    g2 = (b >>  8) & 0xff;
+    b2 =  b        & 0xff;
+
+    rr = ((unsigned short)         a1  * r1 +
+          (unsigned short) (0xff - a1) * r2) / 0xff;
+    gr = ((unsigned short)         a1  * g1 +
+          (unsigned short) (0xff - a1) * g2) / 0xff;
+    br = ((unsigned short)         a1 *  b1 +
+          (unsigned short) (0xff - a1) * b2) / 0xff;
+
+    return 0xff000000 | (rr << 16) | (gr << 8) | br;
+}
+
+pixel_t I_DarkBlend (pixel_t a, int b)
+{
+    byte r1, g1, b1;
     byte rr, gr, br;
 
-    a1 = (a & 0xff000000) >> 24;
-    r1 = (a & 0x00ff0000) >> 16;
-    g1 = (a & 0x0000ff00) >> 8;
-    b1 = (a & 0x000000ff);
+    r1 = (a >> 16) & 0xff;
+    g1 = (a >>  8) & 0xff;
+    b1 =  a        & 0xff;
 
-    r2 = (b & 0x00ff0000) >> 16;
-    g2 = (b & 0x0000ff00) >> 8;
-    b2 = (b & 0x000000ff);
+    rr = (unsigned short) r1 * (0xff - b) / 0xff;
+    gr = (unsigned short) g1 * (0xff - b) / 0xff;
+    br = (unsigned short) b1 * (0xff - b) / 0xff;
 
-    rr = ((short) a1 * r1 + (short) (0xff - a1) * r2) / 0xff;
-    gr = ((short) a1 * g1 + (short) (0xff - a1) * g2) / 0xff;
-    br = ((short) a1 * b1 + (short) (0xff - a1) * b2) / 0xff;
-
-    return 0xff000000 + (rr << 16) + (gr << 8) + br;
+    return 0xff000000 | (rr << 16) | (gr << 8) | br;
 }
 
 void I_ApplyColorMod (int palette)
