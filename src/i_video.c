@@ -1108,6 +1108,23 @@ void I_FinishUpdate (void)
 	    I_VideoBuffer[ (SCREENHEIGHT-1)*SCREENWIDTH + i] = 0x0;
     }
 
+	// [AM] Real FPS counter
+	if (crispy_showfps)
+	{
+		fpscount++;
+
+		i = SDL_GetTicks();
+		mili = i - lastmili;
+
+		// Update FPS counter every second
+		if (mili >= 1000)
+		{
+			crispy_fps = (fpscount * 1000) / mili;
+			fpscount = 0;
+			lastmili = i;
+		}
+	}
+
 #if 0 // obsolete software scaling routines
     // draw to screen
 
