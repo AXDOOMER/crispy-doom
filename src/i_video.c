@@ -2170,7 +2170,7 @@ void I_BindVideoVariables(void)
 
 pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
 {
-    byte a1, r1, g1, b1
+    byte a1, r1, g1, b1;
     byte     r2, g2, b2;
     byte     rr, gr, br;
 
