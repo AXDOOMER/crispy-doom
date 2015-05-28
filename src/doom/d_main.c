@@ -339,11 +339,16 @@ void D_Display (void)
     // [crispy] shade background when a menu is active or the game is paused
     if (paused || menuactive)
     {
+	static int firsttic;
+
 	for (y = 0; y < SCREENWIDTH * SCREENHEIGHT; y++)
 	    I_VideoBuffer[y] = I_AlphaBlend(I_VideoBuffer[y], CB_DARK50 / 0x10 * menushade);
 
-	if (menushade < 16)
+	if (menushade < 16 && gametic != firsttic)
+	{
 	    menushade++;
+	    firsttic = gametic;
+	}
 
 	crispy_redrawall = true;
     }
