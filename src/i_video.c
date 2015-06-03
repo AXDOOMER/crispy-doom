@@ -2168,45 +2168,40 @@ void I_BindVideoVariables(void)
 #endif
 }
 
-pixel_t I_AlphaBlend (pixel_t b, pixel_t a)
+const pixel_t (*blendfunc) (const pixel_t fg, const pixel_t bg) = I_BlendOver;
+
+const pixel_t I_BlendAdd (const pixel_t bg, const pixel_t fg)
 {
-    byte a1, r1, g1, b1;
-    byte     r2, g2, b2;
-    byte     rr, gr, br;
+    uint32_t r, g, b;
 
-    a1 =  a >> 24;
-    r1 = (a >> 16) & 0xff;
-    g1 = (a >>  8) & 0xff;
-    b1 =  a        & 0xff;
+    if ((r = (fg & 0xff0000) + (bg & 0xff0000)) > 0xff0000) r = 0xff0000;
+    if ((g = (fg & 0xff00)   + (bg & 0xff00))   > 0xff00)   g = 0xff00;
+    if ((b = (fg & 0xff)     + (bg & 0xff))     > 0xff)     b = 0xff;
 
-    r2 = (b >> 16) & 0xff;
-    g2 = (b >>  8) & 0xff;
-    b2 =  b        & 0xff;
-
-    rr = ((unsigned short)         a1  * r1 +
-          (unsigned short) (0xff - a1) * r2) / 0xff;
-    gr = ((unsigned short)         a1  * g1 +
-          (unsigned short) (0xff - a1) * g2) / 0xff;
-    br = ((unsigned short)         a1 *  b1 +
-          (unsigned short) (0xff - a1) * b2) / 0xff;
-
-    return 0xff000000 | (rr << 16) | (gr << 8) | br;
+    return 0xff000000 | r | g | b;
 }
 
-pixel_t I_DarkBlend (pixel_t a, int b)
+const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg)
 {
-    byte r1, g1, b1;
-    byte rr, gr, br;
+    uint32_t r, g, b;
+    const uint32_t a = fg >> 24;
 
-    r1 = (a >> 16) & 0xff;
-    g1 = (a >>  8) & 0xff;
-    b1 =  a        & 0xff;
+    r = ((a * (fg & 0xff0000) + (0xff - a) * (bg & 0xff0000)) >> 8) & 0xff0000;
+    g = ((a * (fg & 0xff00)   + (0xff - a) * (bg & 0xff00))   >> 8) & 0xff00;
+    b = ((a * (fg & 0xff)     + (0xff - a) * (bg & 0xff))     >> 8) & 0xff;
 
-    rr = (unsigned short) r1 * (0xff - b) / 0xff;
-    gr = (unsigned short) g1 * (0xff - b) / 0xff;
-    br = (unsigned short) b1 * (0xff - b) / 0xff;
+    return 0xff000000 | r | g | b;
+}
 
-    return 0xff000000 | (rr << 16) | (gr << 8) | br;
+const pixel_t I_DarkBlend (const pixel_t bg, const int d)
+{
+    uint32_t r, g, b;
+
+    r = (((bg & 0xff0000) * (0xff - d)) >> 8) & 0xff0000;
+    g = (((bg & 0xff00)   * (0xff - d)) >> 8) & 0xff00;
+    b = (((bg & 0xff)     * (0xff - d)) >> 8) & 0xff;
+
+    return 0xff000000 | r | g | b;
 }
 
 void I_ApplyColorMod (int palette)

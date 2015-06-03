@@ -454,6 +454,7 @@ R_DrawVisSprite
         ((vis->mobjflags & MF_TRANSLUCENT) ||
         ((vis->mobjflags & MF_SHADOW) && crispy_transshadow)))
     {
+	blendfunc = vis->blendfunc;
 	colfunc = tlcolfunc;
     }
 	
@@ -476,6 +477,7 @@ R_DrawVisSprite
     }
 
     colfunc = basecolfunc;
+    blendfunc = I_BlendOver;
 }
 
 
@@ -703,6 +705,41 @@ void R_ProjectSprite (mobj_t* thing)
 	    }
 	}
     }
+    if (thing->flags & MF_TRANSLUCENT)
+    {
+	switch (thing->type)
+	{
+	    // [crispy] projectiles
+	    case MT_FIRE:
+	    case MT_SMOKE:
+	    case MT_FATSHOT:
+	    case MT_BRUISERSHOT:
+	    case MT_SPAWNFIRE:
+	    case MT_TROOPSHOT:
+	    case MT_HEADSHOT:
+	    case MT_ROCKET:
+	    case MT_PLASMA:
+	    case MT_BFG:
+	    case MT_ARACHPLAZ:
+	    case MT_PUFF:
+	    case MT_TFOG:
+	    case MT_IFOG:
+	    // [crispy] spheres
+	    case MT_MISC12:
+	    case MT_INV:
+	    case MT_INS:
+	    case MT_MEGA:
+		vis->blendfunc = I_BlendAdd;
+		break;
+	    default:
+		vis->blendfunc = I_BlendOver;
+		break;
+	}
+    }
+    if (thing->flags & MF_SHADOW && crispy_transshadow)
+    {
+	vis->blendfunc = I_BlendAdd;
+    }
 }
 
 // [crispy] generate a vissprite for the laser spot
@@ -758,7 +795,8 @@ static void R_DrawLSprite (void)
     memset(vis, 0, sizeof(*vis)); // [crispy] set all fields to NULL, except ...
     vis->patch = lump - firstspritelump; // [crispy] not a sprite patch
     vis->colormap = fixedcolormap ? fixedcolormap : colormaps; // [crispy] always full brightness
-//  vis->mobjflags |= MF_TRANSLUCENT;
+    vis->mobjflags |= MF_TRANSLUCENT;
+    vis->blendfunc = I_BlendAdd;
     vis->xiscale = FixedDiv (FRACUNIT, xscale);
     vis->texturemid = laserspot->z - viewz;
     vis->scale = xscale<<(detailshift && !hires);
@@ -919,11 +957,15 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
         crispy_transshadow)
     {
 	vis->mobjflags |= MF_TRANSLUCENT;
+	vis->blendfunc = I_BlendAdd;
     }
 
     // [crispy] translucent gun flash sprites
     if (psprnum == ps_flash)
+    {
         vis->mobjflags |= MF_TRANSLUCENT;
+        vis->blendfunc = I_BlendOver;
+    }
 
     R_DrawVisSprite (vis, vis->x1, vis->x2);
 }

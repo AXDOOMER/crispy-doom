@@ -1296,7 +1296,8 @@ static void M_DrawMouse(void)
 static void M_DrawCrispnessBackground(void)
 {
     byte *src;
-    static pixel_t *dest, *sdest;
+    pixel_t *dest;
+    static pixel_t *sdest;
     int x, y;
 
     if (!sdest)

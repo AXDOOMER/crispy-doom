@@ -557,7 +557,7 @@ void R_DrawTranslatedColumn (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	*dest = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
+	*dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
 	dest += SCREENWIDTH;
 	
 	frac += fracstep; 
@@ -611,14 +611,14 @@ void R_DrawTranslatedColumnLow (void)
 	//  used with PLAY sprites.
 	// Thus the "green" ramp of the player 0 sprite
 	//  is mapped to gray, red, black/indigo. 
-	*dest = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
-	*dest2 = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
+	*dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	*dest2 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
-	    *dest3 = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
-	    *dest4 = colormaps[dc_translation[dc_source[frac>>FRACBITS]]];
+	    *dest3 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+	    *dest4 = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
@@ -659,7 +659,7 @@ void R_DrawTLColumn (void)
     do
     {
 	destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
-	*dest = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	*dest = blendfunc(*dest, (destrgb & dc_translucency));
 	dest += SCREENWIDTH;
 
 	frac += fracstep;
@@ -706,15 +706,15 @@ void R_DrawTLColumnLow (void)
     do
     {
 	destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
-	*dest = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-	*dest2 = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	*dest = blendfunc(*dest, (destrgb & dc_translucency));
+	*dest2 = blendfunc(*dest, (destrgb & dc_translucency));
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
 	    destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
-	    *dest3 = I_AlphaBlend(*dest, (destrgb & dc_translucency));
-	    *dest4 = I_AlphaBlend(*dest, (destrgb & dc_translucency));
+	    *dest3 = blendfunc(*dest, (destrgb & dc_translucency));
+	    *dest4 = blendfunc(*dest, (destrgb & dc_translucency));
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}

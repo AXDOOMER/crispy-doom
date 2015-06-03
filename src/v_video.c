@@ -288,11 +288,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
                 if (hires)
                 {
                     sourcergb = colormaps[*source];
-                    *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                    *dest = I_BlendOver(*dest, (sourcergb & dc_translucency));
                     dest += SCREENWIDTH;
                 }
                 sourcergb = colormaps[*source++];
-                *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                *dest = I_BlendOver(*dest, (sourcergb & dc_translucency));
                 dest += SCREENWIDTH;
             }
           }
@@ -322,11 +322,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
                 if (hires)
                 {
                     sourcergb = colormaps[dp_translation[*source]];
-                    *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                    *dest = I_BlendOver(*dest, (sourcergb & dc_translucency));
                     dest += SCREENWIDTH;
                 }
                 sourcergb = colormaps[dp_translation[*source++]];
-                *dest = I_AlphaBlend(*dest, (sourcergb & dc_translucency));
+                *dest = I_BlendOver(*dest, (sourcergb & dc_translucency));
                 dest += SCREENWIDTH;
             }
             }
