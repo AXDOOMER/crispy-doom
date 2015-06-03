@@ -705,7 +705,7 @@ void R_ProjectSprite (mobj_t* thing)
 	    }
 	}
     }
-    if (thing->flags & MF_TRANSLUCENT)
+    if (thing->flags & (MF_TRANSLUCENT | MF_SHADOW))
     {
 	switch (thing->type)
 	{
@@ -724,21 +724,19 @@ void R_ProjectSprite (mobj_t* thing)
 	    case MT_PUFF:
 	    case MT_TFOG:
 	    case MT_IFOG:
+/*
 	    // [crispy] spheres
 	    case MT_MISC12:
 	    case MT_INV:
 	    case MT_INS:
 	    case MT_MEGA:
+*/
 		vis->blendfunc = I_BlendAdd;
 		break;
 	    default:
 		vis->blendfunc = I_BlendOver;
 		break;
 	}
-    }
-    if (thing->flags & MF_SHADOW && crispy_transshadow)
-    {
-	vis->blendfunc = I_BlendAdd;
     }
 }
 
