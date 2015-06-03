@@ -413,7 +413,7 @@ void R_DrawFuzzColumn (void)
 	//  left or right of the current one.
 	// Add index from colormap to index.
 
-	*dest = I_DarkBlend(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
+	*dest = I_BlendDark(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
 
 	// Clamp table lookup index.
 	if (++fuzzpos == FUZZTABLE) 
@@ -483,12 +483,12 @@ void R_DrawFuzzColumnLow (void)
 	//  a pixel that is either one column
 	//  left or right of the current one.
 	// Add index from colormap to index.
-	*dest = I_DarkBlend(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
-	*dest2 = I_DarkBlend(dest2[fuzzoffset[fuzzpos]], 0xff >> 2);
+	*dest = I_BlendDark(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
+	*dest2 = I_BlendDark(dest2[fuzzoffset[fuzzpos]], 0xff >> 2);
 	if (hires)
 	{
-	    *dest3 = I_DarkBlend(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
-	    *dest4 = I_DarkBlend(dest2[fuzzoffset[fuzzpos]], 0xff >> 2);
+	    *dest3 = I_BlendDark(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
+	    *dest4 = I_BlendDark(dest2[fuzzoffset[fuzzpos]], 0xff >> 2);
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}

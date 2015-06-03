@@ -342,7 +342,7 @@ void D_Display (void)
 	static int firsttic;
 
 	for (y = 0; y < SCREENWIDTH * SCREENHEIGHT; y++)
-	    I_VideoBuffer[y] = I_DarkBlend(I_VideoBuffer[y], menushade << 3);
+	    I_VideoBuffer[y] = I_BlendDark(I_VideoBuffer[y], menushade << 3);
 
 	if (menushade < 16 && gametic != firsttic)
 	{

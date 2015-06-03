@@ -2183,6 +2183,17 @@ const pixel_t I_BlendAdd (const pixel_t bg, const pixel_t fg)
     return 0xff000000 | r | g | b;
 }
 
+const pixel_t I_BlendDark (const pixel_t bg, const int d)
+{
+    uint32_t r, g, b;
+
+    r = (((bg & 0xff0000) * (0xff - d)) >> 8) & 0xff0000;
+    g = (((bg & 0xff00)   * (0xff - d)) >> 8) & 0xff00;
+    b = (((bg & 0xff)     * (0xff - d)) >> 8) & 0xff;
+
+    return 0xff000000 | r | g | b;
+}
+
 const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg)
 {
     uint32_t r, g, b;
@@ -2191,17 +2202,6 @@ const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg)
     r = ((a * (fg & 0xff0000) + (0xff - a) * (bg & 0xff0000)) >> 8) & 0xff0000;
     g = ((a * (fg & 0xff00)   + (0xff - a) * (bg & 0xff00))   >> 8) & 0xff00;
     b = ((a * (fg & 0xff)     + (0xff - a) * (bg & 0xff))     >> 8) & 0xff;
-
-    return 0xff000000 | r | g | b;
-}
-
-const pixel_t I_DarkBlend (const pixel_t bg, const int d)
-{
-    uint32_t r, g, b;
-
-    r = (((bg & 0xff0000) * (0xff - d)) >> 8) & 0xff0000;
-    g = (((bg & 0xff00)   * (0xff - d)) >> 8) & 0xff00;
-    b = (((bg & 0xff)     * (0xff - d)) >> 8) & 0xff;
 
     return 0xff000000 | r | g | b;
 }

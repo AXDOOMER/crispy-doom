@@ -144,8 +144,8 @@ void I_EnableLoadingDisk(void);
 
 extern const pixel_t (*blendfunc) (const pixel_t fg, const pixel_t bg);
 const pixel_t I_BlendAdd (const pixel_t bg, const pixel_t fg);
+const pixel_t I_BlendDark (const pixel_t bg, const int d);
 const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg);
-const pixel_t I_DarkBlend (const pixel_t bg, const int d);
 void I_ApplyColorMod (int palette);
 
 extern char *video_driver;
