@@ -927,7 +927,7 @@ void R_InitSpriteLumps (void)
 //
 // R_InitColormaps
 //
-void R_InitColormaps (int pal)
+void R_InitColormaps (void)
 {
     byte *doompalette, *playpal;
     int c, i, j;
@@ -940,11 +940,11 @@ void R_InitColormaps (int pal)
     }
 
     doompalette = W_CacheLumpName("PLAYPAL", PU_STATIC);
-    playpal = doompalette + 256 * 3 * pal;
+    playpal = doompalette;
 
     for (c = j = 0; c < NUMCOLORMAPS; c++)
     {
-	scale = 1. - 1. * c / (NUMCOLORMAPS + 1);
+	scale = 1. - 1. * c / NUMCOLORMAPS;
 
 	for (i = 0; i < 256; i++)
 	{
@@ -1025,7 +1025,7 @@ void R_InitData (void)
     printf (".");
     R_InitSpriteLumps ();
     printf (".");
-    R_InitColormaps (0);
+    R_InitColormaps ();
 }
 
 

@@ -1197,6 +1197,7 @@ void I_ReadScreen (pixel_t* scr)
 //
 // I_SetPalette
 //
+#if 0
 void I_SetPalette (byte *doompalette)
 {
     int i;
@@ -1213,6 +1214,7 @@ void I_SetPalette (byte *doompalette)
 
 //    palette_to_set = true;
 }
+#endif
 
 // Given an RGB value, find the closest matching palette index.
 
@@ -2204,7 +2206,7 @@ const pixel_t I_DarkBlend (const pixel_t bg, const int d)
     return 0xff000000 | r | g | b;
 }
 
-void I_ApplyColorMod (int palette)
+void I_SetPalette (int palette)
 {
 
     if (!palette)

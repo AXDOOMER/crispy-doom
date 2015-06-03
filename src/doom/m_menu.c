@@ -2532,13 +2532,10 @@ boolean M_Responder (event_t* ev)
 	    if (usegamma > 4)
 		usegamma = 0;
 	    players[consoleplayer].message = DEH_String(gammamsg[usegamma]);
-
-	    R_InitColormaps(0);
-	    I_ApplyColorMod(0); // [crispy] gamma correction resets palette
+	    R_InitColormaps();
+            I_SetPalette(0); // [crispy] gamma correction resets palette
 	    R_FillBackScreen ();
-
 	    crispy_redrawall = true;
-
 	    return true;
 	}
         // [crispy] those two can be considered as shortcuts for the IDCLEV cheat
