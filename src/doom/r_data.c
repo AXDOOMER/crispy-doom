@@ -944,7 +944,7 @@ void R_InitColormaps (int pal)
 
     for (c = j = 0; c < NUMCOLORMAPS; c++)
     {
-	scale = 1. - 1. * c / (NUMCOLORMAPS - 1);
+	scale = 1. - 1. * c / (NUMCOLORMAPS + 1);
 
 	for (i = 0; i < 256; i++)
 	{
