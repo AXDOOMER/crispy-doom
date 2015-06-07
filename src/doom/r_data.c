@@ -929,8 +929,9 @@ void R_InitSpriteLumps (void)
 //
 void R_InitColormaps (void)
 {
-    byte *doompalette, *playpal;
-    int c, i, j;
+    byte *palettelump, *palette, *colormaplump;
+    int c, i;
+    size_t j = 0;
     byte r, g, b;
     float scale;
 
@@ -939,37 +940,53 @@ void R_InitColormaps (void)
 	colormaps = (lighttable_t*) Z_Malloc((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
     }
 
-    doompalette = W_CacheLumpName("PLAYPAL", PU_STATIC);
-    playpal = doompalette;
+    palettelump = W_CacheLumpName("PLAYPAL", PU_STATIC);
+    palette = palettelump;
 
-    for (c = j = 0; c < NUMCOLORMAPS; c++)
+    if (crispy_highcolor)
     {
-	scale = 1. - 1. * c / NUMCOLORMAPS;
+	for (c = 0; c < NUMCOLORMAPS; c++)
+	{
+	    scale = 1. - 1. * c / NUMCOLORMAPS;
 
+	    for (i = 0; i < 256; i++)
+	    {
+		r = gammatable[usegamma][palette[3 * i + 0]] * scale + gammatable[usegamma][0] * (1. - scale);
+		g = gammatable[usegamma][palette[3 * i + 1]] * scale + gammatable[usegamma][0] * (1. - scale);
+		b = gammatable[usegamma][palette[3 * i + 2]] * scale + gammatable[usegamma][0] * (1. - scale);
+
+		colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
+	    }
+	}
+
+	// [crispy] Invulnerability (c == COLORMAPS)
 	for (i = 0; i < 256; i++)
 	{
-	    r = gammatable[usegamma][playpal[3 * i + 0]] * scale + gammatable[usegamma][0] * (1. - scale);
-	    g = gammatable[usegamma][playpal[3 * i + 1]] * scale + gammatable[usegamma][0] * (1. - scale);
-	    b = gammatable[usegamma][playpal[3 * i + 2]] * scale + gammatable[usegamma][0] * (1. - scale);
+	    r = g = b =
+	    0xff - (gammatable[4 - usegamma][palette[3 * i + 0]]/3 + // 0.299
+	            gammatable[4 - usegamma][palette[3 * i + 1]]/2 + // 0.587
+	            gammatable[4 - usegamma][palette[3 * i + 2]]/6); // 0.144
 
-	    colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
+	    colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
 	}
     }
-
-    // [crispy] Invulnerability (c == COLORMAPS)
-    for (i = 0; i < 256; i++)
+    else
     {
-	r = g = b = 
-/*
-	255 - (0.299 * gammatable[4 - usegamma][playpal[3 * i + 0]] +
-	       0.587 * gammatable[4 - usegamma][playpal[3 * i + 1]] +
-	       0.144 * gammatable[4 - usegamma][playpal[3 * i + 2]]);
-*/
-	255 - (gammatable[4 - usegamma][playpal[3 * i + 0]] +
-	       gammatable[4 - usegamma][playpal[3 * i + 1]] +
-	       gammatable[4 - usegamma][playpal[3 * i + 2]])/3;
+	colormaplump = W_CacheLumpName("COLORMAP", PU_STATIC);
 
-	colormaps[j++] = 0xff000000 + (r << 16) + (g << 8) + b;
+	for (c = 0; c <= NUMCOLORMAPS; c++)
+	{
+	    for (i = 0; i < 256; i++)
+	    {
+		r = gammatable[usegamma][palette[3 * colormaplump[c * 256 + i] + 0]];
+		g = gammatable[usegamma][palette[3 * colormaplump[c * 256 + i] + 1]];
+		b = gammatable[usegamma][palette[3 * colormaplump[c * 256 + i] + 2]];
+
+		colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
+	    }
+	}
+
+	Z_ChangeTag(colormaplump, PU_CACHE);
     }
 
     // [crispy] initialize color translation tables
@@ -987,7 +1004,7 @@ void R_InitColormaps (void)
 	{
 	    for (j = 0; j < 256; j++)
 	    {
-		cr[i][j] = V_Colorize(playpal, i, j, keepgray);
+		cr[i][j] = V_Colorize(palette, i, j, keepgray);
 	    }
 	}
     }
@@ -1006,7 +1023,7 @@ void R_InitColormaps (void)
 	}
     }
 
-    Z_ChangeTag(doompalette, PU_CACHE);
+    Z_ChangeTag(palettelump, PU_CACHE);
 }
 
 

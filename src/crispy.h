@@ -51,6 +51,7 @@ extern int crispy_crosshair2;
 extern int crispy_flipcorpses;
 extern int crispy_freeaim;
 extern int crispy_freelook;
+extern int crispy_highcolor;
 extern int crispy_jump;
 extern int crispy_mouselook;
 extern int crispy_overunder;

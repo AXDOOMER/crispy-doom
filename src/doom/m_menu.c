@@ -214,6 +214,7 @@ static void M_CrispyToggleRecoil(int choice);
 static void M_CrispyToggleSecretmessage(int choice);
 static void M_CrispyToggleTranslucency(int choice);
 static void M_CrispyToggleUncapped(int choice);
+static void M_CrispyToggleHighcolor(int choice);
 void M_SfxVol(int choice);
 void M_MusicVol(int choice);
 void M_ChangeDetail(int choice);
@@ -462,6 +463,7 @@ static menu_t  MouseDef =
 enum
 {
     crispness_sep_visual,
+    crispness_highcolor,
     crispness_uncapped,
     crispness_coloredhud,
     crispness_translucency,
@@ -476,6 +478,7 @@ enum
 static menuitem_t CrispnessMenu[]=
 {
     {-1,"",0,'\0'},
+    {1,"",	M_CrispyToggleHighcolor,'h'},
     {1,"",	M_CrispyToggleUncapped,'u'},
     {1,"",	M_CrispyToggleColoredhud,'c'},
     {1,"",	M_CrispyToggleTranslucency,'t'},
@@ -1366,6 +1369,7 @@ static void M_DrawCrispness1(void)
 
     M_DrawCrispnessSeparator(crispness_sep_visual, "Visual");
 
+    M_DrawCrispnessItem(crispness_highcolor, "High-Color Rendering", crispy_highcolor, true);
     M_DrawCrispnessItem(crispness_uncapped, "Uncapped Framerate", crispy_uncapped, true);
     M_DrawCrispnessItem(crispness_coloredhud, "Colorize Status Bar and Texts", crispy_coloredhud, true);
     M_DrawCrispnessItem(crispness_translucency, "Enable Translucency", crispy_translucency, true);
@@ -1705,6 +1709,14 @@ static void M_CrispyToggleUncapped(int choice)
 {
     choice = 0;
     crispy_uncapped = !crispy_uncapped;
+}
+
+static void M_CrispyToggleHighcolor(int choice)
+{
+    choice = 0;
+    crispy_highcolor = !crispy_highcolor;
+
+    R_InitColormaps();
 }
 
 static void M_CrispyToggleAutomapstats(int choice)

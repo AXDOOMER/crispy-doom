@@ -1214,6 +1214,41 @@ void I_SetPalette (byte *doompalette)
 
 //    palette_to_set = true;
 }
+#else
+void I_SetPalette (int palette)
+{
+    switch (palette)
+    {
+	case 0:
+	    curpane = NULL;
+	    break;
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	    curpane = redpane;
+	    a_pane = 0xff * palette / 9;
+	    break;
+	case 9:
+	case 10:
+	case 11:
+	case 12:
+	    curpane = yelpane;
+	    a_pane = 0xff * (palette - 8) / 8;
+	    break;
+	case 13:
+	    curpane = grnpane;
+	    a_pane = 0xff * 125 / 1000;
+	    break;
+	default:
+	    I_Error("Unknown palette: %d!\n", palette);
+	    break;
+    }
+}
 #endif
 
 // Given an RGB value, find the closest matching palette index.
@@ -2205,30 +2240,3 @@ const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg)
 
     return 0xff000000 | r | g | b;
 }
-
-void I_SetPalette (int palette)
-{
-
-    if (!palette)
-	curpane = NULL;
-    if (palette >= 1 && palette < 9)
-    {
-	curpane = redpane;
-	a_pane = 0xff * palette / 9;
-    }
-    else
-    if (palette >= 9 && palette < 13)
-    {
-	curpane = yelpane;
-	a_pane = 0xff * (palette - 8) / 8;
-    }
-    else
-    if (palette == 13)
-    {
-	curpane = grnpane;
-	a_pane = 0xff * 125 / 1000;
-    }
-
-}
-
-

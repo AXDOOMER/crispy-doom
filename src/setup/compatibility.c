@@ -38,6 +38,7 @@ int crispy_crosshair2 = 0;
 int crispy_flipcorpses = 0;
 int crispy_freeaim = 0;
 int crispy_freelook = 0;
+int crispy_highcolor = 0;
 int crispy_jump = 0;
 int crispy_mouselook = 0;
 int crispy_overunder = 0;
@@ -59,6 +60,8 @@ void CompatibilitySettings(void)
 
     TXT_AddWidgets(window,
                    TXT_NewSeparator("Visual"),
+                   TXT_NewCheckBox("High-Color Rendering",
+                                   &crispy_highcolor),
                    TXT_NewCheckBox("Uncapped Framerate",
                                    &crispy_uncapped),
                    TXT_NewCheckBox("Colorize Status Bar and Texts",
@@ -69,8 +72,8 @@ void CompatibilitySettings(void)
                                    &crispy_coloredblood),
 //                   TXT_NewCheckBox("Fix Spectre and Lost Soul Blood",
 //                                   &crispy_coloredblood2),
-                   TXT_NewCheckBox("Randomly Mirrored Corpses",
-                                   &crispy_flipcorpses),
+//                   TXT_NewCheckBox("Randomly Mirrored Corpses",
+//                                   &crispy_flipcorpses),
                    TXT_NewSeparator("Tactical"),
                    TXT_NewCheckBox("Allow Free Look [*]",
                                    &crispy_freelook),
@@ -133,6 +136,7 @@ void BindCompatibilityVariables(void)
         M_BindIntVariable("crispy_flipcorpses",     &crispy_flipcorpses);
         M_BindIntVariable("crispy_freeaim",         &crispy_freeaim);
         M_BindIntVariable("crispy_freelook",        &crispy_freelook);
+        M_BindIntVariable("crispy_highcolor",       &crispy_highcolor);
         M_BindIntVariable("crispy_jump",            &crispy_jump);
         M_BindIntVariable("crispy_mouselook",       &crispy_mouselook);
         M_BindIntVariable("crispy_overunder",       &crispy_overunder);

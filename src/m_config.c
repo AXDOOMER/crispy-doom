@@ -1794,6 +1794,14 @@ static default_t extra_defaults_list[] =
     //
 
     CONFIG_VARIABLE_INT(crispy_uncapped),
+
+    //!
+    // @game doom
+    //
+    // High-Color Rendering.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_highcolor),
 };
 
 static default_collection_t extra_defaults =

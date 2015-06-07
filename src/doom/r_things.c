@@ -733,13 +733,11 @@ void R_ProjectSprite (mobj_t* thing)
 	    case MT_PUFF:
 	    case MT_TFOG:
 	    case MT_IFOG:
-/*
 	    // [crispy] spheres
 	    case MT_MISC12:
 	    case MT_INV:
 	    case MT_INS:
 	    case MT_MEGA:
-*/
 		vis->blendfunc = I_BlendAdd;
 		break;
 	    default:
