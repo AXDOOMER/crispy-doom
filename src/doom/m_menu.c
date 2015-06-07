@@ -197,34 +197,12 @@ void M_ChangeSensitivity(int choice);
 static void M_ChangeSensitivity_y(int choice);
 static void M_MouseInvert(int choice);
 static void M_MouseLook(int choice);
-static void M_CrispyToggleAutomapstats(int choice);
-static void M_CrispyToggleCenterweapon(int choice);
-static void M_CrispyToggleColoredblood(int choice);
-static void M_CrispyToggleColoredblood2(int choice);
-static void M_CrispyToggleColoredhud(int choice);
-static void M_CrispyToggleCrosshair(int choice);
-static void M_CrispyToggleCrosshair2(int choice);
-static void M_CrispyToggleFlipcorpses(int choice);
-static void M_CrispyToggleFreeaim(int choice);
-static void M_CrispyToggleFreelook(int choice);
-static void M_CrispyToggleJumping(int choice);
-static void M_CrispyToggleOverunder(int choice);
-static void M_CrispyTogglePitch(int choice);
-static void M_CrispyToggleRecoil(int choice);
-static void M_CrispyToggleSecretmessage(int choice);
-static void M_CrispyToggleTranslucency(int choice);
-static void M_CrispyToggleUncapped(int choice);
-static void M_CrispyToggleHighcolor(int choice);
 void M_SfxVol(int choice);
 void M_MusicVol(int choice);
 void M_ChangeDetail(int choice);
 void M_SizeDisplay(int choice);
 void M_StartGame(int choice);
 static void M_Mouse(int choice);
-static void M_Crispness(int choice);
-static void M_Crispness1(int choice);
-static void M_Crispness2(int choice);
-static void M_Crispness3(int choice);
 void M_Sound(int choice);
 
 void M_FinishReadThis(int choice);
@@ -241,9 +219,6 @@ void M_DrawNewGame(void);
 void M_DrawEpisode(void);
 void M_DrawOptions(void);
 static void M_DrawMouse(void);
-static void M_DrawCrispness1(void);
-static void M_DrawCrispness2(void);
-static void M_DrawCrispness3(void);
 void M_DrawSound(void);
 void M_DrawLoad(void);
 void M_DrawSave(void);
@@ -260,6 +235,31 @@ void M_StartMessage(char *string,void *routine,boolean input);
 void M_StopMessage(void);
 void M_ClearMenus (void);
 
+static void M_CrispyToggleAutomapstats(int choice);
+static void M_CrispyToggleCenterweapon(int choice);
+static void M_CrispyToggleColoredblood(int choice);
+static void M_CrispyToggleColoredblood2(int choice);
+static void M_CrispyToggleColoredhud(int choice);
+static void M_CrispyToggleCrosshair(int choice);
+static void M_CrispyToggleCrosshair2(int choice);
+static void M_CrispyToggleFlipcorpses(int choice);
+static void M_CrispyToggleFreeaim(int choice);
+static void M_CrispyToggleFreelook(int choice);
+static void M_CrispyToggleHighcolor(int choice);
+static void M_CrispyToggleJumping(int choice);
+static void M_CrispyToggleOverunder(int choice);
+static void M_CrispyTogglePitch(int choice);
+static void M_CrispyToggleRecoil(int choice);
+static void M_CrispyToggleSecretmessage(int choice);
+static void M_CrispyToggleTranslucency(int choice);
+static void M_CrispyToggleUncapped(int choice);
+static void M_Crispness(int choice);
+static void M_Crispness1(int choice);
+static void M_Crispness2(int choice);
+static void M_Crispness3(int choice);
+static void M_DrawCrispness1(void);
+static void M_DrawCrispness2(void);
+static void M_DrawCrispness3(void);
 
 
 
@@ -1689,46 +1689,34 @@ static void M_MouseLook(int choice)
     players[consoleplayer].lookdir = 0;
 }
 
-static void M_CrispyToggleTranslucency(int choice)
-{
-    choice = 0;
-    crispy_translucency = !crispy_translucency;
-
-    // [crispy] translucent Crispy HUD?
-    if (screenblocks > CRISPY_HUD)
-	M_SizeDisplay(0);
-}
-
-static void M_CrispyToggleColoredhud(int choice)
-{
-    choice = 0;
-    crispy_coloredhud = !crispy_coloredhud;
-}
-
-static void M_CrispyToggleUncapped(int choice)
-{
-    choice = 0;
-    crispy_uncapped = !crispy_uncapped;
-}
-
-static void M_CrispyToggleHighcolor(int choice)
-{
-    choice = 0;
-    crispy_highcolor = !crispy_highcolor;
-
-    R_InitColormaps();
-}
-
 static void M_CrispyToggleAutomapstats(int choice)
 {
     choice = 0;
     crispy_automapstats = !crispy_automapstats;
 }
 
-static void M_CrispyToggleSecretmessage(int choice)
+static void M_CrispyToggleCenterweapon(int choice)
 {
     choice = 0;
-    crispy_secretmessage = !crispy_secretmessage;
+    crispy_centerweapon = !crispy_centerweapon;
+}
+
+static void M_CrispyToggleColoredblood(int choice)
+{
+    choice = 0;
+    crispy_coloredblood = !crispy_coloredblood;
+}
+
+static void M_CrispyToggleColoredblood2(int choice)
+{
+    choice = 0;
+    crispy_coloredblood2 = !crispy_coloredblood2;
+}
+
+static void M_CrispyToggleColoredhud(int choice)
+{
+    choice = 0;
+    crispy_coloredhud = !crispy_coloredhud;
 }
 
 static void M_CrispyToggleCrosshair(int choice)
@@ -1749,18 +1737,10 @@ static void M_CrispyToggleCrosshair2(int choice)
     crispy_crosshair2 = !crispy_crosshair2;
 }
 
-static void M_CrispyToggleCenterweapon(int choice)
+static void M_CrispyToggleFlipcorpses(int choice)
 {
     choice = 0;
-    crispy_centerweapon = !crispy_centerweapon;
-}
-
-static void M_CrispyToggleFreelook(int choice)
-{
-    choice = 0;
-    crispy_freelook = !crispy_freelook;
-
-    players[consoleplayer].lookdir = 0;
+    crispy_flipcorpses = !crispy_flipcorpses;
 }
 
 static void M_CrispyToggleFreeaim(int choice)
@@ -1773,6 +1753,22 @@ static void M_CrispyToggleFreeaim(int choice)
 
     choice = 0;
     crispy_freeaim = !crispy_freeaim;
+}
+
+static void M_CrispyToggleFreelook(int choice)
+{
+    choice = 0;
+    crispy_freelook = !crispy_freelook;
+
+    players[consoleplayer].lookdir = 0;
+}
+
+static void M_CrispyToggleHighcolor(int choice)
+{
+    choice = 0;
+    crispy_highcolor = !crispy_highcolor;
+
+    R_InitColormaps();
 }
 
 static void M_CrispyToggleJumping(int choice)
@@ -1817,22 +1813,26 @@ static void M_CrispyToggleRecoil(int choice)
     crispy_recoil = !crispy_recoil;
 }
 
-static void M_CrispyToggleColoredblood(int choice)
+static void M_CrispyToggleSecretmessage(int choice)
 {
     choice = 0;
-    crispy_coloredblood = !crispy_coloredblood;
+    crispy_secretmessage = !crispy_secretmessage;
 }
 
-static void M_CrispyToggleColoredblood2(int choice)
+static void M_CrispyToggleTranslucency(int choice)
 {
     choice = 0;
-    crispy_coloredblood2 = !crispy_coloredblood2;
+    crispy_translucency = !crispy_translucency;
+
+    // [crispy] translucent Crispy HUD?
+    if (screenblocks > CRISPY_HUD)
+	M_SizeDisplay(0);
 }
 
-static void M_CrispyToggleFlipcorpses(int choice)
+static void M_CrispyToggleUncapped(int choice)
 {
     choice = 0;
-    crispy_flipcorpses = !crispy_flipcorpses;
+    crispy_uncapped = !crispy_uncapped;
 }
 
 void M_ChangeDetail(int choice)
