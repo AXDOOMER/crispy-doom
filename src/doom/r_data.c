@@ -962,10 +962,10 @@ void R_InitColormaps (void)
 	// [crispy] Invulnerability (c == COLORMAPS)
 	for (i = 0; i < 256; i++)
 	{
-	    r = g = b =
-	    0xff - (gammatable[4 - usegamma][palette[3 * i + 0]]/3 + // 0.299
-	            gammatable[4 - usegamma][palette[3 * i + 1]]/2 + // 0.587
-	            gammatable[4 - usegamma][palette[3 * i + 2]]/6); // 0.144
+	    size_t gray = 0xff - (palette[3 * i + 0]/3 + // 0.299
+	                          palette[3 * i + 1]/2 + // 0.587
+	                          palette[3 * i + 2]/6); // 0.144
+	    r = g = b = gammatable[usegamma][gray];
 
 	    colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
 	}
