@@ -154,11 +154,6 @@ void V_SetPatchClipCallback(vpatchclipfunc_t func)
 // V_DrawPatch
 // Masks a column based masked pic to the screen. 
 //
-extern pixel_t I_Desaturate(pixel_t a);
-
-// [crispy] prevent framebuffer overflow
-#define dest_in_framebuffer (safe || ((dest-dest_screen) < SCREENHEIGHT*SCREENWIDTH))
-
 void V_DrawPatch(int x, int y, patch_t *patch)
 { 
     int count;
@@ -168,9 +163,7 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     pixel_t *dest;
     byte *source;
     pixel_t sourcergb;
-    int w, f;
-    // [crispy] prevent framebuffer overflow
-    const boolean safe = !(y + SHORT(patch->height) > ORIGHEIGHT);
+    int w, f, tmpy;
 
     y -= SHORT(patch->topoffset);
     x -= SHORT(patch->leftoffset);
@@ -182,11 +175,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             return;
     }
 
-#ifdef RANGECHECK
+#ifdef RANGECHECK_NOTHANKS
     if (x < 0
-     || x /* + SHORT(patch->width) */ > ORIGWIDTH
+     || x + SHORT(patch->width) > ORIGWIDTH
      || y < 0
-     || y /* + SHORT(patch->height) */ > ORIGHEIGHT )
+     || y + SHORT(patch->height) > ORIGHEIGHT)
     {
         I_Error("Bad V_DrawPatch");
     }
@@ -199,15 +192,12 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
     w = SHORT(patch->width);
 
-    // [crispy] prevent framebuffer overflow
-    if (x + w > ORIGWIDTH)
-        w = ORIGWIDTH - x;
-
   // [crispy] quadruple for-loop for each dp_translation and dp_translucent case
   // to avoid checking these variables for each pixel and instead check once per patch
   // (1) normal, opaque patch
   if (!dp_translation && !dp_translucent)
-    for ( ; col<w ; x++, col++, desttop++)
+    // [crispy] prevent framebuffer overflow
+    for ( ; col<w && x >= 0 && x < ORIGWIDTH; x++, col++, desttop++)
     {
         column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
 
@@ -219,9 +209,23 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             source = (byte *)column + 3;
             dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
             count = column->length;
+            tmpy = y;
 
             // [crispy] prevent framebuffer overflow
-            while (count-- && dest_in_framebuffer)
+            while (tmpy + column->topdelta < 0)
+            {
+                source++;
+                count--;
+                dest += (SCREENWIDTH << hires);
+                tmpy++;
+            }
+
+            while (tmpy + column->topdelta + count > ORIGHEIGHT)
+            {
+                count--;
+            }
+
+            while (count-- > 0)
             {
                 if (hires)
                 {
@@ -238,7 +242,8 @@ void V_DrawPatch(int x, int y, patch_t *patch)
   else
   // (2) color-translated, opaque patch
   if (dp_translation && !dp_translucent)
-    for ( ; col<w ; x++, col++, desttop++)
+    // [crispy] prevent framebuffer overflow
+    for ( ; col<w && x >= 0 && x < ORIGWIDTH; x++, col++, desttop++)
     {
         column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
 
@@ -250,9 +255,23 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             source = (byte *)column + 3;
             dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
             count = column->length;
+            tmpy = y;
 
             // [crispy] prevent framebuffer overflow
-            while (count-- && dest_in_framebuffer)
+            while (tmpy + column->topdelta < 0)
+            {
+                source++;
+                count--;
+                dest += (SCREENWIDTH << hires);
+                tmpy++;
+            }
+
+            while (tmpy + column->topdelta + count > ORIGHEIGHT)
+            {
+                count--;
+            }
+
+            while (count-- > 0)
             {
                 if (hires)
                 {
@@ -269,7 +288,8 @@ void V_DrawPatch(int x, int y, patch_t *patch)
   else
   // (3) normal, translucent patch
   if (!dp_translation && dp_translucent)
-    for ( ; col<w ; x++, col++, desttop++)
+    // [crispy] prevent framebuffer overflow
+    for ( ; col<w && x >= 0 && x < ORIGWIDTH; x++, col++, desttop++)
     {
         column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
 
@@ -281,9 +301,23 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             source = (byte *)column + 3;
             dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
             count = column->length;
+            tmpy = y;
 
             // [crispy] prevent framebuffer overflow
-            while (count-- && dest_in_framebuffer)
+            while (tmpy + column->topdelta < 0)
+            {
+                source++;
+                count--;
+                dest += (SCREENWIDTH << hires);
+                tmpy++;
+            }
+
+            while (tmpy + column->topdelta + count > ORIGHEIGHT)
+            {
+                count--;
+            }
+
+            while (count-- > 0)
             {
                 if (hires)
                 {
@@ -302,7 +336,8 @@ void V_DrawPatch(int x, int y, patch_t *patch)
   else
   // (4) color-translated, translucent patch
   if (dp_translation && dp_translucent)
-    for ( ; col<w ; x++, col++, desttop++)
+    // [crispy] prevent framebuffer overflow
+    for ( ; col<w && x >= 0 && x < ORIGWIDTH; x++, col++, desttop++)
     {
         column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
 
@@ -314,9 +349,23 @@ void V_DrawPatch(int x, int y, patch_t *patch)
             source = (byte *)column + 3;
             dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
             count = column->length;
+            tmpy = y;
 
             // [crispy] prevent framebuffer overflow
-            while (count-- && dest_in_framebuffer)
+            while (tmpy + column->topdelta < 0)
+            {
+                source++;
+                count--;
+                dest += (SCREENWIDTH << hires);
+                tmpy++;
+            }
+
+            while (tmpy + column->topdelta + count > ORIGHEIGHT)
+            {
+                count--;
+            }
+
+            while (count-- > 0)
             {
             {
                 if (hires)
@@ -350,9 +399,7 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
     pixel_t *desttop;
     pixel_t *dest;
     byte *source; 
-    int w, f;
-    // [crispy] prevent framebuffer overflow
-    const boolean safe = !(y + SHORT(patch->height) > ORIGHEIGHT);
+    int w, f, tmpy;
  
     y -= SHORT(patch->topoffset); 
     x -= SHORT(patch->leftoffset); 
@@ -364,11 +411,11 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
             return;
     }
 
-#ifdef RANGECHECK 
+#ifdef RANGECHECK_NOTHANKS
     if (x < 0
-     || x /* + SHORT(patch->width) */ > ORIGWIDTH
+     || x + SHORT(patch->width) > ORIGWIDTH
      || y < 0
-     || y /* + SHORT(patch->height) */ > ORIGHEIGHT )
+     || y + SHORT(patch->height) > ORIGHEIGHT)
     {
         I_Error("Bad V_DrawPatchFlipped");
     }
@@ -382,10 +429,7 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
     w = SHORT(patch->width);
 
     // [crispy] prevent framebuffer overflow
-    if (x + w > ORIGWIDTH)
-        w = ORIGWIDTH - x;
-
-    for ( ; col<w ; x++, col++, desttop++)
+    for ( ; col<w && x >= 0 && x < ORIGWIDTH; x++, col++, desttop++)
     {
         column = (column_t *)((byte *)patch + LONG(patch->columnofs[w-1-col]));
 
@@ -397,9 +441,23 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
             source = (byte *)column + 3;
             dest = desttop + column->topdelta*(SCREENWIDTH << hires) + (x * hires) + f;
             count = column->length;
+            tmpy = y;
 
             // [crispy] prevent framebuffer overflow
-            while (count-- && dest_in_framebuffer)
+            while (tmpy + column->topdelta < 0)
+            {
+                source++;
+                count--;
+                dest += (SCREENWIDTH << hires);
+                tmpy++;
+            }
+
+            while (tmpy + column->topdelta + count > ORIGHEIGHT)
+            {
+                count--;
+            }
+
+            while (count-- > 0)
             {
                 if (hires)
                 {

@@ -160,6 +160,8 @@ boolean         crispy_havessg = false;
 boolean         crispy_nwtmerge = false;
 boolean         crispy_redrawall = false;
 
+int             crispy_demowarp = 0;
+
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
 
@@ -218,6 +220,9 @@ void D_Display (void)
     if (nodrawers)
 	return;                    // for comparative timing / profiling
 		
+    // [crispy] catch SlopeDiv overflows
+    SlopeDiv = SlopeDivCrispy;
+
     redrawsbar = false;
     
     // change the view size if needed
@@ -382,6 +387,8 @@ void D_Display (void)
     M_Drawer ();          // menu is drawn even on top of everything
     NetUpdate ();         // send out any new accumulation
 
+    // [crispy] back to Vanilla SlopeDiv
+    SlopeDiv = SlopeDivVanilla;
 
     // normal update
     if (!wipe)
@@ -1908,11 +1915,13 @@ void D_DoomMain (void)
     );
 
     // [crispy] check for presence of E1M10
-    crispy_havee1m10 = (W_CheckNumForName("e1m10") != -1) &&
+    crispy_havee1m10 = (gamemode == retail) &&
+                       (W_CheckNumForName("e1m10") != -1) &&
                        (W_CheckNumForName("sewers") != -1);
 
     // [crispy] check for presence of MAP33
-    crispy_havemap33 = (W_CheckNumForName("map33") != -1) &&
+    crispy_havemap33 = (gamemode == commercial) &&
+                       (W_CheckNumForName("map33") != -1) &&
                        (W_CheckNumForName("cwilv32") != -1);
 
     // [crispy] change level name for MAP33 if not already changed
@@ -2022,7 +2031,8 @@ void D_DoomMain (void)
         {
             startepisode = myargv[p+1][0]-'0';
 
-            if (p + 2 < myargc)
+            // [crispy] only if second argument is not another option
+            if (p + 2 < myargc && myargv[p+2][0] != '-')
             {
                 startmap = myargv[p+2][0]-'0';
             }
@@ -2033,6 +2043,8 @@ void D_DoomMain (void)
             }
         }
         autostart = true;
+        // [crispy] if used with -playdemo, fast-forward demo up to the desired map
+        crispy_demowarp = startmap;
     }
 
     // Undocumented:
@@ -2155,6 +2167,7 @@ void D_DoomMain (void)
 	G_DeferedPlayDemo (demolumpname);
 	D_DoomLoop ();  // never returns
     }
+    crispy_demowarp = 0; // [crispy] nope
 	
     p = M_CheckParmWithArgs("-timedemo", 1);
     if (p)

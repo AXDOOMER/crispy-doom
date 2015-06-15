@@ -1126,6 +1126,9 @@ void G_Ticker (void)
 		    break; 
 					 
 		  case BTS_SAVEGAME: 
+		    // [crispy] never override savegames by demo playback
+		    if (demoplayback)
+			break;
 		    if (!savedescription[0]) 
                     {
                         M_StringCopy(savedescription, "NET GAME",
@@ -1672,7 +1675,7 @@ void G_DoCompleted (void)
     // Set par time. Doom episode 4 doesn't have a par time, so this
     // overflows into the cpars array. It's necessary to emulate this
     // for statcheck regression testing.
-    if (gamemap == 33 || (gameepisode == 1 && gamemap == 10) || gamemission == pack_master)
+    if (gamemap == 33 || (crispy_havee1m10 && gameepisode == 1 && gamemap == 10) || gamemission == pack_master)
 	// [crispy] par time for inofficial maps sucks
 	wminfo.partime = INT_MAX;
     else
@@ -1964,9 +1967,12 @@ void G_DoNewGame (void)
     netgame = false;
     deathmatch = false;
     playeringame[1] = playeringame[2] = playeringame[3] = 0;
+    // [crispy] do not reset -respawn, -fast and -nomonsters parameters
+    /*
     respawnparm = false;
     fastparm = false;
     nomonsters = false;
+    */
     consoleplayer = 0;
     G_InitNew (d_skill, d_episode, d_map); 
     gameaction = ga_nothing; 
@@ -2351,6 +2357,13 @@ void G_DeferedPlayDemo (char* name)
 { 
     defdemoname = name; 
     gameaction = ga_playdemo; 
+
+    // [crispy] fast-forward demo up to the desired map
+    if (crispy_demowarp)
+    {
+	nodrawers = true;
+	singletics = true;
+    }
 } 
 
 // Generate a string describing a demo version
