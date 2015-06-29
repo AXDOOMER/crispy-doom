@@ -241,7 +241,6 @@ static void M_CrispyToggleColoredblood(int choice);
 static void M_CrispyToggleColoredblood2(int choice);
 static void M_CrispyToggleColoredhud(int choice);
 static void M_CrispyToggleCrosshair(int choice);
-static void M_CrispyToggleCrosshair2(int choice);
 static void M_CrispyToggleFlipcorpses(int choice);
 static void M_CrispyToggleFreeaim(int choice);
 static void M_CrispyToggleFreelook(int choice);
@@ -504,9 +503,8 @@ static menu_t *CrispnessXDef = &Crispness1Def;
 enum
 {
     crispness_sep_tactical,
-    crispness_freelook,
     crispness_crosshair,
-    crispness_crosshair2,
+    crispness_freelook,
     crispness_centerweapon,
     crispness_pitch,
     crispness_secretmessage,
@@ -520,9 +518,8 @@ enum
 static menuitem_t Crispness2Menu[]=
 {
     {-1,"",0,'\0'},
-    {1,"",	M_CrispyToggleFreelook,'f'},
     {1,"",	M_CrispyToggleCrosshair,'l'},
-    {1,"",	M_CrispyToggleCrosshair2,'g'},
+    {1,"",	M_CrispyToggleFreelook,'f'},
     {1,"",	M_CrispyToggleCenterweapon,'c'},
     {1,"",	M_CrispyTogglePitch,'p'},
     {1,"",	M_CrispyToggleSecretmessage,'s'},
@@ -1350,6 +1347,37 @@ static void M_DrawCrispnessItem(int y, char *item, int feat, boolean cond)
     M_WriteText(currentMenu->x, currentMenu->y + CRISPY_LINEHEIGHT * y, crispy_menu_text);
 }
 
+typedef struct
+{
+    int value;
+    char *name;
+} multiitem_t;
+
+static multiitem_t multiitem_jump[NUM_JUMPS] =
+{
+    {JUMP_OFF, "off"},
+    {JUMP_LOW, "low"},
+    {JUMP_HIGH, "high"},
+};
+
+static multiitem_t multiitem_crosshair[NUM_CROSSHAIRS] =
+{
+    {CROSSHAIR_OFF, "off"},
+    {CROSSHAIR_STATIC, "static"},
+    {CROSSHAIR_PROJECTED, "projected"},
+};
+
+static void M_DrawCrispnessMultiItem(int y, char *item, multiitem_t *multiitem, int feat, boolean cond)
+{
+    char crispy_menu_text[48];
+
+    M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
+               "%s%s: %s%s", cond ? crstr[CR_NONE] : crstr[CR_DARK], item,
+               cond ? (feat ? crstr[CR_GREEN] : crstr[CR_DARK]) : crstr[CR_DARK],
+               multiitem[feat].name);
+    M_WriteText(currentMenu->x, currentMenu->y + CRISPY_LINEHEIGHT * y, crispy_menu_text);
+}
+
 static void M_DrawCrispnessGoto(int y, char *item)
 {
     char crispy_menu_text[48];
@@ -1392,9 +1420,8 @@ static void M_DrawCrispness2(void)
 
     M_DrawCrispnessSeparator(crispness_sep_tactical, "Tactical");
 
+    M_DrawCrispnessMultiItem(crispness_crosshair, "Draw Crosshair", multiitem_crosshair, crispy_crosshair, true);
     M_DrawCrispnessItem(crispness_freelook, "Allow Free Look", crispy_freelook, true);
-    M_DrawCrispnessItem(crispness_crosshair, "Draw Crosshair", crispy_crosshair, true);
-    M_DrawCrispnessItem(crispness_crosshair2, "Project Crosshair into Scene", crispy_crosshair2, crispy_crosshair);
     M_DrawCrispnessItem(crispness_centerweapon, "Center Weapon when Firing", crispy_centerweapon, true);
     M_DrawCrispnessItem(crispness_pitch, "Enable Weapon Recoil Pitch", crispy_pitch, true);
     M_DrawCrispnessItem(crispness_secretmessage, "Show Revealed Secrets", crispy_secretmessage, true);
@@ -1416,7 +1443,7 @@ static void M_DrawCrispness3(void)
 
     M_DrawCrispnessSeparator(crispness_sep_physical, "Physical");
 
-    M_DrawCrispnessItem(crispness_jumping, "Allow Jumping", crispy_jump, singleplayer);
+    M_DrawCrispnessMultiItem(crispness_jumping, "Allow Jumping", multiitem_jump, crispy_jump, singleplayer);
     M_DrawCrispnessItem(crispness_freeaim, "Allow Vertical Aiming", crispy_freeaim, singleplayer);
     M_DrawCrispnessItem(crispness_overunder, "Walk over/under Monsters", crispy_overunder, singleplayer);
     M_DrawCrispnessItem(crispness_recoil, "Enable Weapon Recoil Thrust", crispy_recoil, singleplayer);
@@ -1722,19 +1749,7 @@ static void M_CrispyToggleColoredhud(int choice)
 static void M_CrispyToggleCrosshair(int choice)
 {
     choice = 0;
-    crispy_crosshair = !crispy_crosshair;
-}
-
-static void M_CrispyToggleCrosshair2(int choice)
-{
-    if (!crispy_crosshair)
-    {
-	S_StartSound(NULL,sfx_oof);
-	return;
-    }
-
-    choice = 0;
-    crispy_crosshair2 = !crispy_crosshair2;
+    crispy_crosshair = (crispy_crosshair + 1) % NUM_CROSSHAIRS;
 }
 
 static void M_CrispyToggleFlipcorpses(int choice)
@@ -1780,7 +1795,7 @@ static void M_CrispyToggleJumping(int choice)
     }
 
     choice = 0;
-    crispy_jump = !crispy_jump;
+    crispy_jump = (crispy_jump + 1) % NUM_JUMPS;
 }
 
 static void M_CrispyToggleOverunder(int choice)
