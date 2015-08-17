@@ -985,6 +985,9 @@ void M_DrawReadThis1(void)
 
     switch (gameversion)
     {
+        case exe_doom_1_666:
+        case exe_doom_1_7:
+        case exe_doom_1_8:
         case exe_doom_1_9:
         case exe_hacx:
 
@@ -1565,7 +1568,7 @@ void M_ReadThis2(int choice)
     // Doom 1.9 had two menus when playing Doom 1
     // All others had only one
 
-    if (gameversion == exe_doom_1_9 && gamemode != commercial)
+    if (gameversion <= exe_doom_1_9 && gamemode != commercial)
     {
         choice = 0;
         M_SetupNextMenu(&ReadDef2);
@@ -2458,7 +2461,7 @@ boolean M_Responder (event_t* ev)
     {
 	// [crispy] take screen shot without weapons and HUD
 	if (speedkeydown())
-	    crispy_cleanscreenshot++;
+	    crispy_cleanscreenshot = true;
 	G_ScreenShot ();
 	return true;
     }

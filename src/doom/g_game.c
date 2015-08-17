@@ -750,7 +750,8 @@ void G_DoLoadLevel (void)
     // The "Sky never changes in Doom II" bug was fixed in
     // the id Anthology version of doom2.exe for Final Doom.
     // [crispy] correct "Sky never changes in Doom II" bug
-    if ((gamemode == commercial) /* && (gameversion == exe_final2) */ )
+    if ((gamemode == commercial)
+     && (gameversion == exe_final2 || gameversion == exe_chex || 1))
     {
         char *skytexturename;
 
@@ -1034,12 +1035,14 @@ void G_Ticker (void)
 	    break; 
 	  case ga_screenshot: 
 	    // [crispy] when the "run" button is pressed,
-	    // remove all obstacles in the current tic and
-	    // take the actual screenshot in the next one
+	    // redraw view without weapons and HUD
 	    if (crispy_cleanscreenshot)
 	    {
-	        crispy_cleanscreenshot--;
-	        break;
+	        extern void D_Display (void);
+
+	        D_Display();
+	        S_StartSound(NULL, gamemode == commercial ? sfx_radio : sfx_tink);
+	        crispy_cleanscreenshot = false;
 	    }
 	    V_ScreenShot("DOOM%02i.%s"); 
             players[consoleplayer].message = DEH_String("screen shot");
@@ -1321,26 +1324,26 @@ G_CheckSpot
         fixed_t xa, ya;
         signed int an;
 
-        an = (ANG45 * ((signed int) mthing->angle / 45));
-        // Right-shifting a negative signed integer is implementation-defined,
-        // so divide instead.
-        an /= 1 << ANGLETOFINESHIFT;
+        // This calculation overflows in Vanilla Doom, but here we deliberately
+        // avoid integer overflow as it is undefined behavior, so the value of
+        // 'an' will always be positive.
+        an = (ANG45 >> ANGLETOFINESHIFT) * ((signed int) mthing->angle / 45);
 
         switch (an)
         {
-            case -4096:
+            case 4096:  // -4096:
                 xa = finetangent[2048];    // finecosine[-4096]
                 ya = finetangent[0];       // finesine[-4096]
                 break;
-            case -3072:
+            case 5120:  // -3072:
                 xa = finetangent[3072];    // finecosine[-3072]
                 ya = finetangent[1024];    // finesine[-3072]
                 break;
-            case -2048:
+            case 6144:  // -2048:
                 xa = finesine[0];          // finecosine[-2048]
                 ya = finetangent[2048];    // finesine[-2048]
                 break;
-            case -1024:
+            case 7168:  // -1024:
                 xa = finesine[1024];       // finecosine[-1024]
                 ya = finetangent[3072];    // finesine[-1024]
                 break;
@@ -1348,7 +1351,6 @@ G_CheckSpot
             case 1024:
             case 2048:
             case 3072:
-            case 4096:
                 xa = finecosine[an];
                 ya = finesine[an];
                 break;

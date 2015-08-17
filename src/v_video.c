@@ -1033,12 +1033,24 @@ static void warning_fn(png_structp p, png_const_charp s)
 }
 
 void WritePNGfile(char *filename, byte *data,
-                  int width, int height)
+                  int inwidth, int inheight,
+                  byte *palette)
 {
     png_structp ppng;
     png_infop pinfo;
     FILE *handle;
-    int i;
+    int i, j;
+    int width, height;
+    byte *rowbuf;
+
+    // [crispy] screenshots are actual reproductions of the screen content
+    extern void I_GetVideobuffer (byte **buffer, int *w, int *h);
+    I_GetVideobuffer(&rowbuf, &width, &height); // [crispy] recycle "rowbuf" pointer
+/*
+    // scale up to accommodate aspect ratio correction
+    width = inwidth * 5;
+    height = inheight * 6;
+*/
 
     handle = fopen(filename, "wb");
     if (!handle)
@@ -1070,10 +1082,34 @@ void WritePNGfile(char *filename, byte *data,
 
     png_write_info(ppng, pinfo);
 
-    for (i = 0; i < SCREENHEIGHT; i++)
+    // [crispy] screenshots are actual reproductions of the screen content
+    for (i = j = 0; i < height; i++) // [crispy] unused variable ‘j’
     {
-        png_write_row(ppng, data + i*SCREENWIDTH*sizeof(pixel_t));
+        png_write_row(ppng, rowbuf + i*width);
     }
+/*
+    rowbuf = malloc(width);
+
+    if (rowbuf)
+    {
+        for (i = 0; i < SCREENHEIGHT; i++)
+        {
+            // expand the row 5x
+            for (j = 0; j < SCREENWIDTH; j++)
+            {
+                memset(rowbuf + j * 5, *(data + i*SCREENWIDTH + j), 5);
+            }
+
+            // write the row 6 times
+            for (j = 0; j < 6; j++)
+            {
+                png_write_row(ppng, rowbuf);
+            }
+        }
+
+        free(rowbuf);
+    }
+*/
 
     png_write_end(ppng, pinfo);
     png_destroy_write_struct(&ppng, &pinfo);
@@ -1124,7 +1160,8 @@ void V_ScreenShot(char *format)
     if (png_screenshots)
     {
     WritePNGfile(lbmname, I_VideoBuffer,
-                 SCREENWIDTH, SCREENHEIGHT);
+                 SCREENWIDTH, SCREENHEIGHT,
+                 W_CacheLumpName (DEH_String("PLAYPAL"), PU_CACHE));
     }
     else
 #endif

@@ -306,6 +306,13 @@ void D_Display (void)
 	R_FillBackScreen ();    // draw the pattern into the back screen
     }
 
+    // [crispy] in automap overlay mode,
+    // draw the automap beneath the bezel
+    if (automapactive && crispy_automapoverlay)
+    {
+	AM_Drawer ();
+    }
+
     // see if the border needs to be updated to the screen
     if (gamestate == GS_LEVEL && (!automapactive || (automapactive && crispy_automapoverlay)) && scaledviewwidth != (320 << hires))
     {
@@ -332,13 +339,23 @@ void D_Display (void)
     oldgamestate = wipegamestate = gamestate;
     
     // [crispy] in automap overlay mode,
-    // draw the automap and HUD on top of everything else
+    // draw the HUD on top of everything else
     if (automapactive && crispy_automapoverlay)
     {
-	AM_Drawer ();
 	HU_Drawer ();
 
 	crispy_redrawall = true;
+    }
+
+    // [crispy] back to Vanilla SlopeDiv
+    SlopeDiv = SlopeDivVanilla;
+
+    // [crispy] do not shade background and draw neither pause pic nor menu
+    // when taking a clean screenshot
+    if (crispy_cleanscreenshot)
+    {
+	I_FinishUpdate ();              // page flip or blit buffer
+	return;
     }
 
     // [crispy] shade background when a menu is active or the game is paused
@@ -386,8 +403,6 @@ void D_Display (void)
     M_Drawer ();          // menu is drawn even on top of everything
     NetUpdate ();         // send out any new accumulation
 
-    // [crispy] back to Vanilla SlopeDiv
-    SlopeDiv = SlopeDivVanilla;
 
     // normal update
     if (!wipe)
@@ -720,6 +735,10 @@ static char *banners[] =
     "                         "
     "DOOM 2: Hell on Earth v%i.%i"
     "                           ",
+    // doom2.wad v1.666
+    "                         "
+    "DOOM 2: Hell on Earth v%i.%i66"
+    "                          ",
     // doom1.wad
     "                            "
     "DOOM Shareware Startup v%i.%i"
@@ -732,6 +751,10 @@ static char *banners[] =
     "                          "
     "DOOM System Startup v%i.%i"
     "                          ",
+    // Doom v1.666
+    "                          "
+    "DOOM System Startup v%i.%i66"
+    "                          "
     // doom.wad (Ultimate DOOM)
     "                         "
     "The Ultimate DOOM Startup v%i.%i"
@@ -844,12 +867,12 @@ void D_IdentifyVersion(void)
 
         for (i=0; i<numlumps; ++i)
         {
-            if (!strncasecmp(lumpinfo[i].name, "MAP01", 8))
+            if (!strncasecmp(lumpinfo[i]->name, "MAP01", 8))
             {
                 gamemission = doom2;
                 break;
             } 
-            else if (!strncasecmp(lumpinfo[i].name, "E1M1", 8))
+            else if (!strncasecmp(lumpinfo[i]->name, "E1M1", 8))
             {
                 gamemission = doom;
                 break;
@@ -1066,8 +1089,12 @@ static struct
 
 static void InitGameVersion(void)
 {
+    byte *demolump;
+    char demolumpname[6];
+    int demoversion;
     int p;
     int i;
+    boolean status;
 
     //! 
     // @arg <version>
@@ -1119,13 +1146,46 @@ static void InitGameVersion(void)
 
             gameversion = exe_hacx;
         }
-        else if (gamemode == shareware || gamemode == registered)
+        else if (gamemode == shareware || gamemode == registered
+              || (gamemode == commercial && gamemission == doom2))
         {
             // original
-
             gameversion = exe_doom_1_9;
 
-            // TODO: Detect IWADs earlier than Doom v1.9.
+            // Detect version from demo lump
+            for (i = 1; i <= 3; ++i)
+            {
+                M_snprintf(demolumpname, 6, "demo%i", i);
+                if (W_CheckNumForName(demolumpname) > 0)
+                {
+                    demolump = W_CacheLumpName(demolumpname, PU_STATIC);
+                    demoversion = demolump[0];
+                    W_ReleaseLumpName(demolumpname);
+                    status = true;
+                    switch (demoversion)
+                    {
+                        case 106:
+                            gameversion = exe_doom_1_666;
+                            break;
+                        case 107:
+                            gameversion = exe_doom_1_7;
+                            break;
+                        case 108:
+                            gameversion = exe_doom_1_8;
+                            break;
+                        case 109:
+                            gameversion = exe_doom_1_9;
+                            break;
+                        default:
+                            status = false;
+                            break;
+                    }
+                    if (status)
+                    {
+                        break;
+                    }
+                }
+            }
         }
         else if (gamemode == retail)
         {
@@ -1133,20 +1193,13 @@ static void InitGameVersion(void)
         }
         else if (gamemode == commercial)
         {
-            if (gamemission == doom2)
-            {
-                gameversion = exe_doom_1_9;
-            }
-            else
-            {
-                // Final Doom: tnt or plutonia
-                // Defaults to emulating the first Final Doom executable,
-                // which has the crash in the demo loop; however, having
-                // this as the default should mean that it plays back
-                // most demos correctly.
+            // Final Doom: tnt or plutonia
+            // Defaults to emulating the first Final Doom executable,
+            // which has the crash in the demo loop; however, having
+            // this as the default should mean that it plays back
+            // most demos correctly.
 
-                gameversion = exe_final;
-            }
+            gameversion = exe_final;
         }
     }
     
@@ -1313,13 +1366,13 @@ static void LoadNerveWad(void)
         for (i = 0; i < 9; i++)
         {
             M_snprintf (lumpname, 9, "CWILV%2.2d", i);
-            lumpinfo[W_GetNumForName(lumpname)].name[0] = 'N';
+            lumpinfo[W_GetNumForName(lumpname)]->name[0] = 'N';
         }
     }
     else
     {
 	i = W_GetNumForName("map01");
-	if (!strcasecmp(lumpinfo[i].wad_file->path, "nerve.wad"))
+	if (!strcasecmp(lumpinfo[i]->wad_file->path, "nerve.wad"))
 	{
 	    gamemission = pack_nerve;
 	    DEH_AddStringReplacement ("TITLEPIC", "INTERPIC");
@@ -1336,8 +1389,8 @@ static void LoadMasterlevelsWad(void)
     {
 	i = W_GetNumForName("map01");
 	j = W_GetNumForName("map21");
-	if (!strcasecmp(lumpinfo[i].wad_file->path, "masterlevels.wad") &&
-	    !strcasecmp(lumpinfo[j].wad_file->path, "masterlevels.wad"))
+	if (!strcasecmp(lumpinfo[i]->wad_file->path, "masterlevels.wad") &&
+	    !strcasecmp(lumpinfo[j]->wad_file->path, "masterlevels.wad"))
 	{
 	    gamemission = pack_master;
 	}
@@ -1771,7 +1824,7 @@ void D_DoomMain (void)
 
         if (D_AddFile(file))
         {
-            M_StringCopy(demolumpname, lumpinfo[numlumps - 1].name,
+            M_StringCopy(demolumpname, lumpinfo[numlumps - 1]->name,
                          sizeof(demolumpname));
         }
         else
@@ -1814,7 +1867,7 @@ void D_DoomMain (void)
 
         for (i = numiwadlumps; i < numlumps; ++i)
         {
-            if (!strncmp(lumpinfo[i].name, "DEHACKED", 8))
+            if (!strncmp(lumpinfo[i]->name, "DEHACKED", 8))
             {
                 DEH_LoadLump(i, true, true); // [crispy] allow long, allow error
                 loaded++;

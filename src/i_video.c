@@ -155,9 +155,7 @@ static char *window_title = "";
 // SDL releases. It surely is in 2.0.2, i.e. it is currently impossible to
 // update the texture with the pixels from the 8-bit paletted buffer.
 
-/* hicolor
 static SDL_Surface *screenbuffer = NULL;
-*/
 static SDL_Surface *rgbabuffer = NULL;
 static SDL_Texture *curpane = NULL;
 static SDL_Texture *redpane = NULL;
@@ -2239,4 +2237,12 @@ const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg)
     b = ((a * (fg & 0xff)     + (0xff - a) * (bg & 0xff))     >> 8) & 0xff;
 
     return 0xff000000 | r | g | b;
+}
+
+// [crispy] screenshots are actual reproductions of the screen content
+void I_GetVideobuffer (byte **buffer, int *w, int *h)
+{
+    *buffer = screenbuffer->pixels;
+    *w = screenbuffer->w;
+    *h = screenbuffer->h;
 }

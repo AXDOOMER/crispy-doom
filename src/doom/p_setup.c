@@ -1096,6 +1096,13 @@ void P_LoadLineDefs (int lump)
 	ld->sidenum[0] = SHORT(mld->sidenum[0]);
 	ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
+	// [crispy] substitute dummy sidedef for missing right side
+	if (ld->sidenum[0] == NO_INDEX)
+	{
+	    ld->sidenum[0] = 0;
+	    fprintf(stderr, "P_LoadLineDefs: linedef %d without first sidedef!\n", i);
+	}
+
 	if (ld->sidenum[0] != NO_INDEX) // [crispy] extended nodes
 	    ld->frontsector = sides[ld->sidenum[0]].sector;
 	else
@@ -1762,7 +1769,7 @@ static mapformat_t P_CheckMapFormat (int lumpnum)
     int b;
 
     if ((b = lumpnum+ML_BLOCKMAP+1) < numlumps &&
-        !strncasecmp(lumpinfo[b].name, "BEHAVIOR", 8))
+        !strncasecmp(lumpinfo[b]->name, "BEHAVIOR", 8))
     {
 	fprintf(stderr, "Hexen map format, ");
 	format |= HEXEN;
@@ -1894,7 +1901,7 @@ P_SetupLevel
 	const int time = savedleveltime / TICRATE;
 
 	fprintf(stderr, "P_SetupLevel: %s (%s), Skill %d, Time %d:%02d, ",
-	    lumpname, lumpinfo[lumpnum].wad_file->path, (int) skill, time/60, time%60);
+	    lumpname, lumpinfo[lumpnum]->wad_file->path, (int) skill, time/60, time%60);
     }
     // [crispy] check and log map and nodes format
     crispy_mapformat = P_CheckMapFormat(lumpnum);

@@ -726,7 +726,8 @@ ST_Responder (event_t* ev)
 	  musnum = mus_runnin + (buf[0]-'0')*10 + buf[1]-'0' - 1;
 	  
 	  // [crispy] prevent crash with IDMUS00
-	  if (((buf[0]-'0')*10 + buf[1]-'0') > 35 || musnum < mus_runnin)
+	  if ((((buf[0]-'0')*10 + buf[1]-'0') > 35 || musnum < mus_runnin)
+       && gameversion >= exe_doom_1_8)
 	    plyr->message = DEH_String(STSTR_NOMUS);
 	  else
 	    S_ChangeMusic(musnum, 1);
@@ -922,13 +923,20 @@ ST_Responder (event_t* ev)
       {
 	epsd = buf[0] - '0';
 	map = buf[1] - '0';
-      }
 
-      // Chex.exe always warps to episode 1.
+        // Chex.exe always warps to episode 1.
 
-      if (gameversion == exe_chex)
-      {
-        epsd = 1;
+        if (gameversion == exe_chex)
+        {
+            if (epsd > 1)
+            {
+                epsd = 1;
+            }
+            if (map > 5)
+            {
+                map = 5;
+            }
+        }
       }
 
       // Catch invalid maps.
@@ -1888,6 +1896,18 @@ void ST_Stop (void)
     st_stopped = true;
 }
 
+// [crispy] colorize keycard and skull key messages
+static inline void replace_color (char *str, const int cr, const char *col)
+{
+    char *str_replace, col_replace[16];
+
+    M_snprintf(col_replace, sizeof(col_replace),
+               "%s%s%s", crstr[cr], col, crstr[CR_NONE]);
+    str_replace = M_StringReplace(str, col, col_replace);
+    DEH_AddStringReplacement(str, str_replace);
+    free(str_replace);
+}
+
 void ST_Init (void)
 {
     // [crispy] colorize the confusing 'behold' power-up menu
@@ -1904,6 +1924,20 @@ void ST_Init (void)
 	           crstr[CR_GOLD], crstr[CR_NONE]);
 	DEH_AddStringReplacement(STSTR_BEHOLD, str_behold);
     }
+
+    // [crispy] colorize keycard and skull key messages
+    replace_color(GOTBLUECARD, CR_BLUE, " blue ");
+    replace_color(GOTBLUESKUL, CR_BLUE, " blue ");
+    replace_color(PD_BLUEO,    CR_BLUE, " blue ");
+    replace_color(PD_BLUEK,    CR_BLUE, " blue ");
+    replace_color(GOTREDCARD,  CR_RED,  " red ");
+    replace_color(GOTREDSKULL, CR_RED,  " red ");
+    replace_color(PD_REDO,     CR_RED,  " red ");
+    replace_color(PD_REDK,     CR_RED,  " red ");
+    replace_color(GOTYELWCARD, CR_GOLD, " yellow ");
+    replace_color(GOTYELWSKUL, CR_GOLD, " yellow ");
+    replace_color(PD_YELLOWO,  CR_GOLD, " yellow ");
+    replace_color(PD_YELLOWK,  CR_GOLD, " yellow ");
 
     ST_loadData();
     st_backing_screen = (pixel_t *) Z_Malloc((ST_WIDTH << hires) * (ST_HEIGHT << hires) * sizeof(pixel_t), PU_STATIC, 0);
