@@ -325,7 +325,7 @@ typedef struct
 //  precalculating 24bpp lightmap/colormap LUT.
 //  from darkening PLAYPAL to all black.
 // Could even us emore than 32 levels.
-//typedef uint32_t	lighttable_t;	// now in doomtype.h
+typedef pixel_t	lighttable_t;
 
 
 
@@ -399,7 +399,7 @@ typedef struct vissprite_s
    
     int			mobjflags;
     // [crispy] color translation table for blood colored by monster class
-    byte*		translation;
+    byte*			translation;
     const pixel_t	(*blendfunc)(const pixel_t fg, const pixel_t bg);
     
 } vissprite_t;

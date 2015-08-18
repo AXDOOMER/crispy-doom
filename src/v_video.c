@@ -52,7 +52,7 @@ byte *tinttable = NULL;
 byte *tranmap = NULL;
 byte *dp_translation = NULL;
 boolean dp_translucent = false;
-const lighttable_t dc_translucency = 0xa8ffffff;
+const pixel_t dc_translucency = 0xa8ffffff;
 
 // villsa [STRIFE] Blending table used for Strife
 byte *xlatab = NULL;
@@ -61,7 +61,7 @@ byte *xlatab = NULL;
 
 static pixel_t *dest_screen = NULL;
 
-extern lighttable_t *colormaps;
+extern pixel_t *colormaps;
 
 int dirtybox[4]; 
 

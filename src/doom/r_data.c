@@ -974,7 +974,7 @@ void R_InitColormaps (void)
     byte *playpal, *colormap;
     int c, i;
     size_t j = 0;
-    byte r, g, b;
+    byte r, g, b, gray;
     float scale;
 
     if (!colormaps)
@@ -1003,9 +1003,9 @@ void R_InitColormaps (void)
 	// [crispy] Invulnerability (c == COLORMAPS)
 	for (i = 0; i < 256; i++)
 	{
-	    size_t gray = 0xff - (playpal[3 * i + 0]/3 + // 0.299
-	                          playpal[3 * i + 1]/2 + // 0.587
-	                          playpal[3 * i + 2]/6); // 0.144
+	    gray = 0xff - (playpal[3 * i + 0]/3 + // 0.299
+	                   playpal[3 * i + 1]/2 + // 0.587
+	                   playpal[3 * i + 2]/6); // 0.144
 	    r = g = b = gammatable[usegamma][gray];
 
 	    colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;

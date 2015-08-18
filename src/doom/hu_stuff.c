@@ -592,15 +592,16 @@ static void HU_DemoProgressBar (void)
     int i;
     extern char *demo_p, *demobuffer;
     extern int defdemosize;
+    extern lighttable_t* colormaps;
 
     i = SCREENWIDTH * (demo_p - demobuffer) / defdemosize;
 
-    V_DrawHorizLine(0, SCREENHEIGHT - 3, i, 4); // [crispy] white
-    V_DrawHorizLine(0, SCREENHEIGHT - 2, i, 0); // [crispy] black
-    V_DrawHorizLine(0, SCREENHEIGHT - 1, i, 4); // [crispy] white
+    V_DrawHorizLine(0, SCREENHEIGHT - 3, i, colormaps[4]); // [crispy] white
+    V_DrawHorizLine(0, SCREENHEIGHT - 2, i, colormaps[0]); // [crispy] black
+    V_DrawHorizLine(0, SCREENHEIGHT - 1, i, colormaps[4]); // [crispy] white
 
-    V_DrawHorizLine(0, SCREENHEIGHT - 2, 1, 4); // [crispy] white start
-    V_DrawHorizLine(i - 1, SCREENHEIGHT - 2, 1, 4); // [crispy] white end
+    V_DrawHorizLine(0, SCREENHEIGHT - 2, 1, colormaps[4]); // [crispy] white start
+    V_DrawHorizLine(i - 1, SCREENHEIGHT - 2, 1, colormaps[4]); // [crispy] white end
 }
 
 // [crispy] static, non-projected crosshair

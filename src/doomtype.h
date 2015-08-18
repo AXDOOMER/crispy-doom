@@ -83,9 +83,7 @@ typedef enum
 #endif
 
 typedef uint8_t byte;
-
 typedef uint32_t pixel_t;
-typedef pixel_t lighttable_t;
 
 #include <limits.h>
 

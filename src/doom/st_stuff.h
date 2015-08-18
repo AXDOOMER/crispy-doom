@@ -24,7 +24,6 @@
 #include "doomtype.h"
 #include "d_event.h"
 #include "m_cheat.h"
-#include "i_video.h"
 
 // Size of statusbar.
 // Now sensitive for scaling.

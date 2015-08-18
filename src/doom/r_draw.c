@@ -107,7 +107,7 @@ int			dccount;
 void R_DrawColumn (void) 
 { 
     int			count; 
-    pixel_t*		dest; 
+    pixel_t*		dest;
     fixed_t		frac;
     fixed_t		fracstep;	 
     int			heightmask = dc_texheight - 1;
@@ -278,13 +278,11 @@ void R_DrawColumnLow (void)
     {
 	// Hack. Does not work corretly.
 	*dest2 = *dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
 	    *dest4 = *dest3 = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
-
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
@@ -369,7 +367,6 @@ void R_DrawFuzzColumn (void)
 	//  a pixel that is either one column
 	//  left or right of the current one.
 	// Add index from colormap to index.
-
 	*dest = I_BlendDark(dest[fuzzoffset[fuzzpos]], 0xff >> 2);
 
 	// Clamp table lookup index.
@@ -584,7 +581,7 @@ void R_DrawTranslatedColumnLow (void)
     } while (count--); 
 } 
 
-extern lighttable_t dc_translucency;
+extern pixel_t dc_translucency;
 
 void R_DrawTLColumn (void)
 {
@@ -983,7 +980,7 @@ R_InitBuffer
 void R_FillBackScreen (void) 
 { 
     byte*	src;
-    pixel_t*	dest; 
+    pixel_t*	dest;
     int		x;
     int		y; 
     patch_t*	patch;
@@ -1105,7 +1102,7 @@ R_VideoErase
 
     if (background_buffer != NULL)
     {
-        memcpy(I_VideoBuffer + ofs, background_buffer + ofs, count * sizeof(pixel_t)); 
+        memcpy(I_VideoBuffer + ofs, background_buffer + ofs, count * sizeof(pixel_t));
     }
 } 
 

@@ -132,6 +132,7 @@ static boolean opldev;
 
 boolean crispy_cleanscreenshot = false;
 extern boolean speedkeydown (void);
+extern void R_InitColormaps (void);
 
 //
 // MENU TYPEDEFS

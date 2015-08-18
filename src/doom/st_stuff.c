@@ -1275,6 +1275,7 @@ void ST_doPaletteStuff(void)
 {
 
     int		palette;
+//    byte*	pal;
     int		cnt;
     int		bzc;
 
@@ -1333,6 +1334,7 @@ void ST_doPaletteStuff(void)
     if (palette != st_palette)
     {
 	st_palette = palette;
+//	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
 	I_SetPalette (palette);
     }
 
