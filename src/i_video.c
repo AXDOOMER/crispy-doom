@@ -2239,10 +2239,3 @@ const pixel_t I_BlendOver (const pixel_t bg, const pixel_t fg)
     return 0xff000000 | r | g | b;
 }
 
-// [crispy] screenshots are actual reproductions of the screen content
-void I_GetVideobuffer (byte **buffer, int *w, int *h)
-{
-    *buffer = screenbuffer->pixels;
-    *w = screenbuffer->w;
-    *h = screenbuffer->h;
-}

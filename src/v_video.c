@@ -1043,14 +1043,10 @@ void WritePNGfile(char *filename, byte *data,
     int width, height;
     byte *rowbuf;
 
-    // [crispy] screenshots are actual reproductions of the screen content
-    extern void I_GetVideobuffer (byte **buffer, int *w, int *h);
-    I_GetVideobuffer(&rowbuf, &width, &height); // [crispy] recycle "rowbuf" pointer
-/*
     // scale up to accommodate aspect ratio correction
-    width = inwidth * 5;
-    height = inheight * 6;
-*/
+    // [crispy] nope
+    width = inwidth;// * 5;
+    height = inheight;// * 6;
 
     handle = fopen(filename, "wb");
     if (!handle)
@@ -1085,7 +1081,7 @@ void WritePNGfile(char *filename, byte *data,
     // [crispy] screenshots are actual reproductions of the screen content
     for (i = j = 0; i < height; i++) // [crispy] unused variable ‘j’
     {
-        png_write_row(ppng, rowbuf + i*width);
+        png_write_row(ppng, I_VideoBuffer + i*width);
     }
 /*
     rowbuf = malloc(width);
