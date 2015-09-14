@@ -341,7 +341,7 @@ vissprite_t* R_NewVisSprite (void)
 	return &overflowsprite;
 
 	numvissprites = numvissprites ? 2 * numvissprites : MAXVISSPRITES;
-	vissprites = realloc(vissprites, numvissprites * sizeof(*vissprites));
+	vissprites = crispy_realloc(vissprites, numvissprites * sizeof(*vissprites));
 	memset(vissprites + numvissprites_old, 0, (numvissprites - numvissprites_old) * sizeof(*vissprites));
 
 	vissprite_p = vissprites + numvissprites_old;
@@ -409,8 +409,6 @@ void R_DrawMaskedColumn (column_t* column)
 }
 
 
-// [crispy] invisibility is rendered translucently
-#define crispy_transshadow 0
 
 //
 // R_DrawVisSprite
@@ -451,11 +449,15 @@ R_DrawVisSprite
     }
     // [crispy] translucent sprites
     if (crispy_translucency && dc_colormap &&
-        ((vis->mobjflags & MF_TRANSLUCENT) ||
-        ((vis->mobjflags & MF_SHADOW) && crispy_transshadow)))
+        vis->mobjflags & MF_TRANSLUCENT)
     {
-	blendfunc = vis->blendfunc;
-	colfunc = tlcolfunc;
+	if (!(vis->mobjflags & (MF_NOGRAVITY | MF_COUNTITEM)) ||
+	    (vis->mobjflags & MF_NOGRAVITY && crispy_translucency & TRANSLUCENCY_MISSILE) ||
+	    (vis->mobjflags & MF_COUNTITEM && crispy_translucency & TRANSLUCENCY_ITEM))
+	{
+	    blendfunc = vis->blendfunc;
+	    colfunc = tlcolfunc;
+	}
     }
 	
     dc_iscale = abs(vis->xiscale)>>(detailshift && !hires);
@@ -466,7 +468,7 @@ R_DrawVisSprite
 	
     for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
-	static boolean error = 0;
+	static boolean error = false;
 	texturecolumn = frac>>FRACBITS;
 #ifdef RANGECHECK
 	if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
@@ -475,7 +477,7 @@ R_DrawVisSprite
 	    if (!error)
 	    {
 	    fprintf (stderr, "R_DrawSpriteRange: bad texturecolumn\n");
-	    error++;
+	    error = true;
 	    }
 	    continue;
 	}
@@ -635,8 +637,8 @@ void R_ProjectSprite (mobj_t* thing)
     iscale = FixedDiv (FRACUNIT, xscale);
 
     // [crispy] flip death sprites and corpses randomly
-    // except for the Cyberdemon which is too asymmetrical
-    if (thing->type != MT_CYBORG &&
+    // except for Cyberdemons and Barrels which are too asymmetrical
+    if (thing->type != MT_CYBORG && thing->type != MT_BARREL &&
         thing->flags & MF_CORPSE &&
         thing->health & 1)
     {
@@ -659,8 +661,7 @@ void R_ProjectSprite (mobj_t* thing)
     vis->patch = lump;
     
     // get light level
-    // [crispy] do not invalidate colormap if invisibility is rendered translucently
-    if (thing->flags & MF_SHADOW && !crispy_transshadow)
+    if (thing->flags & MF_SHADOW)
     {
 	// shadow draw
 	vis->colormap = NULL;
@@ -689,7 +690,8 @@ void R_ProjectSprite (mobj_t* thing)
 
     // [crispy] colored blood
     if (crispy_coloredblood &&
-        thing->type == MT_BLOOD && thing->target)
+        (thing->type == MT_BLOOD || thing->sprite == SPR_POL5) // [crispy] S_GIBS
+        && thing->target)
     {
 	// [crispy] Thorn Things in Hacx bleed green blood
 	if (gamemission == pack_hacx)
@@ -932,10 +934,8 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 
     vis->patch = lump;
 
-    // [crispy] do not invalidate colormap if invisibility is rendered translucently
-    if ((viewplayer->powers[pw_invisibility] > 4*32
+    if (viewplayer->powers[pw_invisibility] > 4*32
 	|| viewplayer->powers[pw_invisibility] & 8)
-	&& !crispy_transshadow)
     {
 	// shadow draw
 	vis->colormap = NULL;
@@ -956,15 +956,6 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 	vis->colormap = spritelights[MAXLIGHTSCALE-1];
     }
 	
-    // [crispy] invisibility is rendered translucently
-    if ((viewplayer->powers[pw_invisibility] > 4*32 ||
-        viewplayer->powers[pw_invisibility] & 8) &&
-        crispy_transshadow)
-    {
-	vis->mobjflags |= MF_TRANSLUCENT;
-	vis->blendfunc = I_BlendAdd;
-    }
-
     // [crispy] translucent gun flash sprites
     if (psprnum == ps_flash)
     {

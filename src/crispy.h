@@ -64,10 +64,11 @@ extern int crispy_demowarp;
 
 enum
 {
-    JUMP_OFF,
-    JUMP_LOW,
-    JUMP_HIGH,
-    NUM_JUMPS
+    COLOREDHUD_OFF,
+    COLOREDHUD_BAR,
+    COLOREDHUD_TEXT,
+    COLOREDHUD_BOTH,
+    NUM_COLOREDHUD
 };
 
 enum
@@ -78,5 +79,32 @@ enum
     NUM_CROSSHAIRS,
     CROSSHAIR_INTERCEPT = 0x10
 };
+
+enum
+{
+    FREELOOK_OFF,
+    FREELOOK_SPRING,
+    FREELOOK_LOCK,
+    NUM_FREELOOKS
+};
+
+enum
+{
+    JUMP_OFF,
+    JUMP_LOW,
+    JUMP_HIGH,
+    NUM_JUMPS
+};
+
+enum
+{
+    TRANSLUCENCY_OFF,
+    TRANSLUCENCY_MISSILE,
+    TRANSLUCENCY_ITEM,
+    TRANSLUCENCY_BOTH,
+    NUM_TRANSLUCENCY
+};
+
+void *crispy_realloc (void *ptr, size_t size);
 
 #endif

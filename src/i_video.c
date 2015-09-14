@@ -1055,10 +1055,6 @@ void I_FinishUpdate (void)
     int tics;
     int i;
 
-    static int	lastmili;
-    static int	fpscount;
-    int		mili;
-
     if (!initialized)
         return;
 
@@ -1109,6 +1105,10 @@ void I_FinishUpdate (void)
 	// [AM] Real FPS counter
 	if (crispy_showfps)
 	{
+		static int lastmili;
+		static int fpscount;
+		int mili;
+
 		fpscount++;
 
 		i = SDL_GetTicks();

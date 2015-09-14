@@ -398,6 +398,12 @@ EV_VerticalDoor
 	break;
     }
 	
+    // [crispy] do not crash if the wrong side of the door is pushed
+    if (line->sidenum[side^1] == NO_INDEX)
+    {
+	return;
+    }
+
     // if the sector has an active thinker, use it
     sec = sides[ line->sidenum[side^1]] .sector;
 

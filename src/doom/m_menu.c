@@ -1257,7 +1257,7 @@ void M_DrawOptions(void)
                 showMessages ? "On" : "Off");
 
     M_DrawThermo(OptionsDef.x,OptionsDef.y+LINEHEIGHT*(scrnsize+1),
-		 9 + (crispy_translucency ? 2 : 1),screenSize); // [crispy] Crispy HUD
+		 9 + 2,screenSize); // [crispy] Crispy HUD
 }
 
 // [crispy] mouse sensitivity menu
@@ -1299,13 +1299,14 @@ static void M_DrawMouse(void)
 // [crispy] crispness menu
 static void M_DrawCrispnessBackground(void)
 {
-    byte *src;
-    pixel_t *dest;
     static pixel_t *sdest;
-    int x, y;
 
     if (!sdest)
     {
+	byte *src;
+	pixel_t *dest;
+	int x, y;
+
 	src = W_CacheLumpName("FLOOR4_6" , PU_CACHE);
 	dest = (pixel_t *) Z_Malloc (SCREENWIDTH * SCREENHEIGHT * sizeof(pixel_t), PU_STATIC, NULL);
 	sdest = dest;
@@ -1357,11 +1358,13 @@ typedef struct
     char *name;
 } multiitem_t;
 
-static multiitem_t multiitem_jump[NUM_JUMPS] =
+
+static multiitem_t multiitem_coloredhud[NUM_COLOREDHUD] =
 {
-    {JUMP_OFF, "off"},
-    {JUMP_LOW, "low"},
-    {JUMP_HIGH, "high"},
+    {COLOREDHUD_OFF, "off"},
+    {COLOREDHUD_BAR, "status bar"},
+    {COLOREDHUD_TEXT, "hud texts"},
+    {COLOREDHUD_BOTH, "both"},
 };
 
 static multiitem_t multiitem_crosshair[NUM_CROSSHAIRS] =
@@ -1369,6 +1372,28 @@ static multiitem_t multiitem_crosshair[NUM_CROSSHAIRS] =
     {CROSSHAIR_OFF, "off"},
     {CROSSHAIR_STATIC, "static"},
     {CROSSHAIR_PROJECTED, "projected"},
+};
+
+static multiitem_t multiitem_freelook[NUM_FREELOOKS] =
+{
+    {FREELOOK_OFF, "off"},
+    {FREELOOK_SPRING, "spring"},
+    {FREELOOK_LOCK, "lock"},
+};
+
+static multiitem_t multiitem_jump[NUM_JUMPS] =
+{
+    {JUMP_OFF, "off"},
+    {JUMP_LOW, "low"},
+    {JUMP_HIGH, "high"},
+};
+
+static multiitem_t multiitem_translucency[NUM_TRANSLUCENCY] =
+{
+    {TRANSLUCENCY_OFF, "off"},
+    {TRANSLUCENCY_MISSILE, "missiles"},
+    {TRANSLUCENCY_ITEM, "items"},
+    {TRANSLUCENCY_BOTH, "both"},
 };
 
 static void M_DrawCrispnessMultiItem(int y, char *item, multiitem_t *multiitem, int feat, boolean cond)
@@ -1403,8 +1428,8 @@ static void M_DrawCrispness1(void)
 
     M_DrawCrispnessItem(crispness_highcolor, "High-Color Rendering", crispy_highcolor, true);
     M_DrawCrispnessItem(crispness_uncapped, "Uncapped Framerate", crispy_uncapped, true);
-    M_DrawCrispnessItem(crispness_coloredhud, "Colorize Status Bar and Texts", crispy_coloredhud, true);
-    M_DrawCrispnessItem(crispness_translucency, "Enable Translucency", crispy_translucency, true);
+    M_DrawCrispnessMultiItem(crispness_coloredhud, "Colorize HUD Elements", multiitem_coloredhud, crispy_coloredhud, true);
+    M_DrawCrispnessMultiItem(crispness_translucency, "Enable Translucency", multiitem_translucency, crispy_translucency, true);
     M_DrawCrispnessItem(crispness_coloredblood, "Enable Colored Blood", crispy_coloredblood, true);
     M_DrawCrispnessItem(crispness_coloredblood2, "Fix Spectre and Lost Soul Blood", crispy_coloredblood2, true);
     M_DrawCrispnessItem(crispness_flipcorpses, "Randomly Mirrored Corpses", crispy_flipcorpses, true);
@@ -1425,7 +1450,7 @@ static void M_DrawCrispness2(void)
     M_DrawCrispnessSeparator(crispness_sep_tactical, "Tactical");
 
     M_DrawCrispnessMultiItem(crispness_crosshair, "Draw Crosshair", multiitem_crosshair, crispy_crosshair, true);
-    M_DrawCrispnessItem(crispness_freelook, "Allow Free Look", crispy_freelook, true);
+    M_DrawCrispnessMultiItem(crispness_freelook, "Allow Free Look", multiitem_freelook, crispy_freelook, true);
     M_DrawCrispnessItem(crispness_centerweapon, "Center Weapon when Firing", crispy_centerweapon, true);
     M_DrawCrispnessItem(crispness_pitch, "Enable Weapon Recoil Pitch", crispy_pitch, true);
     M_DrawCrispnessItem(crispness_secretmessage, "Show Revealed Secrets", crispy_secretmessage, true);
@@ -1747,7 +1772,7 @@ static void M_CrispyToggleColoredblood2(int choice)
 static void M_CrispyToggleColoredhud(int choice)
 {
     choice = 0;
-    crispy_coloredhud = !crispy_coloredhud;
+    crispy_coloredhud = (crispy_coloredhud + 1) % NUM_COLOREDHUD;
 }
 
 static void M_CrispyToggleCrosshair(int choice)
@@ -1777,7 +1802,7 @@ static void M_CrispyToggleFreeaim(int choice)
 static void M_CrispyToggleFreelook(int choice)
 {
     choice = 0;
-    crispy_freelook = !crispy_freelook;
+    crispy_freelook = (crispy_freelook + 1) % NUM_FREELOOKS;
 
     players[consoleplayer].lookdir = 0;
 }
@@ -1841,11 +1866,7 @@ static void M_CrispyToggleSecretmessage(int choice)
 static void M_CrispyToggleTranslucency(int choice)
 {
     choice = 0;
-    crispy_translucency = !crispy_translucency;
-
-    // [crispy] translucent Crispy HUD?
-    if (screenblocks > CRISPY_HUD)
-	M_SizeDisplay(0);
+    crispy_translucency = (crispy_translucency + 1) % NUM_TRANSLUCENCY;
 }
 
 static void M_CrispyToggleUncapped(int choice)
@@ -1882,7 +1903,7 @@ void M_SizeDisplay(int choice)
 	}
 	break;
       case 1:
-	if (screenSize < 8 + (crispy_translucency ? 2 : 1)) // [crispy] Crispy HUD
+	if (screenSize < 8 + 2) // [crispy] Crispy HUD
 	{
 	    screenblocks++;
 	    screenSize++;
@@ -2063,7 +2084,7 @@ M_WriteText
 	if (c == '\x1b')
 	{
 	    c = *ch++;
-	    dp_translation = (crispy_coloredhud) ? cr[(int) (c - '0')] : NULL;
+	    dp_translation = (crispy_coloredhud & COLOREDHUD_TEXT) ? cr[(int) (c - '0')] : NULL;
 	    continue;
 	}
 		
@@ -2351,13 +2372,13 @@ boolean M_Responder (event_t* ev)
 	    }
 
 	    // [crispy] scroll menus with mouse wheel
-	    if (ev->data1 & (1 << mousebprevweapon))
+	    if (mousebprevweapon >= 0 && ev->data1 & (1 << mousebprevweapon))
 	    {
 		key = key_menu_down;
 		mousewait = I_GetTime() + 5;
 	    }
 	    else
-	    if (ev->data1 & (1 << mousebnextweapon))
+	    if (mousebnextweapon >= 0 && ev->data1 & (1 << mousebnextweapon))
 	    {
 		key = key_menu_up;
 		mousewait = I_GetTime() + 5;
@@ -2457,12 +2478,16 @@ boolean M_Responder (event_t* ev)
 	return true;
     }
 
+    // [crispy] take screen shot without weapons and HUD
+    if (key != 0 && key == key_menu_cleanscreenshot)
+    {
+	crispy_cleanscreenshot = true;
+	key = key_menu_screenshot;
+    }
+
     if ((devparm && key == key_menu_help) ||
         (key != 0 && key == key_menu_screenshot))
     {
-	// [crispy] take screen shot without weapons and HUD
-	if (speedkeydown())
-	    crispy_cleanscreenshot = true;
 	G_ScreenShot ();
 	return true;
     }

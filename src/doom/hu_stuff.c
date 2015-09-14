@@ -625,8 +625,7 @@ static void HU_DrawCrosshair (void)
 	patch = W_CacheLumpNum(lump, PU_CACHE);
     }
 
-    if (crispy_translucency)
-	dp_translucent = true;
+    dp_translucent = true;
 
     V_DrawPatch(160-SHORT(patch->width/2), (screenblocks <= 10) ? 84 : 100, patch);
 }
@@ -643,14 +642,14 @@ void HU_Drawer(void)
     }
 
     // [crispy] translucent messages for translucent HUD
-    if (crispy_translucency && screenblocks > CRISPY_HUD && (!automapactive || (automapactive && crispy_automapoverlay)))
+    if (screenblocks > CRISPY_HUD && (!automapactive || crispy_automapoverlay))
 	dp_translucent = true;
 
     V_ClearDPTranslation();
     HUlib_drawSText(&w_message);
     HUlib_drawIText(&w_chat);
 
-    if (crispy_coloredhud)
+    if (crispy_coloredhud & COLOREDHUD_TEXT)
 	dp_translation = cr[CR_GOLD];
     HUlib_drawSText(&w_secret);
 

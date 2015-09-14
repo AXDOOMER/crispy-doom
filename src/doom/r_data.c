@@ -295,7 +295,7 @@ void R_GenerateComposite (int texnum)
 	for ( ; x<x2 ; x++)
 	{
 	    // Column does not have multiple patches?
-	    // [crispy] generate composites for single-patched textures as well
+	    // [crispy] generate composites for single-patched columns as well
 	    /*
 	    if (collump[x] >= 0)
 		continue;
@@ -305,7 +305,9 @@ void R_GenerateComposite (int texnum)
 				    + LONG(realpatch->columnofs[x-x1]));
 	    R_DrawColumnInCache (patchcol,
 				 block + colofs[x],
-				 patch->originy,
+				 // [crispy] single-patched columns are normally not composited
+				 // but directly read from the patch lump ignoring their originy
+				 collump[x] >= 0 ? 0 : patch->originy,
 				 texture->height,
 				 marks + x * texture->height);
 	}
@@ -677,8 +679,8 @@ void R_InitTextures (void)
     int			numtexturelumps = 0;
 
     // [crispy] allocate memory for the pnameslumps and texturelumps arrays
-    pnameslumps = realloc(pnameslumps, maxpnameslumps * sizeof(*pnameslumps));
-    texturelumps = realloc(texturelumps, maxtexturelumps * sizeof(*texturelumps));
+    pnameslumps = crispy_realloc(pnameslumps, maxpnameslumps * sizeof(*pnameslumps));
+    texturelumps = crispy_realloc(texturelumps, maxtexturelumps * sizeof(*texturelumps));
 
     // [crispy] make sure the first available TEXTURE1/2 lumps
     // are always processed first
@@ -698,7 +700,7 @@ void R_InitTextures (void)
 	    if (numpnameslumps == maxpnameslumps)
 	    {
 		maxpnameslumps++;
-		pnameslumps = realloc(pnameslumps, maxpnameslumps * sizeof(*pnameslumps));
+		pnameslumps = crispy_realloc(pnameslumps, maxpnameslumps * sizeof(*pnameslumps));
 	    }
 
 	    pnameslumps[numpnameslumps].lumpnum = i;
@@ -731,7 +733,7 @@ void R_InitTextures (void)
 	    if (numtexturelumps == maxtexturelumps)
 	    {
 		maxtexturelumps++;
-		texturelumps = realloc(texturelumps, maxtexturelumps * sizeof(*texturelumps));
+		texturelumps = crispy_realloc(texturelumps, maxtexturelumps * sizeof(*texturelumps));
 	    }
 
 	    // [crispy] do not proceed any further, yet

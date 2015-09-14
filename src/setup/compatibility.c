@@ -50,7 +50,6 @@ int crispy_uncapped = 0;
 void CompatibilitySettings(void)
 {
     txt_window_t *window;
-    txt_scrollpane_t *scrollpane;
 
     // [crispy]
     if (gamemission == doom)
@@ -63,7 +62,7 @@ void CompatibilitySettings(void)
                                    &crispy_highcolor),
                    TXT_NewCheckBox("Uncapped Framerate",
                                    &crispy_uncapped),
-                   TXT_NewCheckBox("Colorize Status Bar and Texts",
+                   TXT_NewCheckBox("Colorize Status Bar",
                                    &crispy_coloredhud),
                    TXT_NewCheckBox("Enable Translucency",
                                    &crispy_translucency),

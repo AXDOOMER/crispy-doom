@@ -1351,7 +1351,7 @@ enum
 // [crispy] return ammo/health/armor widget color
 static byte* ST_WidgetColor(int i)
 {
-    if (!crispy_coloredhud)
+    if (!(crispy_coloredhud & COLOREDHUD_BAR))
         return NULL;
 
     switch (i)
@@ -1459,7 +1459,7 @@ void ST_drawWidgets(boolean refresh)
     V_ClearDPTranslation();
 
     // [crispy] draw berserk pack instead of no ammo if appropriate
-    if (screenblocks >= CRISPY_HUD && (!automapactive || (automapactive && crispy_automapoverlay)) &&
+    if (screenblocks >= CRISPY_HUD && (!automapactive || crispy_automapoverlay) &&
         plyr->readyweapon == wp_fist && plyr->powers[pw_strength])
     {
 	static patch_t *patch;
@@ -1483,11 +1483,7 @@ void ST_drawWidgets(boolean refresh)
     }
 
     dp_translation = ST_WidgetColor(hudcolor_health);
-    // [crispy] in the Crispy HUD, health blinks if below 10%
-    if (screenblocks < CRISPY_HUD || (automapactive && !crispy_automapoverlay) || plyr->health > 9 || (gametic & TICRATE/2) > TICRATE/4)
-    {
     STlib_updatePercent(&w_health, refresh || screenblocks >= CRISPY_HUD);
-    }
     dp_translation = ST_WidgetColor(hudcolor_armor);
     STlib_updatePercent(&w_armor, refresh || screenblocks >= CRISPY_HUD);
     V_ClearDPTranslation();
@@ -1545,7 +1541,7 @@ void ST_Drawer (boolean fullscreen, boolean refresh)
     ST_doPaletteStuff();
 
     // [crispy] translucent HUD
-    if (crispy_translucency && screenblocks > CRISPY_HUD && !(automapactive && !crispy_automapoverlay))
+    if (screenblocks > CRISPY_HUD && !(automapactive && !crispy_automapoverlay))
 	dp_translucent = true;
 
     // If just after ST_Start(), refresh all

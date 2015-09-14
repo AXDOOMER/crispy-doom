@@ -342,8 +342,6 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     int		forward;
     int		side;
     int		look;
-    static int		mbmlookctrl = 0; // [crispy] single click view centering
-    static int		joybspeed_old = 2; // [crispy] toggle "always run"
 
     memset(cmd, 0, sizeof(ticcmd_t));
 
@@ -408,6 +406,7 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     if (gamekeydown[key_toggleautorun])
     {
         static char autorunmsg[24];
+        static int joybspeed_old = 2;
 
         if (joybspeed >= MAX_JOY_BUTTONS)
         {
@@ -493,17 +492,32 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     // [crispy] look up/down/center keys
     if (crispy_freelook)
     {
+        static unsigned int kbdlookctrl = 0;
+
         if (gamekeydown[key_lookup])
         {
             look = lspeed;
+            kbdlookctrl += ticdup;
         }
+        else
         if (gamekeydown[key_lookdown])
         {
             look = -lspeed;
+            kbdlookctrl += ticdup;
         }
+        else
         if (gamekeydown[key_lookcenter])
         {
             look = TOCENTER;
+            kbdlookctrl = 0;
+        }
+
+        // [crispy] keyboard lookspring
+        if (crispy_freelook == FREELOOK_SPRING && kbdlookctrl &&
+            !gamekeydown[key_lookup] && !gamekeydown[key_lookdown])
+        {
+            look = TOCENTER;
+            kbdlookctrl = 0;
         }
     }
 
@@ -646,15 +660,25 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     }
 
     // [crispy] single click on mouse look button centers view
-    if (mousebuttons[mousebmouselook]) // [crispy] clicked
+    if (crispy_freelook)
     {
-        mbmlookctrl += ticdup;
-    }
-    if (mbmlookctrl && !mousebuttons[mousebmouselook]) // [crispy] released
-    {
-        if (mbmlookctrl < 6) // [crispy] short click
-            look = TOCENTER;
-        mbmlookctrl = 0;
+        static unsigned int mbmlookctrl = 0;
+
+        // [crispy] single click view centering
+        if (mousebuttons[mousebmouselook]) // [crispy] clicked
+        {
+            mbmlookctrl += ticdup;
+        }
+        else
+        // [crispy] released
+        if (mbmlookctrl)
+        {
+            if (crispy_freelook == FREELOOK_SPRING || mbmlookctrl < 6) // [crispy] short click
+            {
+                look = TOCENTER;
+            }
+            mbmlookctrl = 0;
+        }
     }
 
     if (strafe) 
@@ -751,7 +775,7 @@ void G_DoLoadLevel (void)
     // the id Anthology version of doom2.exe for Final Doom.
     // [crispy] correct "Sky never changes in Doom II" bug
     if ((gamemode == commercial)
-     && (gameversion == exe_final2 || gameversion == exe_chex || 1))
+    /* && (gameversion == exe_final2 || gameversion == exe_chex) */ )
     {
         char *skytexturename;
 
@@ -1034,14 +1058,12 @@ void G_Ticker (void)
 	    G_DoWorldDone (); 
 	    break; 
 	  case ga_screenshot: 
-	    // [crispy] when the "run" button is pressed,
-	    // redraw view without weapons and HUD
+	    // [crispy] redraw view without weapons and HUD
 	    if (crispy_cleanscreenshot)
 	    {
 	        extern void D_Display (void);
 
 	        D_Display();
-	        S_StartSound(NULL, gamemode == commercial ? sfx_radio : sfx_tink);
 	        crispy_cleanscreenshot = false;
 	    }
 	    V_ScreenShot("DOOM%02i.%s"); 
@@ -2263,9 +2285,8 @@ void G_RecordDemo (char *name)
     for (i = 0; i <= 999 && (fp = fopen(demoname, "rb")) != NULL; i++)
     {
 	M_snprintf(demoname, demoname_size, "%s-%03d.lmp", name, i);
-    }
-    if (fp)
 	fclose (fp);
+    }
 
     maxsize = 0x20000;
 

@@ -281,7 +281,7 @@ void D_Display (void)
     I_UpdateNoBlit ();
     
     // draw the view directly
-    if (gamestate == GS_LEVEL && (!automapactive || (automapactive && crispy_automapoverlay)) && gametic)
+    if (gamestate == GS_LEVEL && (!automapactive || crispy_automapoverlay) && gametic)
     {
 	R_RenderPlayerView (&players[displayplayer]);
 
@@ -314,7 +314,7 @@ void D_Display (void)
     }
 
     // see if the border needs to be updated to the screen
-    if (gamestate == GS_LEVEL && (!automapactive || (automapactive && crispy_automapoverlay)) && scaledviewwidth != (320 << hires))
+    if (gamestate == GS_LEVEL && (!automapactive || crispy_automapoverlay) && scaledviewwidth != (320 << hires))
     {
 	if (menuactive || menuactivestate || !viewactivestate)
 	    borderdrawcount = 3;
@@ -363,8 +363,13 @@ void D_Display (void)
     {
 	static int firsttic;
 
-	for (y = 0; y < SCREENWIDTH * SCREENHEIGHT; y++)
-	    I_VideoBuffer[y] = I_BlendDark(I_VideoBuffer[y], menushade << 3);
+	if (!automapactive || crispy_automapoverlay)
+	{
+	    for (y = 0; y < SCREENWIDTH * SCREENHEIGHT; y++)
+	    {
+		I_VideoBuffer[y] = I_BlendDark(I_VideoBuffer[y], menushade << 3);
+	    }
+	}
 
 	if (menushade < 16 && gametic != firsttic)
 	{
@@ -1329,7 +1334,6 @@ static void LoadIwadDeh(void)
 static void LoadNerveWad(void)
 {
     int i;
-    char lumpname[9];
 
     if (gamemission != doom2)
         return;
@@ -1365,6 +1369,8 @@ static void LoadNerveWad(void)
         // [crispy] rename level name patch lumps out of the way
         for (i = 0; i < 9; i++)
         {
+            char lumpname[9];
+
             M_snprintf (lumpname, 9, "CWILV%2.2d", i);
             lumpinfo[W_GetNumForName(lumpname)]->name[0] = 'N';
         }
@@ -1383,10 +1389,10 @@ static void LoadNerveWad(void)
 // [crispy] support loading MASTERLEVELS.WAD alongside DOOM2.WAD
 static void LoadMasterlevelsWad(void)
 {
-    int i, j;
-
     if (gamemission == doom2 && modifiedgame)
     {
+	int i, j;
+
 	i = W_GetNumForName("map01");
 	j = W_GetNumForName("map21");
 	if (!strcasecmp(lumpinfo[i]->wad_file->path, "masterlevels.wad") &&
@@ -1606,10 +1612,6 @@ void D_DoomMain (void)
     vanilla_savegame_limit = 0;
     vanilla_demo_limit = 0;
 
-    // [crispy] normalize screenblocks
-    if (screenblocks > CRISPY_HUD)
-	screenblocks = CRISPY_HUD + (crispy_translucency ? 1 : 0);
-
     // Save configuration at exit.
     I_AtExit(M_SaveDefaults, false);
 
@@ -1697,10 +1699,12 @@ void D_DoomMain (void)
     if (!M_ParmExists("-nodeh") && !M_ParmExists("-noload"))
     {
 	int i;
-	char file[16], *path;
+	char file[16];
 
 	for (i = 0; i < 10; i++)
 	{
+	    char *path;
+
 	    M_snprintf(file, sizeof(file), "preload%d.deh", i);
 	    path = M_StringJoin(configdir, file, NULL);
 
@@ -1728,11 +1732,13 @@ void D_DoomMain (void)
     if (!M_ParmExists("-noload") && gamemode != shareware)
     {
 	int i;
-	char file[16], *path;
+	char file[16];
 	extern void W_MergeFile(char *filename);
 
 	for (i = 0; i < 10; i++)
 	{
+	    char *path;
+
 	    M_snprintf(file, sizeof(file), "preload%d.wad", i);
 	    path = M_StringJoin(configdir, file, NULL);
 
@@ -2122,10 +2128,10 @@ void D_DoomMain (void)
     // [crispy] port level flipping feature over from Strawberry Doom
     {
         time_t curtime = time(NULL);
-        struct tm *tm;
+        struct tm curtm = {0};
 
-        if ((tm = localtime(&curtime)) != NULL &&
-            tm->tm_mon == 3 && tm->tm_mday == 1)
+        if ((localtime_r(&curtime, &curtm) != NULL) &&
+            curtm.tm_mon == 3 && curtm.tm_mday == 1)
             crispy_fliplevels = true;
     }
 
