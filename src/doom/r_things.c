@@ -448,16 +448,15 @@ R_DrawVisSprite
 	dc_translation = vis->translation;
     }
     // [crispy] translucent sprites
-    if (crispy_translucency && dc_colormap &&
-        vis->mobjflags & MF_TRANSLUCENT)
+    else if (crispy_translucency && vis->mobjflags & MF_TRANSLUCENT)
     {
 	if (!(vis->mobjflags & (MF_NOGRAVITY | MF_COUNTITEM)) ||
 	    (vis->mobjflags & MF_NOGRAVITY && crispy_translucency & TRANSLUCENCY_MISSILE) ||
 	    (vis->mobjflags & MF_COUNTITEM && crispy_translucency & TRANSLUCENCY_ITEM))
 	{
-	    blendfunc = vis->blendfunc;
 	    colfunc = tlcolfunc;
 	}
+	blendfunc = vis->blendfunc;
     }
 	
     dc_iscale = abs(vis->xiscale)>>(detailshift && !hires);
@@ -716,8 +715,15 @@ void R_ProjectSprite (mobj_t* thing)
 	    }
 	}
     }
-    if (thing->flags & (MF_TRANSLUCENT | MF_SHADOW))
+
+    // [crispy] translucent sprites
+    if (thing->flags & MF_TRANSLUCENT)
     {
+	if (thing->flags & (MF_NOGRAVITY | MF_COUNTITEM))
+	    vis->blendfunc = I_BlendAdd;
+	else
+	    vis->blendfunc = I_BlendOver;
+/*
 	switch (thing->type)
 	{
 	    // [crispy] projectiles
@@ -746,6 +752,7 @@ void R_ProjectSprite (mobj_t* thing)
 		vis->blendfunc = I_BlendOver;
 		break;
 	}
+*/
     }
 }
 
