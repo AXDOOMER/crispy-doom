@@ -661,14 +661,14 @@ void R_DrawTLColumnLow (void)
     {
 	destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
 	*dest = blendfunc(*dest, (destrgb & dc_translucency));
-	*dest2 = blendfunc(*dest, (destrgb & dc_translucency));
+	*dest2 = blendfunc(*dest2, (destrgb & dc_translucency));
 	dest += SCREENWIDTH << hires;
 	dest2 += SCREENWIDTH << hires;
 	if (hires)
 	{
 	    destrgb = dc_colormap[dc_source[frac>>FRACBITS]];
-	    *dest3 = blendfunc(*dest, (destrgb & dc_translucency));
-	    *dest4 = blendfunc(*dest, (destrgb & dc_translucency));
+	    *dest3 = blendfunc(*dest3, (destrgb & dc_translucency));
+	    *dest4 = blendfunc(*dest4, (destrgb & dc_translucency));
 	    dest3 += SCREENWIDTH << hires;
 	    dest4 += SCREENWIDTH << hires;
 	}
