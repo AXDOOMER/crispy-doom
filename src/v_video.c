@@ -158,16 +158,16 @@ void V_SetPatchClipCallback(vpatchclipfunc_t func)
 // [crispy] four different rendering functions
 // for each possible combination of dp_translation and dp_translucent:
 // (1) normal, opaque patch
-static const inline pixel_t drawpatchpx00 (const byte dest, const byte source)
+static const inline pixel_t drawpatchpx00 (const pixel_t dest, const byte source)
 {return colormaps[source];}
 // (2) color-translated, opaque patch
-static const inline pixel_t drawpatchpx01 (const byte dest, const byte source)
+static const inline pixel_t drawpatchpx01 (const pixel_t dest, const byte source)
 {return colormaps[dp_translation[source]];}
 // (3) normal, translucent patch
-static const inline pixel_t drawpatchpx10 (const byte dest, const byte source)
+static const inline pixel_t drawpatchpx10 (const pixel_t dest, const byte source)
 {return I_BlendOver(dest, (colormaps[source] & dc_translucency));}
 // (4) color-translated, translucent patch
-static const inline pixel_t drawpatchpx11 (const byte dest, const byte source)
+static const inline pixel_t drawpatchpx11 (const pixel_t dest, const byte source)
 {return I_BlendOver(dest, (colormaps[dp_translation[source]] & dc_translucency));}
 
 void V_DrawPatch(int x, int y, patch_t *patch)
@@ -181,7 +181,7 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     int w, f;
 
     // [crispy] four different rendering functions
-    const pixel_t (* drawpatchpx) (const byte dest, const byte source) =
+    const pixel_t (* drawpatchpx) (const pixel_t dest, const byte source) =
         (!dp_translucent ?
         (!dp_translation ? drawpatchpx00 : drawpatchpx01) :
         (!dp_translation ? drawpatchpx10 : drawpatchpx11));
