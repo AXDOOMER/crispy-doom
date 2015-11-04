@@ -231,8 +231,8 @@ static char     savedescription[32];
 mobj_t*		bodyque[BODYQUESIZE]; 
 int		bodyqueslot; 
  
-int             vanilla_savegame_limit = 0; // [crispy] disabled
-int             vanilla_demo_limit = 0; // [crispy] disabled
+int             vanilla_savegame_limit = 1;
+int             vanilla_demo_limit = 1;
  
 int G_CmdChecksum (ticcmd_t* cmd) 
 { 
@@ -1925,6 +1925,14 @@ void G_DoSaveGame (void)
 
     P_WriteSaveGameHeader(savedescription);
  
+    // [crispy] some logging when saving
+    {
+	const int time = leveltime / TICRATE;
+
+	fprintf(stderr, "G_DoSaveGame: Episode %d, Map %d, Skill %d, Time %d:%02d.\n",
+	        gameepisode, gamemap, gameskill, time/60, time%60);
+    }
+
     P_ArchivePlayers (); 
     P_ArchiveWorld (); 
     P_ArchiveThinkers (); 
@@ -1932,6 +1940,8 @@ void G_DoSaveGame (void)
 	 
     P_WriteSaveGameEOF();
 	 
+    // [crispy] unconditionally disable savegame and demo limits
+    /*
     // Enforce the same savegame size limit as in Vanilla Doom, 
     // except if the vanilla_savegame_limit setting is turned off.
 
@@ -1939,6 +1949,7 @@ void G_DoSaveGame (void)
     {
         I_Error ("Savegame buffer overrun");
     }
+    */
     
     // Finish up, close the savegame file.
 
@@ -2246,6 +2257,8 @@ void G_WriteDemoTiccmd (ticcmd_t* cmd)
 
     if (demo_p > demoend - 16)
     {
+        // [crispy] unconditionally disable savegame and demo limits
+        /*
         if (vanilla_demo_limit)
         {
             // no more space 
@@ -2253,6 +2266,7 @@ void G_WriteDemoTiccmd (ticcmd_t* cmd)
             return; 
         }
         else
+        */
         {
             // Vanilla demo limit disabled: unlimited
             // demo lengths!

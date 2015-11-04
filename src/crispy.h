@@ -23,8 +23,19 @@
 
 #include "doomtype.h"
 
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+#ifndef BETWEEN
+#define BETWEEN(l,u,x) (((l)>(x))?(l):((x)>(u))?(u):(x))
+#endif
+
 #define CRISPY_HUD 12
 #define CRISPY_CROSSHAIR "STCFN043"
+#define CRISPY_SLOPE(a) ((((a)->lookdir / MLOOKUNIT) << FRACBITS) / 173)
 
 #define singleplayer (!demorecording && !demoplayback && !netgame)
 
@@ -44,7 +55,6 @@ extern boolean crispy_showfps;
 extern int crispy_automapstats;
 extern int crispy_centerweapon;
 extern int crispy_coloredblood;
-extern int crispy_coloredblood2;
 extern int crispy_coloredhud;
 extern int crispy_crosshair;
 extern int crispy_flipcorpses;
@@ -64,6 +74,13 @@ extern int crispy_demowarp;
 
 enum
 {
+    COLOREDBLOOD_OFF,
+    COLOREDBLOOD_COL,
+    COLOREDBLOOD_FIX
+};
+
+enum
+{
     COLOREDHUD_OFF,
     COLOREDHUD_BAR,
     COLOREDHUD_TEXT,
@@ -78,6 +95,14 @@ enum
     CROSSHAIR_PROJECTED,
     NUM_CROSSHAIRS,
     CROSSHAIR_INTERCEPT = 0x10
+};
+
+enum
+{
+    FREEAIM_AUTO,
+    FREEAIM_DIRECT,
+    FREEAIM_BOTH,
+    NUM_FREEAIMS
 };
 
 enum

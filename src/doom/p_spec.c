@@ -1047,14 +1047,16 @@ void P_PlayerInSpecialSector (player_t* player)
       case 5:
 	// HELLSLIME DAMAGE
 	if (!player->powers[pw_ironfeet])
-	    if (!(leveltime&0x1f))
+	    // [crispy] no nukage damage with NOCLIP cheat
+	    if (!(leveltime&0x1f) && !(player->mo->flags & MF_NOCLIP))
 		P_DamageMobj (player->mo, NULL, NULL, 10);
 	break;
 	
       case 7:
 	// NUKAGE DAMAGE
 	if (!player->powers[pw_ironfeet])
-	    if (!(leveltime&0x1f))
+	    // [crispy] no nukage damage with NOCLIP cheat
+	    if (!(leveltime&0x1f) && !(player->mo->flags & MF_NOCLIP))
 		P_DamageMobj (player->mo, NULL, NULL, 5);
 	break;
 	
@@ -1065,7 +1067,8 @@ void P_PlayerInSpecialSector (player_t* player)
 	if (!player->powers[pw_ironfeet]
 	    || (P_Random()<5) )
 	{
-	    if (!(leveltime&0x1f))
+	    // [crispy] no nukage damage with NOCLIP cheat
+	    if (!(leveltime&0x1f) && !(player->mo->flags & MF_NOCLIP))
 		P_DamageMobj (player->mo, NULL, NULL, 20);
 	}
 	break;
@@ -1075,9 +1078,20 @@ void P_PlayerInSpecialSector (player_t* player)
 	// [crispy] show centered "Secret Revealed!" message
 	if (showMessages && crispy_secretmessage)
 	{
+	    static int sfx_id = -1;
+
+	    // [crispy] play DSSECRET if available
+	    if (sfx_id == -1)
+	    {
+		if (W_CheckNumForName("dssecret") != -1)
+		    sfx_id = sfx_secret;
+		else
+		    sfx_id = sfx_itmbk;
+	    }
+
 	    player->centermessage = HUSTR_SECRETFOUND;
 	    if (player == &players[consoleplayer])
-	        S_StartSound(NULL, sfx_itmbk);
+	        S_StartSound(NULL, sfx_id);
 	}
 	player->secretcount++;
 	sector->special = 0;

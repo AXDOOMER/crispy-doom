@@ -82,9 +82,10 @@ static int screen_height = 200;
 static int startup_delay = 1000;
 static int usegamma = 0;
 
-int graphical_startup = 1;
-int show_endoom = 1;
-int png_screenshots = 0;
+int graphical_startup = 0;
+int show_endoom = 0;
+int show_diskicon = 1;
+int png_screenshots = 1;
 
 // These are the last screen width/height values that were chosen by the
 // user.  These are used when finding the "nearest" mode, so when 
@@ -355,6 +356,13 @@ static void AdvancedDisplayConfig(TXT_UNCAST_ARG(widget),
                                       &show_endoom));
     }
 
+    if (gamemission == doom || gamemission == strife)
+    {
+        TXT_AddWidget(window,
+                      TXT_NewCheckBox("Show disk activity indicator",
+                                      &show_diskicon));
+    }
+
 #ifdef HAVE_LIBPNG
     TXT_AddWidget(window,
                   TXT_NewCheckBox("Save screenshots in PNG format",
@@ -486,6 +494,11 @@ void BindDisplayVariables(void)
      || gamemission == strife)
     {
         M_BindIntVariable("show_endoom",               &show_endoom);
+    }
+
+    if (gamemission == doom || gamemission == strife)
+    {
+        M_BindIntVariable("show_diskicon",             &show_diskicon);
     }
 
     if (gamemission == heretic || gamemission == hexen || gamemission == strife)

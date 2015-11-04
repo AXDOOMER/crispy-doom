@@ -44,6 +44,7 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "tables.h"
+#include "v_diskicon.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -91,10 +92,6 @@ static const char shiftxform[] =
     'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     '{', '|', '}', '~', 127
 };
-
-
-#define LOADING_DISK_W (16 << hires)
-#define LOADING_DISK_H (16 << hires)
 
 #if 0 // obsolete software scaling routines
 // Non aspect ratio-corrected modes (direct multiples of 320x200)
@@ -193,6 +190,20 @@ int novert = 1;
 
 int png_screenshots = 1;
 
+// Display disk activity indicator.
+
+int show_diskicon = 1;
+
+// Only display the disk icon if more then this much bytes have been read
+// during the previous tic.
+
+static const int diskicon_threshold = 20*1024;
+int diskicon_readbytes = 0;
+
+// if true, I_VideoBuffer is screen->pixels
+
+static boolean native_surface;
+
 // Screen width and height, from configuration file.
 
 int screen_width = SCREENWIDTH;
@@ -248,12 +259,7 @@ static boolean noblit;
 
 static grabmouse_callback_t grabmouse_callback = NULL;
 
-// disk image data and background overwritten by the disk to be
-// restored by EndRead
-
-static byte *disk_image = NULL;
-static byte *saved_background;
-static boolean window_focused = true;
+static boolean window_focused;
 
 // Empty mouse cursor
 
@@ -386,57 +392,6 @@ static void SetShowCursor(boolean show)
     {
         SDL_SetWindowGrab(screen, !show);
     }
-}
-
-void I_EnableLoadingDisk(void)
-{
-    patch_t *disk;
-    pixel_t *tmpbuf;
-    char *disk_name;
-    int y;
-
-    if (!strcmp(SDL_GetCurrentVideoDriver(), "Quartz"))
-    {
-        // MacOS Quartz gives us pageflipped graphics that screw up the 
-        // display when we use the loading disk.  Disable it.
-        // This is a gross hack.
-        // SDL2-TODO: Check this is still needed.
-
-        return;
-    }
-
-    if (M_CheckParm("-cdrom") > 0)
-        disk_name = DEH_String("STCDROM");
-    else
-        disk_name = DEH_String("STDISK");
-
-    disk = W_CacheLumpName(disk_name, PU_STATIC);
-
-    // Draw the patch into a temporary buffer
-
-    tmpbuf = Z_Malloc(SCREENWIDTH * ((disk->height + 1) << hires) * sizeof(pixel_t), PU_STATIC, NULL);
-    V_UseBuffer(tmpbuf);
-
-    // Draw the disk to the screen:
-
-    V_DrawPatch(0, 0, disk);
-
-    disk_image = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H * sizeof(pixel_t), PU_STATIC, NULL);
-    saved_background = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H * sizeof(pixel_t), PU_STATIC, NULL);
-
-    for (y=0; y<LOADING_DISK_H; ++y) 
-    {
-        memcpy(disk_image + LOADING_DISK_W * y,
-               tmpbuf + SCREENWIDTH * y,
-               LOADING_DISK_W);
-    }
-
-    // All done - free the screen buffer and restore the normal 
-    // video buffer.
-
-    W_ReleaseLumpName(disk_name);
-    V_RestoreBuffer();
-    Z_Free(tmpbuf);
 }
 
 //
@@ -951,94 +906,6 @@ static boolean BlitArea(int x1, int y1, int x2, int y2)
 }
 #endif
 
-// TODO: needed for I_BeginRead() and I_EndRead(),
-// but let's forget about this for a while
-/*
-static void UpdateRect(int x1, int y1, int x2, int y2)
-{
-    SDL_Rect update_rect;
-    int x1_scaled, x2_scaled, y1_scaled, y2_scaled;
-
-    // Do stretching and blitting
-
-    if (BlitArea(x1, y1, x2, y2))
-    {
-        // Update the area
-
-        x1_scaled = (x1 * screen_mode->width) / SCREENWIDTH;
-        y1_scaled = (y1 * screen_mode->height) / SCREENHEIGHT;
-        x2_scaled = (x2 * screen_mode->width) / SCREENWIDTH;
-        y2_scaled = (y2 * screen_mode->height) / SCREENHEIGHT;
-
-        update_rect.x = x1_scaled;
-        update_rect.y = y1_scaled;
-        update_rect.x = x2_scaled - x1_scaled;
-        update_rect.y = y2_scaled - y1_scaled;
-
-        SDL_UpdateWindowSurfaceRects(screen, &update_rect, 1);
-    }
-}
-*/
-
-// TODO: let's forget about this for a while
-void I_BeginRead(void)
-{
-/*
-    pixel_t *screenloc = I_VideoBuffer
-                    + (SCREENHEIGHT - LOADING_DISK_H) * SCREENWIDTH
-                    + (SCREENWIDTH - LOADING_DISK_W);
-    int y;
-
-    if (!initialized || disk_image == NULL || 1)
-        return;
-
-    // save background and copy the disk image in
-
-    for (y=0; y<LOADING_DISK_H; ++y)
-    {
-        memcpy(saved_background + y * LOADING_DISK_W,
-               screenloc,
-               LOADING_DISK_W);
-        memcpy(screenloc,
-               disk_image + y * LOADING_DISK_W,
-               LOADING_DISK_W);
-
-        screenloc += SCREENWIDTH;
-    }
-
-    UpdateRect(SCREENWIDTH - LOADING_DISK_W, SCREENHEIGHT - LOADING_DISK_H,
-               SCREENWIDTH, SCREENHEIGHT);
-*/
-}
-
-// TODO: let's forget about this for a while
-void I_EndRead(void)
-{
-/*
-    pixel_t *screenloc = I_VideoBuffer
-                    + (SCREENHEIGHT - LOADING_DISK_H) * SCREENWIDTH
-                    + (SCREENWIDTH - LOADING_DISK_W);
-    int y;
-
-    if (!initialized || disk_image == NULL || 1)
-        return;
-
-    // save background and copy the disk image in
-
-    for (y=0; y<LOADING_DISK_H; ++y)
-    {
-        memcpy(screenloc,
-               saved_background + y * LOADING_DISK_W,
-               LOADING_DISK_W);
-
-        screenloc += SCREENWIDTH;
-    }
-
-    UpdateRect(SCREENWIDTH - LOADING_DISK_W, SCREENHEIGHT - LOADING_DISK_H,
-               SCREENWIDTH, SCREENHEIGHT);
-*/
-}
-
 int crispy_fps = 0;
 boolean crispy_showfps = false;
 
@@ -1122,6 +989,19 @@ void I_FinishUpdate (void)
 			lastmili = i;
 		}
 	}
+
+    if (show_diskicon && disk_indicator == disk_on)
+    {
+	if (diskicon_readbytes >= diskicon_threshold)
+	{
+	    V_BeginRead();
+	}
+    }
+    else if (disk_indicator == disk_dirty)
+    {
+	disk_indicator = disk_off;
+    }
+    diskicon_readbytes = 0;
 
 #if 0 // obsolete software scaling routines
     // draw to screen
@@ -2100,6 +1980,11 @@ void I_InitGraphics(void)
             printf("I_InitGraphics: %s (%ix%i within %ix%i)\n",
                    WindowBoxType(screen_mode, w, h),
                    screen_mode->width, screen_mode->height, w, h);
+        }
+        // [crispy] always report used screen mode
+        else
+        {
+            printf("I_InitGraphics: Using %dx%d screen mode\n", w, h);
         }
 #endif
 

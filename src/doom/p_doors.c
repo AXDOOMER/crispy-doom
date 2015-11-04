@@ -21,6 +21,7 @@
 #include "doomdef.h"
 #include "deh_main.h"
 #include "p_local.h"
+#include "i_system.h"
 
 #include "s_sound.h"
 
@@ -403,7 +404,7 @@ EV_VerticalDoor
     if (line->sidenum[side^1] == NO_INDEX)
     {
         // [crispy] do not crash if the wrong side of the door is pushed
-        printf(stderr, "EV_VerticalDoor: DR special type on 1-sided linedef\n");
+        fprintf(stderr, "EV_VerticalDoor: DR special type on 1-sided linedef\n");
         return;
     }
 

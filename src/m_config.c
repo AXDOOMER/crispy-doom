@@ -894,6 +894,15 @@ static default_t extra_defaults_list[] =
     CONFIG_VARIABLE_INT(show_endoom),
 
     //!
+    // @game doom strife
+    //
+    // If non-zero, a disk activity indicator is displayed when data is read
+    // from disk. If zero, the disk activity indicator is not displayed.
+    //
+
+    CONFIG_VARIABLE_INT(show_diskicon),
+
+    //!
     // If non-zero, save screenshots in PNG format.
     //
 
@@ -1778,14 +1787,6 @@ static default_t extra_defaults_list[] =
     //
 
     CONFIG_VARIABLE_INT(crispy_coloredblood),
-
-    //!
-    // @game doom
-    //
-    // Fix Spectre and Lost Soul Blood.
-    //
-
-    CONFIG_VARIABLE_INT(crispy_coloredblood2),
 
     //!
     // @game doom

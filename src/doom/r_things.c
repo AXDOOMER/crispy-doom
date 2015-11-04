@@ -688,7 +688,7 @@ void R_ProjectSprite (mobj_t* thing)
     }	
 
     // [crispy] colored blood
-    if (crispy_coloredblood &&
+    if ((crispy_coloredblood & COLOREDBLOOD_COL) &&
         (thing->type == MT_BLOOD || thing->sprite == SPR_POL5) // [crispy] S_GIBS
         && thing->target)
     {
@@ -781,7 +781,7 @@ static void R_DrawLSprite (void)
 
     crispy_crosshair |= CROSSHAIR_INTERCEPT; // [crispy] intercepts overflow guard
     P_LineLaser(viewplayer->mo, viewangle,
-                16*64*FRACUNIT, ((viewplayer->lookdir/MLOOKUNIT)<<FRACBITS)/173);
+                16*64*FRACUNIT, CRISPY_SLOPE(viewplayer));
     crispy_crosshair &= ~CROSSHAIR_INTERCEPT; // [crispy] intercepts overflow guard
 
     if (!laserspot->x &&
@@ -1019,6 +1019,37 @@ void R_DrawPlayerSprites (void)
 //
 // R_SortVisSprites
 //
+#ifdef HAVE_QSORT
+// [crispy] use stdlib's qsort() function for sorting the vissprites[] array
+static inline int cmp_vissprites (const void *a, const void *b)
+{
+    const vissprite_t *vsa = (const vissprite_t *) a;
+    const vissprite_t *vsb = (const vissprite_t *) b;
+
+    const int ret = vsa->scale - vsb->scale;
+
+    return ret ? ret : vsa->next - vsb->next;
+}
+
+void R_SortVisSprites (void)
+{
+    int count;
+    vissprite_t *ds;
+
+    count = vissprite_p - vissprites;
+
+    if (!count)
+	return;
+
+    // [crispy] maintain a stable sort for deliberately overlaid sprites
+    for (ds = vissprites; ds < vissprite_p; ds++)
+    {
+	ds->next = ds + 1;
+    }
+
+    qsort(vissprites, count, sizeof(*vissprites), cmp_vissprites);
+}
+#else
 vissprite_t	vsprsortedhead;
 
 
@@ -1072,6 +1103,7 @@ void R_SortVisSprites (void)
 	vsprsortedhead.prev = best;
     }
 }
+#endif
 
 
 
@@ -1204,9 +1236,15 @@ void R_DrawMasked (void)
     if (vissprite_p > vissprites)
     {
 	// draw all vissprites back to front
+#ifdef HAVE_QSORT
+	for (spr = vissprites;
+	     spr < vissprite_p;
+	     spr++)
+#else
 	for (spr = vsprsortedhead.next ;
 	     spr != &vsprsortedhead ;
 	     spr=spr->next)
+#endif
 	{
 	    
 	    R_DrawSprite (spr);

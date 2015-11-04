@@ -245,6 +245,14 @@ void P_LoadSegs (int lump)
 	ldef = &lines[linedef];
 	li->linedef = ldef;
 	side = SHORT(ml->side);
+
+        // e6y: check for wrong indexes
+        if ((unsigned)ldef->sidenum[side] >= (unsigned)numsides)
+        {
+            I_Error("P_LoadSegs: linedef %d for seg %d references a non-existent sidedef %d",
+                    linedef, i, (unsigned)ldef->sidenum[side]);
+        }
+
 	li->sidedef = &sides[ldef->sidenum[side]];
 	li->frontsector = sides[ldef->sidenum[side]].sector;
 	// [crispy] recalculate
@@ -325,6 +333,14 @@ static void P_LoadSegs_DeePBSP (int lump)
 	ldef = &lines[linedef];
 	li->linedef = ldef;
 	side = SHORT(ml->side);
+
+        // e6y: check for wrong indexes
+        if ((unsigned)ldef->sidenum[side] >= (unsigned)numsides)
+        {
+            I_Error("P_LoadSegs: linedef %d for seg %d references a non-existent sidedef %d",
+                    linedef, i, (unsigned)ldef->sidenum[side]);
+        }
+
 	li->sidedef = &sides[ldef->sidenum[side]];
 	li->frontsector = sides[ldef->sidenum[side]].sector;
 	// [crispy] recalculate
@@ -361,21 +377,18 @@ void P_SegLengths (void)
     seg_t *li;
     fixed_t dx, dy;
 
-    // [crispy] catch SlopeDiv overflows
-    SlopeDiv = SlopeDivCrispy;
-
     for (i = 0; i < numsegs; i++)
     {
 	li = &segs[i];
 	dx = li->v2->px - li->v1->px;
 	dy = li->v2->py - li->v1->py;
 	li->length = (fixed_t)sqrt((double)dx*dx + (double)dy*dy);
-	// [crispy] re-calculate angle used for rendering
-	li->pangle = R_PointToAngle2(li->v1->px, li->v1->py, li->v2->px, li->v2->py);
-    }
 
-    // [crispy] back to Vanilla SlopeDiv
-    SlopeDiv = SlopeDivVanilla;
+	// [crispy] re-calculate angle used for rendering
+	viewx = li->v1->px;
+	viewy = li->v1->py;
+	li->pangle = R_PointToAngleCrispy(li->v2->px, li->v2->py);
+    }
 }
 
 //
@@ -815,6 +828,14 @@ static void P_LoadNodes_ZDBSP (int lump, boolean compressed)
 	ldef = &lines[linedef];
 	li->linedef = ldef;
 	side = ml->side;
+
+        // e6y: check for wrong indexes
+        if ((unsigned)ldef->sidenum[side] >= (unsigned)numsides)
+        {
+            I_Error("P_LoadSegs: linedef %d for seg %d references a non-existent sidedef %d",
+                    linedef, i, (unsigned)ldef->sidenum[side]);
+        }
+
 	li->sidedef = &sides[ldef->sidenum[side]];
 	li->frontsector = sides[ldef->sidenum[side]].sector;
 

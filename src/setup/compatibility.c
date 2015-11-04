@@ -31,7 +31,6 @@ int vanilla_demo_limit = 0;
 int crispy_automapstats = 0;
 int crispy_centerweapon = 0;
 int crispy_coloredblood = 0;
-int crispy_coloredblood2 = 0;
 int crispy_coloredhud = 0;
 int crispy_crosshair = 0;
 int crispy_flipcorpses = 0;
@@ -68,10 +67,8 @@ void CompatibilitySettings(void)
                                    &crispy_translucency),
                    TXT_NewCheckBox("Enable Colored Blood",
                                    &crispy_coloredblood),
-//                   TXT_NewCheckBox("Fix Spectre and Lost Soul Blood",
-//                                   &crispy_coloredblood2),
-//                   TXT_NewCheckBox("Randomly Mirrored Corpses",
-//                                   &crispy_flipcorpses),
+                   TXT_NewCheckBox("Randomly Mirrored Corpses",
+                                   &crispy_flipcorpses),
                    TXT_NewSeparator("Tactical"),
                    TXT_NewCheckBox("Allow Free Look [*]",
                                    &crispy_freelook),
@@ -125,7 +122,6 @@ void BindCompatibilityVariables(void)
         M_BindIntVariable("crispy_automapstats",    &crispy_automapstats);
         M_BindIntVariable("crispy_centerweapon",    &crispy_centerweapon);
         M_BindIntVariable("crispy_coloredblood",    &crispy_coloredblood);
-        M_BindIntVariable("crispy_coloredblood2",   &crispy_coloredblood2);
         M_BindIntVariable("crispy_coloredhud",      &crispy_coloredhud);
         M_BindIntVariable("crispy_crosshair",       &crispy_crosshair);
         M_BindIntVariable("crispy_flipcorpses",     &crispy_flipcorpses);

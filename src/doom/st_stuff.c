@@ -1465,16 +1465,22 @@ void ST_drawWidgets(boolean refresh)
 	static patch_t *patch;
 	static short x, y;
 
-	if (!patch)
+	if (!patch && !x && !y)
 	{
-	    // [crispy] (23,179) is the center of the Ammo widget
-	    patch = W_CacheLumpName("PSTRA0", PU_STATIC);
-	    x = 23 - SHORT(patch->width)/2 + SHORT(patch->leftoffset);
-	    y = 179 - SHORT(patch->height)/2 + SHORT(patch->topoffset);
+	    if (W_CheckNumForName(DEH_String("PSTRA0")) >= 0)
+	    {
+		patch = W_CacheLumpName(DEH_String("PSTRA0"), PU_STATIC);
+		// [crispy] (23,179) is the center of the Ammo widget
+		x = 23 - SHORT(patch->width)/2 + SHORT(patch->leftoffset);
+		y = 179 - SHORT(patch->height)/2 + SHORT(patch->topoffset);
+	    }
+	    else
+		x = y = SHRT_MAX;
 	}
 
-	V_DrawPatch(x, y, patch);
-    }
+	if (patch)
+	    V_DrawPatch(x, y, patch);
+   }
 
     for (i=0;i<4;i++)
     {
@@ -1882,6 +1888,17 @@ void ST_Start (void)
     ST_createWidgets();
     st_stopped = false;
 
+    // [crispy] correctly color the status bar face background in multiplayer
+    // demos recorded by another player than player 1
+    if (netgame && consoleplayer)
+    {
+	char namebuf[8];
+
+	W_ReleaseLumpName("STFB0");
+
+	DEH_snprintf(namebuf, 7, "STFB%d", consoleplayer);
+	faceback = W_CacheLumpName(namebuf, PU_STATIC);
+    }
 }
 
 void ST_Stop (void)
@@ -1892,18 +1909,6 @@ void ST_Stop (void)
     I_SetPalette (0);
 
     st_stopped = true;
-}
-
-// [crispy] colorize keycard and skull key messages
-static inline void replace_color (char *str, const int cr, const char *col)
-{
-    char *str_replace, col_replace[16];
-
-    M_snprintf(col_replace, sizeof(col_replace),
-               "%s%s%s", crstr[cr], col, crstr[CR_NONE]);
-    str_replace = M_StringReplace(str, col, col_replace);
-    DEH_AddStringReplacement(str, str_replace);
-    free(str_replace);
 }
 
 void ST_Init (void)
@@ -1922,20 +1927,6 @@ void ST_Init (void)
 	           crstr[CR_GOLD], crstr[CR_NONE]);
 	DEH_AddStringReplacement(STSTR_BEHOLD, str_behold);
     }
-
-    // [crispy] colorize keycard and skull key messages
-    replace_color(GOTBLUECARD, CR_BLUE, " blue ");
-    replace_color(GOTBLUESKUL, CR_BLUE, " blue ");
-    replace_color(PD_BLUEO,    CR_BLUE, " blue ");
-    replace_color(PD_BLUEK,    CR_BLUE, " blue ");
-    replace_color(GOTREDCARD,  CR_RED,  " red ");
-    replace_color(GOTREDSKULL, CR_RED,  " red ");
-    replace_color(PD_REDO,     CR_RED,  " red ");
-    replace_color(PD_REDK,     CR_RED,  " red ");
-    replace_color(GOTYELWCARD, CR_GOLD, " yellow ");
-    replace_color(GOTYELWSKUL, CR_GOLD, " yellow ");
-    replace_color(PD_YELLOWO,  CR_GOLD, " yellow ");
-    replace_color(PD_YELLOWK,  CR_GOLD, " yellow ");
 
     ST_loadData();
     st_backing_screen = (pixel_t *) Z_Malloc((ST_WIDTH << hires) * (ST_HEIGHT << hires) * sizeof(pixel_t), PU_STATIC, 0);

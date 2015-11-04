@@ -115,7 +115,6 @@ void I_FinishUpdate (void);
 void I_ReadScreen (pixel_t* scr);
 
 void I_BeginRead (void);
-void I_EndRead (void);
 
 void I_SetWindowTitle(char *title);
 
@@ -140,7 +139,7 @@ void I_StartTic (void);
 
 // Enable the loading disk image displayed when reading from disk.
 
-void I_EnableLoadingDisk(void);
+void I_EnableLoadingDisk(int xoffs, int yoffs);
 
 extern const pixel_t (*blendfunc) (const pixel_t fg, const pixel_t bg);
 const pixel_t I_BlendAdd (const pixel_t bg, const pixel_t fg);
@@ -166,5 +165,8 @@ extern int screen_height;
 extern int fullscreen;
 extern int aspect_ratio_correct;
 extern int novert;
+
+extern int show_diskicon;
+extern int diskicon_readbytes;
 
 #endif

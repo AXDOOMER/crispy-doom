@@ -841,7 +841,6 @@ void P_SpawnMapThing (mapthing_t* mthing)
     if (deathmatch && mobjinfo[i].flags & MF_NOTDMATCH)
 	return;
 		
-
     // don't spawn any monsters if -nomonsters
     if (nomonsters
 	&& ( i == MT_SKULL
@@ -862,12 +861,6 @@ void P_SpawnMapThing (mapthing_t* mthing)
     mobj = P_SpawnMobj (x,y,z, i);
     mobj->spawnpoint = *mthing;
 
-    // [crispy] count Lost Souls -- nope
-/*
-    if (i == MT_SKULL)
-	extrakills++;
-*/
-
     if (mobj->tics > 0)
 	mobj->tics = 1 + (P_Random () % mobj->tics);
     if (mobj->flags & MF_COUNTKILL)
@@ -880,7 +873,7 @@ void P_SpawnMapThing (mapthing_t* mthing)
 	mobj->flags |= MF_AMBUSH;
 
     // [crispy] Lost Souls bleed Puffs
-    if (crispy_coloredblood2 && i == MT_SKULL)
+    if ((crispy_coloredblood & COLOREDBLOOD_FIX) && i == MT_SKULL)
         mobj->flags |= MF_NOBLOOD;
 }
 
@@ -941,7 +934,7 @@ P_SpawnBlood
     th->target = target;
 
     // [crispy] Spectres bleed spectre blood
-    if (crispy_coloredblood2 && target->flags & MF_SHADOW)
+    if ((crispy_coloredblood & COLOREDBLOOD_FIX) && target->flags & MF_SHADOW)
 	th->flags |= MF_SHADOW;
 
     if (th->tics < 1)
@@ -1065,6 +1058,12 @@ P_SpawnPlayerMissile
 
     // see which target is to be aimed at
     an = source->angle;
+    if (singleplayer && (crispy_freeaim == FREEAIM_DIRECT))
+    {
+	slope = CRISPY_SLOPE(source->player);
+    }
+    else
+    {
     slope = P_AimLineAttack (source, an, 16*64*FRACUNIT);
     
     if (!linetarget)
@@ -1081,11 +1080,12 @@ P_SpawnPlayerMissile
 	if (!linetarget)
 	{
 	    an = source->angle;
-	    if (singleplayer && crispy_freeaim)
-               slope = ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+	    if (singleplayer && (crispy_freeaim == FREEAIM_BOTH))
+               slope = CRISPY_SLOPE(source->player);
 	    else
 	    slope = 0;
 	}
+    }
     }
 		
     x = source->x;

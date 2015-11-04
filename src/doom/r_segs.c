@@ -279,7 +279,10 @@ R_RenderMaskedSegRange
 
 		if (t + (int64_t) textureheight[texnum] * spryscale < 0 ||
 		    t > (int64_t) SCREENHEIGHT << FRACBITS*2)
+		{
+			spryscale += rw_scalestep; // [crispy] MBF had this in the for-loop iterator
 			continue; // skip if the texture is out of screen's range
+		}
 
 		sprtopscreen = (int64_t)(t >> FRACBITS); // [crispy] WiggleFix
 	    }
@@ -488,7 +491,7 @@ fixed_t R_ScaleFromGlobalAngle (angle_t visangle)
     int		anglea = ANG90 + (visangle - viewangle);
     int		angleb = ANG90 + (visangle - rw_normalangle);
     int		den = FixedMul(rw_distance, finesine[anglea >> ANGLETOFINESHIFT]);
-    fixed_t	num = FixedMul(projection, finesine[angleb >> ANGLETOFINESHIFT]);
+    fixed_t	num = FixedMul(projection, finesine[angleb >> ANGLETOFINESHIFT])<<(detailshift && !hires);
     fixed_t 	scale;
 
     if (den > (num >> 16))
@@ -520,7 +523,7 @@ R_StoreWallRange
 {
     fixed_t		vtop;
     int			lightnum;
-    int64_t		dx, dy, dx1, dy1; // [crispy] fix long wall wobble
+    int64_t		dx, dy, dx1, dy1, dist; // [crispy] fix long wall wobble
 
     // [crispy] remove MAXDRAWSEGS Vanilla limit
     if (ds_p == &drawsegs[numdrawsegs])
@@ -558,11 +561,12 @@ R_StoreWallRange
     // [crispy] fix long wall wobble
     // thank you very much Linguica, e6y and kb1
     // http://www.doomworld.com/vb/post/1340718
-    dx = curline->v2->px - curline->v1->px;
-    dy = curline->v2->py - curline->v1->py;
-    dx1 = viewx - curline->v1->px;
-    dy1 = viewy - curline->v1->py;
-    rw_distance = (fixed_t)((dy * dx1 - dx * dy1) / curline->length);
+    dx = (int64_t)curline->v2->px - curline->v1->px;
+    dy = (int64_t)curline->v2->py - curline->v1->py;
+    dx1 = (int64_t)viewx - curline->v1->px;
+    dy1 = (int64_t)viewy - curline->v1->py;
+    dist = (dy * dx1 - dx * dy1) / curline->length;
+    rw_distance = (fixed_t)BETWEEN(INT_MIN, INT_MAX, dist);
 		
 	
     ds_p->x1 = rw_x = start;

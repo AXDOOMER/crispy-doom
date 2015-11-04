@@ -50,4 +50,6 @@ enum
 extern byte *cr[CRMAX];
 extern char **crstr;
 
+void CrispyReplaceColor (char *str, const int cr, const char *col);
+
 #endif // __V_TRANS__

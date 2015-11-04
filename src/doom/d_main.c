@@ -41,6 +41,7 @@
 #include "w_main.h"
 #include "w_wad.h"
 #include "s_sound.h"
+#include "v_diskicon.h"
 #include "v_video.h"
 
 #include "f_finale.h"
@@ -134,7 +135,6 @@ int             show_endoom = 0; // [crispy] disable
 int             crispy_automapstats = 0;
 int             crispy_centerweapon = 0;
 int             crispy_coloredblood = 0;
-int             crispy_coloredblood2 = 0;
 int             crispy_coloredhud = 0;
 int             crispy_crosshair = 0;
 int             crispy_flipcorpses = 0;
@@ -219,9 +219,6 @@ void D_Display (void)
     if (nodrawers)
 	return;                    // for comparative timing / profiling
 		
-    // [crispy] catch SlopeDiv overflows
-    SlopeDiv = SlopeDivCrispy;
-
     redrawsbar = false;
     
     // change the view size if needed
@@ -256,7 +253,7 @@ void D_Display (void)
 	    R_RenderPlayerView (&players[displayplayer]);
 	    AM_Drawer ();
 	}
-	if (wipe || (scaledviewheight != (200 << hires) && fullscreen) )
+	if (wipe || (scaledviewheight != (200 << hires) && fullscreen) || disk_indicator == disk_dirty)
 	    redrawsbar = true;
 	if (inhelpscreensstate && !inhelpscreens)
 	    redrawsbar = true;              // just put away the help screen
@@ -346,9 +343,6 @@ void D_Display (void)
 
 	crispy_redrawall = true;
     }
-
-    // [crispy] back to Vanilla SlopeDiv
-    SlopeDiv = SlopeDivVanilla;
 
     // [crispy] do not shade background and draw neither pause pic nor menu
     // when taking a clean screenshot
@@ -476,9 +470,11 @@ void D_BindVariables(void)
     M_BindIntVariable("screenblocks",           &screenblocks);
     M_BindIntVariable("detaillevel",            &detailLevel);
     M_BindIntVariable("snd_channels",           &snd_channels);
-    M_BindIntVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
-    M_BindIntVariable("vanilla_demo_limit",     &vanilla_demo_limit);
+    // [crispy] unconditionally disable savegame and demo limits
+//  M_BindIntVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
+//  M_BindIntVariable("vanilla_demo_limit",     &vanilla_demo_limit);
     M_BindIntVariable("show_endoom",            &show_endoom);
+    M_BindIntVariable("show_diskicon",          &show_diskicon);
 
     // Multiplayer chat macros
 
@@ -494,7 +490,6 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_automapstats",    &crispy_automapstats);
     M_BindIntVariable("crispy_centerweapon",    &crispy_centerweapon);
     M_BindIntVariable("crispy_coloredblood",    &crispy_coloredblood);
-    M_BindIntVariable("crispy_coloredblood2",   &crispy_coloredblood2);
     M_BindIntVariable("crispy_coloredhud",      &crispy_coloredhud);
     M_BindIntVariable("crispy_crosshair",       &crispy_crosshair);
     M_BindIntVariable("crispy_flipcorpses",     &crispy_flipcorpses);
@@ -559,7 +554,7 @@ void D_DoomLoop (void)
     I_GraphicsCheckCommandLine();
     I_SetGrabMouseCallback(D_GrabMouseCallback);
     I_InitGraphics();
-    I_EnableLoadingDisk();
+    V_EnableLoadingDisk(ORIGWIDTH - LOADING_DISK_W, ORIGHEIGHT - LOADING_DISK_H);
 
     V_RestoreBuffer();
     R_ExecuteSetViewSize();
@@ -1105,8 +1100,9 @@ static void InitGameVersion(void)
     // @arg <version>
     // @category compat
     //
-    // Emulate a specific version of Doom.  Valid values are "1.9",
-    // "ultimate", "final", "final2", "hacx" and "chex".
+    // Emulate a specific version of Doom.  Valid values are "1.666",
+    // "1.7", "1.8", "1.9", "ultimate", "final", "final2", "hacx" and
+    // "chex".
     //
 
     p = M_CheckParmWithArgs("-gameversion", 1);
@@ -1607,10 +1603,6 @@ void D_DoomMain (void)
     M_SetConfigFilenames("default.cfg", PROGRAM_PREFIX "doom.cfg");
     D_BindVariables();
     M_LoadDefaults();
-
-    // [crispy] unconditionally disable savegame and demo limits
-    vanilla_savegame_limit = 0;
-    vanilla_demo_limit = 0;
 
     // Save configuration at exit.
     I_AtExit(M_SaveDefaults, false);
@@ -2128,10 +2120,9 @@ void D_DoomMain (void)
     // [crispy] port level flipping feature over from Strawberry Doom
     {
         time_t curtime = time(NULL);
-        struct tm curtm = {0};
+        struct tm *curtm = localtime(&curtime);
 
-        if ((localtime_r(&curtime, &curtm) != NULL) &&
-            curtm.tm_mon == 3 && curtm.tm_mday == 1)
+        if (curtm && curtm->tm_mon == 3 && curtm->tm_mday == 1)
             crispy_fliplevels = true;
     }
 
