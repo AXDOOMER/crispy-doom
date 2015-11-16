@@ -49,13 +49,13 @@ wipe_shittyColMajorXform
     int		y;
     pixel_t*	dest;
 
-    dest = (pixel_t*) Z_Malloc(width*height*sizeof(pixel_t), PU_STATIC, 0);
+    dest = (pixel_t*) Z_Malloc(width*height*sizeof(*dest), PU_STATIC, 0);
 
     for(y=0;y<height;y++)
 	for(x=0;x<width;x++)
 	    dest[x*height+y] = array[y*width+x];
 
-    memcpy(array, dest, width*height*sizeof(pixel_t));
+    memcpy(array, dest, width*height*sizeof(*dest));
 
     Z_Free(dest);
 

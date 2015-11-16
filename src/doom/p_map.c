@@ -268,7 +268,7 @@ boolean PIT_CheckLine (line_t* ld)
         {
             // [crispy] print a warning
             if (numspechit == MAXSPECIALCROSS_ORIGINAL + 1)
-                fprintf(stderr, "PIT_CheckLine: Triggered SPECHITS overflow!\n");
+                fprintf(stderr, "PIT_CheckLine: Triggered SPECHITS overflow by thing %d!\n", tmthing->num);
             SpechitOverrun(ld);
         }
     }
@@ -1163,8 +1163,8 @@ P_AimLineAttack
     shootz = t1->z + (t1->height>>1) + 8*FRACUNIT;
 
     // can't shoot outside view angles
-    topslope = 100*FRACUNIT/160;	
-    bottomslope = -100*FRACUNIT/160;
+    topslope = (SCREENHEIGHT/2)*FRACUNIT/(SCREENWIDTH/2);	
+    bottomslope = -(SCREENHEIGHT/2)*FRACUNIT/(SCREENWIDTH/2);
     
     attackrange = distance;
     linetarget = NULL;

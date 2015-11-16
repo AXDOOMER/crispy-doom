@@ -47,6 +47,8 @@
 #endif
 
 void	P_SpawnMapThing (mapthing_t*	mthing);
+// [crispy] count map things
+extern int mapthingcounter;
 
 
 //
@@ -235,12 +237,12 @@ void P_LoadSegs (int lump)
             li->v2 = tmp;
 	}
 
-	li->angle = (SHORT(ml->angle))<<16;
+	li->angle = (SHORT(ml->angle))<<FRACBITS;
 
 	if (crispy_fliplevels)
             li->angle = -li->angle;
 
-//	li->offset = (SHORT(ml->offset))<<16; // [crispy] recalculated below
+//	li->offset = (SHORT(ml->offset))<<FRACBITS; // [crispy] recalculated below
 	linedef = (unsigned short)SHORT(ml->linedef); // [crispy] extended nodes
 	ldef = &lines[linedef];
 	li->linedef = ldef;
@@ -323,12 +325,12 @@ static void P_LoadSegs_DeePBSP (int lump)
 	    li->v2 = tmp;
 	}
 
-	li->angle = (SHORT(ml->angle))<<16;
+	li->angle = (SHORT(ml->angle))<<FRACBITS;
 
 	if (crispy_fliplevels)
 	    li->angle = -li->angle;
 
-//	li->offset = (SHORT(ml->offset))<<16; // [crispy] recalculated below
+//	li->offset = (SHORT(ml->offset))<<FRACBITS; // [crispy] recalculated below
 	linedef = (unsigned short)SHORT(ml->linedef);
 	ldef = &lines[linedef];
 	li->linedef = ldef;
@@ -932,6 +934,8 @@ void P_LoadThings (int lump)
 
     data = W_CacheLumpNum (lump,PU_STATIC);
     numthings = W_LumpLength (lump) / sizeof(mapthing_t);
+    // [crispy] reset map thing counter
+    mapthingcounter = -1;
 	
     mt = (mapthing_t *)data;
     for (i=0 ; i<numthings ; i++, mt++)
@@ -1860,7 +1864,9 @@ P_SetupLevel
     int		lumpnum;
     mapformat_t	crispy_mapformat;
 	
-    totalkills = totalitems = totalsecret = extrakills = wminfo.maxfrags = 0; // [crispy] count Lost Souls and spawned monsters
+    totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
+    // [crispy] count spawned monsters
+    extrakills = 0;
     wminfo.partime = 180;
     for (i=0 ; i<MAXPLAYERS ; i++)
     {

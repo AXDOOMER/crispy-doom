@@ -577,6 +577,9 @@ P_SpawnMobj
     else 
 	mobj->z = z;
 
+    // [crispy] count map things
+    mobj->num = -1;
+
     // [AM] Do not interpolate on spawn.
     mobj->interp = false;
 
@@ -692,6 +695,8 @@ void P_RespawnSpecials (void)
 
 
 
+// [crispy] count map things
+int mapthingcounter = -1;
 
 //
 // P_SpawnPlayer
@@ -737,6 +742,9 @@ void P_SpawnPlayer (mapthing_t* mthing)
     mobj->player = p;
     mobj->health = p->health;
 
+    // [crispy] count map things
+    mobj->num = mapthingcounter;
+
     p->mo = mobj;
     p->playerstate = PST_LIVE;	
     p->refire = 0;
@@ -779,6 +787,9 @@ void P_SpawnMapThing (mapthing_t* mthing)
     fixed_t		y;
     fixed_t		z;
 		
+    // [crispy] count map things
+    mapthingcounter++;
+
     // count deathmatch start positions
     if (mthing->type == 11)
     {
@@ -872,9 +883,22 @@ void P_SpawnMapThing (mapthing_t* mthing)
     if (mthing->options & MTF_AMBUSH)
 	mobj->flags |= MF_AMBUSH;
 
+    // [crispy] count map things
+    mobj->num = mapthingcounter;
+
     // [crispy] Lost Souls bleed Puffs
     if ((crispy_coloredblood & COLOREDBLOOD_FIX) && i == MT_SKULL)
         mobj->flags |= MF_NOBLOOD;
+
+    // [crispy] randomly colorize space marine corpse objects
+    if (!netgame &&
+        (crispy_coloredblood & COLOREDBLOOD_CORPSE) &&
+        (mobj->info->spawnstate == S_PLAY_DIE7 ||
+         mobj->info->spawnstate == S_PLAY_XDIE9))
+    {
+        mobj->flags |= (mobj->lastlook << MF_TRANSSHIFT);
+        mobj->health += (mobj->lastlook + mobj->num) & 1;
+    }
 }
 
 

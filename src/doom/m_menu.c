@@ -1329,7 +1329,7 @@ static void M_DrawCrispnessHeader(char *item)
 
     M_snprintf(crispy_menu_text, sizeof(crispy_menu_text),
                "%s%s", crstr[CR_GOLD], item);
-    M_WriteText(160 - M_StringWidth(item) / 2, 20, crispy_menu_text);
+    M_WriteText(ORIGWIDTH/2 - M_StringWidth(item) / 2, 20, crispy_menu_text);
 }
 
 static void M_DrawCrispnessSeparator(int y, char *item)
@@ -1358,6 +1358,14 @@ typedef struct
     char *name;
 } multiitem_t;
 
+
+static multiitem_t multiitem_coloredblood[NUM_COLOREDBLOOD] =
+{
+    {COLOREDBLOOD_OFF, "off"},
+    {COLOREDBLOOD_BLOOD, "blood"},
+    {COLOREDBLOOD_CORPSE, "corpses"},
+    {COLOREDBLOOD_BOTH, "both"},
+};
 
 static multiitem_t multiitem_coloredhud[NUM_COLOREDHUD] =
 {
@@ -1437,7 +1445,7 @@ static void M_DrawCrispness1(void)
     M_DrawCrispnessItem(crispness_uncapped, "Uncapped Framerate", crispy_uncapped, true);
     M_DrawCrispnessMultiItem(crispness_coloredhud, "Colorize HUD Elements", multiitem_coloredhud, crispy_coloredhud, true);
     M_DrawCrispnessMultiItem(crispness_translucency, "Enable Translucency", multiitem_translucency, crispy_translucency, true);
-    M_DrawCrispnessItem(crispness_coloredblood, "Enable Colored Blood", crispy_coloredblood & COLOREDBLOOD_COL, true);
+    M_DrawCrispnessMultiItem(crispness_coloredblood, "Colored Blood and Corpses", multiitem_coloredblood, crispy_coloredblood & COLOREDBLOOD_BOTH, true);
     M_DrawCrispnessItem(crispness_coloredblood2, "Fix Spectre and Lost Soul Blood", crispy_coloredblood & COLOREDBLOOD_FIX, true);
     M_DrawCrispnessItem(crispness_flipcorpses, "Randomly Mirrored Corpses", crispy_flipcorpses, true);
 
@@ -1767,7 +1775,7 @@ static void M_CrispyToggleCenterweapon(int choice)
 static void M_CrispyToggleColoredblood(int choice)
 {
     choice = 0;
-    crispy_coloredblood ^= COLOREDBLOOD_COL;
+    crispy_coloredblood = (crispy_coloredblood + 1) % NUM_COLOREDBLOOD;
 }
 
 static void M_CrispyToggleColoredblood2(int choice)
@@ -2834,7 +2842,7 @@ void M_Drawer (void)
     if (messageToPrint)
     {
 	start = 0;
-	y = 100 - M_StringHeight(messageString) / 2;
+	y = ORIGHEIGHT/2 - M_StringHeight(messageString) / 2;
 	while (messageString[start] != '\0')
 	{
 	    int foundnewline = 0;
@@ -2862,7 +2870,7 @@ void M_Drawer (void)
                 start += strlen(string);
             }
 
-	    x = 160 - M_StringWidth(string) / 2;
+	    x = ORIGWIDTH/2 - M_StringWidth(string) / 2;
 	    M_WriteText(x > 0 ? x : 0, y, string); // [crispy] prevent negative x-coords
 	    y += SHORT(hu_font[0]->height);
 	}

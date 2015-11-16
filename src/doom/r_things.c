@@ -40,7 +40,7 @@
 
 
 #define MINZ				(FRACUNIT*4)
-#define BASEYCENTER			100
+#define BASEYCENTER			(ORIGHEIGHT/2)
 
 //void R_DrawColumn (void);
 //void R_DrawFuzzColumn (void);
@@ -637,8 +637,9 @@ void R_ProjectSprite (mobj_t* thing)
 
     // [crispy] flip death sprites and corpses randomly
     // except for Cyberdemons and Barrels which are too asymmetrical
-    if (thing->type != MT_CYBORG && thing->type != MT_BARREL &&
-        thing->flags & MF_CORPSE &&
+    if (((thing->type != MT_CYBORG && thing->type != MT_BARREL &&
+        thing->flags & MF_CORPSE) || (thing->info->spawnstate == S_PLAY_DIE7 ||
+         thing->info->spawnstate == S_PLAY_XDIE9)) &&
         thing->health & 1)
     {
         flip = !!crispy_flipcorpses;
@@ -688,8 +689,8 @@ void R_ProjectSprite (mobj_t* thing)
     }	
 
     // [crispy] colored blood
-    if ((crispy_coloredblood & COLOREDBLOOD_COL) &&
-        (thing->type == MT_BLOOD || thing->sprite == SPR_POL5) // [crispy] S_GIBS
+    if ((((crispy_coloredblood & COLOREDBLOOD_BLOOD) && thing->type == MT_BLOOD) ||
+        ((crispy_coloredblood & COLOREDBLOOD_CORPSE) && thing->sprite == SPR_POL5)) // [crispy] S_GIBS
         && thing->target)
     {
 	// [crispy] Thorn Things in Hacx bleed green blood
@@ -697,7 +698,7 @@ void R_ProjectSprite (mobj_t* thing)
 	{
 	    if (thing->target->type == MT_BABY)
 	    {
-		vis->translation = cr[CR_GREEN];
+		vis->translation = cr[CR_RED2GREEN];
 	    }
 	}
 	else
@@ -705,13 +706,13 @@ void R_ProjectSprite (mobj_t* thing)
 	    // [crispy] Barons of Hell and Hell Knights bleed green blood
 	    if (thing->target->type == MT_BRUISER || thing->target->type == MT_KNIGHT)
 	    {
-		vis->translation = cr[CR_GREEN];
+		vis->translation = cr[CR_RED2GREEN];
 	    }
 	    else
 	    // [crispy] Cacodemons bleed blue blood
 	    if (thing->target->type == MT_HEAD)
 	    {
-		vis->translation = cr[CR_BLUE];
+		vis->translation = cr[CR_RED2BLUE];
 	    }
 	}
     }
@@ -896,7 +897,7 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
     flip = (boolean)sprframe->flip[0];
     
     // calculate edges of the shape
-    tx = psp->sx-160*FRACUNIT;
+    tx = psp->sx-(ORIGWIDTH/2)*FRACUNIT;
 	
     tx -= spriteoffset[lump];	
     x1 = (centerxfrac + FixedMul (tx,pspritescale) ) >>FRACBITS;
