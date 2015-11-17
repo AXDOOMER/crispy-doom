@@ -129,7 +129,7 @@ void V_CopyRect(int srcx, int srcy, pixel_t *source,
 
     for ( ; height>0 ; height--) 
     { 
-        memcpy(dest, src, width * sizeof(pixel_t));
+        memcpy(dest, src, width * sizeof(*dest));
         src += SCREENWIDTH; 
         dest += SCREENWIDTH; 
     } 
@@ -686,7 +686,7 @@ void V_DrawBlock(int x, int y, int width, int height, pixel_t *src)
 
     while (height--) 
     { 
-	memcpy (dest, src, width * sizeof(pixel_t));
+	memcpy (dest, src, width * sizeof(*dest));
 	src += width; 
 	dest += SCREENWIDTH; 
     } 

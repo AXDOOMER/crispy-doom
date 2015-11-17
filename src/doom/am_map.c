@@ -910,7 +910,7 @@ void AM_Ticker (void)
 //
 void AM_clearFB(int color)
 {
-    memset(fb, colormaps[color], f_w*f_h*sizeof(pixel_t)); // [crispy] highcolor
+    memset(fb, colormaps[color], f_w*f_h*sizeof(*fb)); // [crispy] highcolor
 }
 
 
