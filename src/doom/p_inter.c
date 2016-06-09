@@ -38,6 +38,7 @@
 #include "s_sound.h"
 
 #include "p_inter.h"
+#include "v_trans.h" // [crispy] colored messages
 
 
 #define BONUSADD	6
@@ -416,7 +417,7 @@ P_TouchSpecialThing
 	// leave cards for everyone
       case SPR_BKEY:
 	if (!player->cards[it_bluecard])
-	    player->message = DEH_String(GOTBLUECARD);
+	    player->message = CrispyReplaceColor(DEH_String(GOTBLUECARD), CR_BLUE, " blue ");
 	P_GiveCard (player, it_bluecard);
 	if (!netgame)
 	    break;
@@ -424,7 +425,7 @@ P_TouchSpecialThing
 	
       case SPR_YKEY:
 	if (!player->cards[it_yellowcard])
-	    player->message = DEH_String(GOTYELWCARD);
+	    player->message = CrispyReplaceColor(DEH_String(GOTYELWCARD), CR_GOLD, " yellow ");
 	P_GiveCard (player, it_yellowcard);
 	if (!netgame)
 	    break;
@@ -432,7 +433,7 @@ P_TouchSpecialThing
 	
       case SPR_RKEY:
 	if (!player->cards[it_redcard])
-	    player->message = DEH_String(GOTREDCARD);
+	    player->message = CrispyReplaceColor(DEH_String(GOTREDCARD), CR_RED, " red ");
 	P_GiveCard (player, it_redcard);
 	if (!netgame)
 	    break;
@@ -440,7 +441,7 @@ P_TouchSpecialThing
 	
       case SPR_BSKU:
 	if (!player->cards[it_blueskull])
-	    player->message = DEH_String(GOTBLUESKUL);
+	    player->message = CrispyReplaceColor(DEH_String(GOTBLUESKUL), CR_BLUE, " blue ");
 	P_GiveCard (player, it_blueskull);
 	if (!netgame)
 	    break;
@@ -448,7 +449,7 @@ P_TouchSpecialThing
 	
       case SPR_YSKU:
 	if (!player->cards[it_yellowskull])
-	    player->message = DEH_String(GOTYELWSKUL);
+	    player->message = CrispyReplaceColor(DEH_String(GOTYELWSKUL), CR_GOLD, " yellow ");
 	P_GiveCard (player, it_yellowskull);
 	if (!netgame)
 	    break;
@@ -456,7 +457,7 @@ P_TouchSpecialThing
 	
       case SPR_RSKU:
 	if (!player->cards[it_redskull])
-	    player->message = DEH_String(GOTREDSKULL);
+	    player->message = CrispyReplaceColor(DEH_String(GOTREDSKULL), CR_RED, " red ");
 	P_GiveCard (player, it_redskull);
 	if (!netgame)
 	    break;

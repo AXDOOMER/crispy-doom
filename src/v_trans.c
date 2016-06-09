@@ -289,18 +289,20 @@ byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
     return FindNearestColor(playpal, (int) rgb.x, (int) rgb.y, (int) rgb.z);
 }
 
-void CrispyReplaceColor (char *str, const int cr, const char *col)
+char* CrispyReplaceColor (char *str, const int cr, const char *col)
 {
-    char *str_replace, col_replace[16];
+    static char *str_replace;
+    char col_replace[16];
 
-    if (M_ParmExists("-nodeh") || strcmp(str, DEH_String(str)))
+    // [crispy] release the previous string before colorizing the next one
+    if (str_replace)
     {
-	return;
+	free(str_replace);
     }
 
     M_snprintf(col_replace, sizeof(col_replace),
                "%s%s%s", crstr[cr], col, crstr[CR_NONE]);
     str_replace = M_StringReplace(str, col, col_replace);
-    DEH_AddStringReplacement(str, str_replace);
-    free(str_replace);
+
+    return str_replace;
 }

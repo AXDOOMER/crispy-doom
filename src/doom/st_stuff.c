@@ -574,6 +574,31 @@ static int ST_cheat_spechits()
     return (speciallines);
 }
 
+// [crispy] colorize the confusing 'behold' power-up menu
+char *CrispyStrBehold (void)
+{
+    static char *ret, str_behold[80];
+
+    if (!ret)
+    {
+	if (!strcmp(STSTR_BEHOLD, DEH_String(STSTR_BEHOLD)))
+	{
+	    M_snprintf(str_behold, sizeof(str_behold),
+		"in%sV%suln, %sS%str, %sI%snviso, %sR%sad, %sA%sllmap, or %sL%site-amp",
+		crstr[CR_GOLD], crstr[CR_NONE],
+		crstr[CR_GOLD], crstr[CR_NONE],
+		crstr[CR_GOLD], crstr[CR_NONE],
+		crstr[CR_GOLD], crstr[CR_NONE],
+		crstr[CR_GOLD], crstr[CR_NONE],
+		crstr[CR_GOLD], crstr[CR_NONE]);
+	}
+
+	ret = str_behold;
+    }
+
+    return ret[0] ? ret : DEH_String(STSTR_BEHOLD);
+}
+
 // Respond to keyboard input events,
 //  intercept cheats.
 boolean
@@ -846,7 +871,7 @@ ST_Responder (event_t* ev)
       // 'behold' power-up menu
       if (cht_CheckCheat(&cheat_powerup[6], ev->data2))
       {
-	plyr->message = DEH_String(STSTR_BEHOLD);
+	plyr->message = CrispyStrBehold(); // DEH_String(STSTR_BEHOLD);
       }
       // [crispy] implement Boom's "tntweap?" weapon cheats
       else if (cht_CheckCheat(&cheat_weapon, ev->data2))
@@ -1951,21 +1976,6 @@ void ST_Stop (void)
 
 void ST_Init (void)
 {
-    // [crispy] colorize the confusing 'behold' power-up menu
-    if (!strcmp(STSTR_BEHOLD, DEH_String(STSTR_BEHOLD)) &&
-        !M_ParmExists("-nodeh"))
-    {
-	char str_behold[80];
-	M_snprintf(str_behold, sizeof(str_behold),
-	           "in%sV%suln, %sS%str, %sI%snviso, %sR%sad, %sA%sllmap, or %sL%site-amp",
-	           crstr[CR_GOLD], crstr[CR_NONE],
-	           crstr[CR_GOLD], crstr[CR_NONE],
-	           crstr[CR_GOLD], crstr[CR_NONE],
-	           crstr[CR_GOLD], crstr[CR_NONE],
-	           crstr[CR_GOLD], crstr[CR_NONE],
-	           crstr[CR_GOLD], crstr[CR_NONE]);
-	DEH_AddStringReplacement(STSTR_BEHOLD, str_behold);
-    }
 
     ST_loadData();
     st_backing_screen = (byte *) Z_Malloc((ST_WIDTH << hires) * (ST_HEIGHT << hires) * sizeof(*st_backing_screen), PU_STATIC, 0);

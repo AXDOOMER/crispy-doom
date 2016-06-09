@@ -22,6 +22,7 @@
 #include "deh_main.h"
 #include "p_local.h"
 #include "i_system.h"
+#include "v_trans.h" // [crispy] colored messages
 
 #include "s_sound.h"
 
@@ -220,7 +221,7 @@ EV_DoLockedDoor
 	    return 0;
 	if (!p->cards[it_bluecard] && !p->cards[it_blueskull])
 	{
-	    p->message = DEH_String(PD_BLUEO);
+	    p->message = CrispyReplaceColor(DEH_String(PD_BLUEO), CR_BLUE, " blue ");
 	    S_StartSound(NULL,sfx_oof);
 	    return 0;
 	}
@@ -232,7 +233,7 @@ EV_DoLockedDoor
 	    return 0;
 	if (!p->cards[it_redcard] && !p->cards[it_redskull])
 	{
-	    p->message = DEH_String(PD_REDO);
+	    p->message = CrispyReplaceColor(DEH_String(PD_REDO), CR_RED, " red ");
 	    S_StartSound(NULL,sfx_oof);
 	    return 0;
 	}
@@ -245,7 +246,7 @@ EV_DoLockedDoor
 	if (!p->cards[it_yellowcard] &&
 	    !p->cards[it_yellowskull])
 	{
-	    p->message = DEH_String(PD_YELLOWO);
+	    p->message = CrispyReplaceColor(DEH_String(PD_YELLOWO), CR_GOLD, " yellow ");
 	    S_StartSound(NULL,sfx_oof);
 	    return 0;
 	}
@@ -365,7 +366,7 @@ EV_VerticalDoor
 	
 	if (!player->cards[it_bluecard] && !player->cards[it_blueskull])
 	{
-	    player->message = DEH_String(PD_BLUEK);
+	    player->message = CrispyReplaceColor(DEH_String(PD_BLUEK), CR_BLUE, " blue ");
 	    S_StartSound(NULL,sfx_oof);
 	    return;
 	}
@@ -379,7 +380,7 @@ EV_VerticalDoor
 	if (!player->cards[it_yellowcard] &&
 	    !player->cards[it_yellowskull])
 	{
-	    player->message = DEH_String(PD_YELLOWK);
+	    player->message = CrispyReplaceColor(DEH_String(PD_YELLOWK), CR_GOLD, " yellow ");
 	    S_StartSound(NULL,sfx_oof);
 	    return;
 	}
@@ -392,7 +393,7 @@ EV_VerticalDoor
 	
 	if (!player->cards[it_redcard] && !player->cards[it_redskull])
 	{
-	    player->message = DEH_String(PD_REDK);
+	    player->message = CrispyReplaceColor(DEH_String(PD_REDK), CR_RED, " red ");
 	    S_StartSound(NULL,sfx_oof);
 	    return;
 	}
