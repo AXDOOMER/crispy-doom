@@ -1637,6 +1637,7 @@ void D_DoomMain (void)
 
     DEH_printf("W_Init: Init WADfiles.\n");
     D_AddFile(iwadfile);
+    W_PrepareLasxSprite(CRISPY_CROSSHAIR);
     numiwadlumps = numlumps;
 
     W_CheckCorrectIWAD(doom);
@@ -1776,6 +1777,7 @@ void D_DoomMain (void)
 
     // Load PWAD files.
     modifiedgame |= W_ParseCommandLine(); // [crispy] OR'ed
+    W_AddLasxSprite(CRISPY_CROSSHAIR);
 
     //!
     // @arg <file>

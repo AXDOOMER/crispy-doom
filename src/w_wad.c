@@ -113,6 +113,8 @@ wad_file_t *W_AddFile (char *filename)
     int numfilelumps;
     // [crispy] indicate this is the IWAD
     extern char* iwadfile;
+    // [crispy] for the IWAD, allocate memory for one more lump (i.e. the laserspot sprite)
+    const int numlumps_extra = (filename == iwadfile);
 
     // If the filename begins with a ~, it indicates that we should use the
     // reload hack.
@@ -201,7 +203,7 @@ wad_file_t *W_AddFile (char *filename)
 
     startlump = numlumps;
     numlumps += numfilelumps;
-    lumpinfo = realloc(lumpinfo, numlumps * sizeof(lumpinfo_t *));
+    lumpinfo = realloc(lumpinfo, (numlumps + numlumps_extra) * sizeof(lumpinfo_t *));
     if (lumpinfo == NULL)
     {
         I_Error("Failed to increase lumpinfo[] array size.");
@@ -634,3 +636,53 @@ void W_Reload(void)
     W_GenerateHashTable();
 }
 
+void W_PrepareLasxSprite (char *crosshair)
+{
+    int i, j, k;
+
+    i = W_CheckNumForName("LASXA0");
+    j = W_GetNumForName("S_END");
+    k = W_GetNumForName(crosshair);
+
+    // [crispy] laserspot sprite lump not found
+    if (i < 0)
+    {
+	lumpinfo_t *lasxlump;
+
+	// [crispy] allocate memory for another sprite lump
+	lasxlump = malloc(sizeof(*lasxlump));
+	memcpy(lasxlump, lumpinfo[k], sizeof(*lasxlump));
+	strcpy(lasxlump->name, "LASXA0");
+
+	// [crispy] the "LASXA0" sprite lump will be added right before "S_END"
+	i = j++;
+
+	// [crispy] create space for the additional sprite lump
+	memmove(lumpinfo + j, lumpinfo + i, (numlumps - i) * sizeof(*lumpinfo));
+	lumpinfo[i] = lasxlump;
+
+	// [crispy] now that we have one more lump, force hash table regeneration
+	numlumps++;
+
+	if (lumphash != NULL)
+	{
+	    Z_Free(lumphash);
+	    lumphash = NULL;
+	}
+
+	W_GenerateHashTable();
+    }
+}
+
+void W_AddLasxSprite (char *crosshair)
+{
+    extern char *DEH_String(char *s);
+    int i, k;
+
+    i = W_GetNumForName(DEH_String("LASXA0"));
+    k = W_GetNumForName(DEH_String(crosshair));
+
+    // [crispy] copy HU font '+' character patch over the "LASXA0" sprite
+    memcpy(lumpinfo[i], lumpinfo[k], sizeof(**lumpinfo));
+    strcpy(lumpinfo[i]->name, "LASXA0");
+}
