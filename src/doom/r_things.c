@@ -717,7 +717,7 @@ void R_ProjectSprite (mobj_t* thing)
 }
 
 // [crispy] generate a vissprite for the laser spot
-static void R_DrawLSprite (void)
+void R_DrawLSprite (void)
 {
     fixed_t		xscale;
     fixed_t		tx, tz;
@@ -728,7 +728,8 @@ static void R_DrawLSprite (void)
 
     extern void	P_LineLaser (mobj_t* t1, angle_t angle, fixed_t distance, fixed_t slope);
 
-    if (viewplayer->readyweapon == wp_fist ||
+    if (!viewplayer ||
+        viewplayer->readyweapon == wp_fist ||
         viewplayer->readyweapon == wp_chainsaw ||
         viewplayer->playerstate > PST_LIVE)
 	return;
@@ -748,6 +749,9 @@ static void R_DrawLSprite (void)
         !laserspot->y &&
         !laserspot->z)
 	return;
+
+    P_SpawnMobjSafe (laserspot->x, laserspot->y, laserspot->z, MT_LASX, true);
+    return;
 
     tz = FixedMul(laserspot->x - viewx, viewcos) +
          FixedMul(laserspot->y - viewy, viewsin);
@@ -956,8 +960,6 @@ void R_DrawPlayerSprites (void)
     mfloorclip = screenheightarray;
     mceilingclip = negonearray;
     
-    if (crispy_crosshair == CROSSHAIR_PROJECTED)
-	R_DrawLSprite();
 
     // add all active psprites
     for (i=0, psp=viewplayer->psprites;

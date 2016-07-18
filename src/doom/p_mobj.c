@@ -507,6 +507,10 @@ void P_MobjThinker (mobj_t* mobj)
         mobj->oldz = mobj->z;
         mobj->oldangle = mobj->angle;
     }
+//    else
+    if (mobj->player && crispy_crosshair == CROSSHAIR_PROJECTED)
+	R_DrawLSprite();
+
 
     // momentum movement
     if (mobj->momx

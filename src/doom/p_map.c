@@ -1075,7 +1075,9 @@ boolean PTR_ShootTraverse (intercept_t* in)
 	// [crispy] update laser spot position and return
 	if (la_damage == INT_MIN)
 	{
-	    P_SpawnMobjSafe (x,y,z, MT_LASX, true);
+	    laserspot->x = x;
+	    laserspot->y = y;
+	    laserspot->z = z;
 	    return false;
 	}
 
@@ -1122,7 +1124,9 @@ boolean PTR_ShootTraverse (intercept_t* in)
 	if (th->flags & MF_SHADOW)
 	    return true;
 
-	P_SpawnMobjSafe (th->x, th->y, z, MT_LASX, true);
+	laserspot->x = th->x;
+	laserspot->y = th->y;
+	laserspot->z = z;
 	return false;
     }
 
