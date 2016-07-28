@@ -24,6 +24,8 @@
 #include "r_local.h"
 #endif
 
+#include "w_wad.h" // [crispy] lumpinfo_t
+
 #define TOCENTER                -8
 #define AFLAG_JUMP              0x80
 #define FLOATSPEED		(FRACUNIT*4)
@@ -123,6 +125,8 @@ void 	P_SpawnBlood (fixed_t x, fixed_t y, fixed_t z, int damage, mobj_t* target)
 mobj_t* P_SpawnMissile (mobj_t* source, mobj_t* dest, mobjtype_t type);
 void	P_SpawnPlayerMissile (mobj_t* source, mobjtype_t type);
 
+void	P_SpawnPuffSafe (fixed_t x, fixed_t y, fixed_t z, boolean safe);
+mobj_t *P_SpawnMobjSafe (fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, boolean safe);
 
 //
 // P_ENEMY
@@ -270,6 +274,8 @@ extern fixed_t		bmaporgx;
 extern fixed_t		bmaporgy;	// origin of block map
 extern mobj_t**		blocklinks;	// for thing chains
 
+// [crispy] pointer to the current map lump info struct
+extern lumpinfo_t *maplumpinfo;
 
 
 //

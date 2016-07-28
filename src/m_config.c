@@ -484,6 +484,14 @@ static default_t	doom_defaults_list[] =
     CONFIG_VARIABLE_INT(mouseb_mouselook),
 
     //!
+    // @game doom
+    //
+    // Quick 180° reverse.
+    //
+
+    CONFIG_VARIABLE_INT(mouseb_reverse),
+
+    //!
     // If non-zero, joystick input is enabled.
     //
 
@@ -1811,6 +1819,14 @@ static default_t extra_defaults_list[] =
     //
 
     CONFIG_VARIABLE_INT(crispy_highcolor),
+
+    //!
+    // @game doom
+    //
+    // Play sounds in full length.
+    //
+
+    CONFIG_VARIABLE_INT(crispy_fullsounds),
 };
 
 static default_collection_t extra_defaults =

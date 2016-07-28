@@ -27,6 +27,7 @@
 #include "i_swap.h"
 #include "m_argv.h"
 #include "m_bbox.h"
+#include "m_misc.h" // [crispy] M_StringJoin()
 
 #include "g_game.h"
 
@@ -118,11 +119,11 @@ mapthing_t	playerstarts[MAXPLAYERS];
 
 typedef enum
 {
-    DOOMBSP = 0x000,
-    DEEPBSP = 0x001,
-    ZDBSPX  = 0x002,
-    ZDBSPZ  = 0x004,
-    HEXEN   = 0x100,
+    MFMT_DOOMBSP = 0x000,
+    MFMT_DEEPBSP = 0x001,
+    MFMT_ZDBSPX  = 0x002,
+    MFMT_ZDBSPZ  = 0x004,
+    MFMT_HEXEN   = 0x100,
 } mapformat_t;
 
 // [crispy] recalculate seg offsets
@@ -377,14 +378,14 @@ void P_SegLengths (void)
 {
     int i;
     seg_t *li;
-    fixed_t dx, dy;
+    int64_t dx, dy;
 
     for (i = 0; i < numsegs; i++)
     {
 	li = &segs[i];
 	dx = li->v2->px - li->v1->px;
 	dy = li->v2->py - li->v1->py;
-	li->length = (fixed_t)sqrt((double)dx*dx + (double)dy*dy);
+	li->length = (int64_t)sqrt((double)dx*dx + (double)dy*dy);
 
 	// [crispy] re-calculate angle used for rendering
 	viewx = li->v1->px;
@@ -965,7 +966,7 @@ void P_LoadThings (int lump)
 	else
 	{
 	    // [crispy] BFG Edition MAP33 "Betray" still has Wolf SS
-	    if (bfgedition && singleplayer && mt->type == 84)
+	    if (gamevariant == bfgedition && singleplayer && mt->type == 84)
 	    {
 	        // [crispy] spawn Former Human instead
 	        mt->type = 3004;
@@ -1813,7 +1814,7 @@ static mapformat_t P_CheckMapFormat (int lumpnum)
         !strncasecmp(lumpinfo[b]->name, "BEHAVIOR", 8))
     {
 	fprintf(stderr, "Hexen map format, ");
-	format |= HEXEN;
+	format |= MFMT_HEXEN;
     }
     else
 	fprintf(stderr, "Doom map format, ");
@@ -1826,19 +1827,19 @@ static mapformat_t P_CheckMapFormat (int lumpnum)
     if (!memcmp(nodes, "xNd4\0\0\0\0", 8))
     {
 	fprintf(stderr, "DeePBSP nodes.\n");
-	format |= DEEPBSP;
+	format |= MFMT_DEEPBSP;
     }
     else
     if (!memcmp(nodes, "XNOD", 4))
     {
 	fprintf(stderr, "uncompressed ZDBSP nodes.\n");
-	format |= ZDBSPX;
+	format |= MFMT_ZDBSPX;
     }
     else
     if (!memcmp(nodes, "ZNOD", 4))
     {
 	fprintf(stderr, "compressed ZDBSP nodes.\n");
-	format |= ZDBSPZ;
+	format |= MFMT_ZDBSPZ;
     }
     else
 	fprintf(stderr, "normal BSP nodes.\n");
@@ -1848,6 +1849,20 @@ static mapformat_t P_CheckMapFormat (int lumpnum)
 
     return format;
 }
+
+// [crispy] log game skill in plain text
+const char *skilltable[] =
+{
+    "No Items",
+    "ITYTD",
+    "HNTR",
+    "HMP",
+    "UV",
+    "NM"
+};
+
+// [crispy] pointer to the current map lump info struct
+lumpinfo_t *maplumpinfo;
 
 //
 // P_SetupLevel
@@ -1936,15 +1951,31 @@ P_SetupLevel
         lumpnum = W_GetSecondNumForName (lumpname);
     }
 
+    // [crispy] pointer to the current map lump info struct
+    maplumpinfo = lumpinfo[lumpnum];
+
     leveltime = 0;
 	
     // [crispy] better logging
     {
-	extern int savedleveltime;
-	const int time = savedleveltime / TICRATE;
+	extern int savedleveltime, totalleveltimes;
+	const int ltime = savedleveltime / TICRATE,
+	          ttime = (totalleveltimes + savedleveltime) / TICRATE;
+	char *rfn_str;
 
-	fprintf(stderr, "P_SetupLevel: %s (%s), Skill %d, Time %d:%02d, ",
-	    lumpname, lumpinfo[lumpnum]->wad_file->path, (int) skill, time/60, time%60);
+	rfn_str = M_StringJoin(
+	    respawnparm ? " -respawn" : "",
+	    fastparm ? " -fast" : "",
+	    nomonsters ? " -nomonsters" : "",
+	    NULL);
+
+	fprintf(stderr, "P_SetupLevel: %s (%s), %s%s, Time %d:%02d:%02d, Total %d:%02d:%02d, ",
+	    maplumpinfo->name, maplumpinfo->wad_file->name,
+	    skilltable[BETWEEN(0,5,(int) skill+1)], rfn_str,
+	    ltime/3600, (ltime%3600)/60, ltime%60,
+	    ttime/3600, (ttime%3600)/60, ttime%60);
+
+	free(rfn_str);
     }
     // [crispy] check and log map and nodes format
     crispy_mapformat = P_CheckMapFormat(lumpnum);
@@ -1956,17 +1987,17 @@ P_SetupLevel
     P_LoadSectors (lumpnum+ML_SECTORS);
     P_LoadSideDefs (lumpnum+ML_SIDEDEFS);
 
-    if (crispy_mapformat & HEXEN)
+    if (crispy_mapformat & MFMT_HEXEN)
 	P_LoadLineDefs_Hexen (lumpnum+ML_LINEDEFS);
     else
     P_LoadLineDefs (lumpnum+ML_LINEDEFS);
     // [crispy] (re-)create BLOCKMAP if necessary
     if (crispy_createblockmap)
 	P_CreateBlockMap();
-    if (crispy_mapformat & (ZDBSPX | ZDBSPZ))
-	P_LoadNodes_ZDBSP (lumpnum+ML_NODES, crispy_mapformat & ZDBSPZ);
+    if (crispy_mapformat & (MFMT_ZDBSPX | MFMT_ZDBSPZ))
+	P_LoadNodes_ZDBSP (lumpnum+ML_NODES, crispy_mapformat & MFMT_ZDBSPZ);
     else
-    if (crispy_mapformat & DEEPBSP)
+    if (crispy_mapformat & MFMT_DEEPBSP)
     {
 	P_LoadSubsectors_DeePBSP (lumpnum+ML_SSECTORS);
 	P_LoadNodes_DeePBSP (lumpnum+ML_NODES);
@@ -1989,7 +2020,7 @@ P_SetupLevel
 
     bodyqueslot = 0;
     deathmatch_p = deathmatchstarts;
-    if (crispy_mapformat & HEXEN)
+    if (crispy_mapformat & MFMT_HEXEN)
 	P_LoadThings_Hexen (lumpnum+ML_THINGS);
     else
     P_LoadThings (lumpnum+ML_THINGS);

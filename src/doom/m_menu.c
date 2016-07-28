@@ -59,6 +59,7 @@
 #include "m_menu.h"
 
 #include "v_trans.h" // [crispy] colored "invert mouse" message
+#include "r_sky.h" // [crispy] R_InitSkyMap()
 
 extern patch_t*		hu_font[HU_FONTSIZE];
 extern boolean		message_dontfuckwithme;
@@ -246,6 +247,7 @@ static void M_CrispyToggleFlipcorpses(int choice);
 static void M_CrispyToggleFreeaim(int choice);
 static void M_CrispyToggleFreelook(int choice);
 static void M_CrispyToggleHighcolor(int choice);
+static void M_CrispyToggleFullsounds(int choice);
 static void M_CrispyToggleJumping(int choice);
 static void M_CrispyToggleOverunder(int choice);
 static void M_CrispyTogglePitch(int choice);
@@ -470,6 +472,9 @@ enum
     crispness_coloredblood,
     crispness_coloredblood2,
     crispness_flipcorpses,
+    crispness1_sep_audible,
+    crispness_sep_audible,
+    crispness_fullsounds,
     crispness1_sep_goto2,
     crispness1_goto2,
     crispness1_end
@@ -485,6 +490,9 @@ static menuitem_t CrispnessMenu[]=
     {1,"",	M_CrispyToggleColoredblood,'e'},
     {1,"",	M_CrispyToggleColoredblood2,'f'},
     {1,"",	M_CrispyToggleFlipcorpses,'r'},
+    {-1,"",0,'\0'},
+    {-1,"",0,'\0'},
+    {1,"",	M_CrispyToggleFullsounds,'p'},
     {-1,"",0,'\0'},
     {1,"",	M_Crispness2,'n'},
 };
@@ -813,6 +821,12 @@ void M_LoadSelect(int choice)
 //
 void M_LoadGame (int choice)
 {
+    // [crispy] forbid New Game and (Quick) Load while recording a demo
+    if (demorecording)
+    {
+	return;
+    }
+
     if (netgame)
     {
 	M_StartMessage(DEH_String(LOADNET),NULL,false);
@@ -977,74 +991,9 @@ void M_QuickLoad(void)
 //
 void M_DrawReadThis1(void)
 {
-    char *lumpname = "CREDIT";
-    int skullx = 330, skully = 175;
-
     inhelpscreens = true;
-    
-    // Different versions of Doom 1.9 work differently
 
-    switch (gameversion)
-    {
-        case exe_doom_1_666:
-        case exe_doom_1_7:
-        case exe_doom_1_8:
-        case exe_doom_1_9:
-        case exe_hacx:
-
-            if (gamemode == commercial)
-            {
-                // Doom 2
-
-                lumpname = "HELP";
-
-                skullx = 330;
-                skully = 165;
-            }
-            else
-            {
-                // Doom 1
-                // HELP2 is the first screen shown in Doom 1
-                
-                lumpname = "HELP2";
-
-                skullx = 280;
-                skully = 185;
-            }
-            break;
-
-        case exe_ultimate:
-        case exe_chex:
-
-            // Ultimate Doom always displays "HELP1".
-
-            // Chex Quest version also uses "HELP1", even though it is based
-            // on Final Doom.
-
-            lumpname = "HELP1";
-
-            break;
-
-        case exe_final:
-        case exe_final2:
-
-            // Final Doom always displays "HELP".
-
-            lumpname = "HELP";
-
-            break;
-
-        default:
-            I_Error("Unhandled game version");
-            break;
-    }
-
-    lumpname = DEH_String(lumpname);
-    
-    V_DrawPatchDirect (0, 0, W_CacheLumpName(lumpname, PU_CACHE));
-
-    ReadDef1.x = skullx;
-    ReadDef1.y = skully;
+    V_DrawPatchDirect(0, 0, W_CacheLumpName(DEH_String("HELP2"), PU_CACHE));
 }
 
 
@@ -1060,6 +1009,13 @@ void M_DrawReadThis2(void)
     // gameversion == exe_doom_1_9 and gamemode == registered
 
     V_DrawPatchDirect(0, 0, W_CacheLumpName(DEH_String("HELP1"), PU_CACHE));
+}
+
+void M_DrawReadThisCommercial(void)
+{
+    inhelpscreens = true;
+
+    V_DrawPatchDirect(0, 0, W_CacheLumpName(DEH_String("HELP"), PU_CACHE));
 }
 
 
@@ -1142,6 +1098,12 @@ void M_DrawNewGame(void)
 
 void M_NewGame(int choice)
 {
+    // [crispy] forbid New Game and (Quick) Load while recording a demo
+    if (demorecording)
+    {
+	return;
+    }
+
     if (netgame && !demoplayback)
     {
 	M_StartMessage(DEH_String(NEWGAME),NULL,false);
@@ -1201,15 +1163,6 @@ void M_Episode(int choice)
 	return;
     }
 
-    // Yet another hack...
-    if ( (gamemode == registered)
-	 && (choice > 2))
-    {
-      fprintf( stderr,
-	       "M_Episode: 4th episode requires UltimateDOOM\n");
-      choice = 0;
-    }
-	 
     epi = choice;
     M_SetupNextMenu(&NewDef);
 }
@@ -1406,9 +1359,17 @@ static multiitem_t multiitem_jump[NUM_JUMPS] =
 static multiitem_t multiitem_translucency[NUM_TRANSLUCENCY] =
 {
     {TRANSLUCENCY_OFF, "off"},
-    {TRANSLUCENCY_MISSILE, "missiles"},
+    {TRANSLUCENCY_MISSILE, "projectiles"},
     {TRANSLUCENCY_ITEM, "items"},
     {TRANSLUCENCY_BOTH, "both"},
+};
+
+static multiitem_t multiitem_uncapped[NUM_UNCAPPED] =
+{
+    {UNCAPPED_OFF, "35 fps"},
+    {UNCAPPED_ON, "uncapped"},
+    {UNCAPPED_60FPS, "60 fps"},
+    {UNCAPPED_70FPS, "70 fps"},
 };
 
 static void M_DrawCrispnessMultiItem(int y, char *item, multiitem_t *multiitem, int feat, boolean cond)
@@ -1442,12 +1403,15 @@ static void M_DrawCrispness1(void)
     M_DrawCrispnessSeparator(crispness_sep_visual, "Visual");
 
     M_DrawCrispnessItem(crispness_highcolor, "High-Color Rendering", crispy_highcolor, true);
-    M_DrawCrispnessItem(crispness_uncapped, "Uncapped Framerate", crispy_uncapped, true);
+    M_DrawCrispnessMultiItem(crispness_uncapped, "Rendering Framerate", multiitem_uncapped, crispy_uncapped, true);
     M_DrawCrispnessMultiItem(crispness_coloredhud, "Colorize HUD Elements", multiitem_coloredhud, crispy_coloredhud, true);
     M_DrawCrispnessMultiItem(crispness_translucency, "Enable Translucency", multiitem_translucency, crispy_translucency, true);
     M_DrawCrispnessMultiItem(crispness_coloredblood, "Colored Blood and Corpses", multiitem_coloredblood, crispy_coloredblood & COLOREDBLOOD_BOTH, true);
     M_DrawCrispnessItem(crispness_coloredblood2, "Fix Spectre and Lost Soul Blood", crispy_coloredblood & COLOREDBLOOD_FIX, true);
     M_DrawCrispnessItem(crispness_flipcorpses, "Randomly Mirrored Corpses", crispy_flipcorpses, true);
+
+    M_DrawCrispnessSeparator(crispness_sep_audible, "Audible");
+    M_DrawCrispnessItem(crispness_fullsounds, "Play sounds in full length", crispy_fullsounds, true);
 
     M_DrawCrispnessGoto(crispness1_goto2, "Next Page >");
 
@@ -1567,6 +1531,10 @@ void M_EndGameResponse(int key)
     if (key != key_menu_confirm)
 	return;
 		
+    // [crispy] killough 5/26/98: make endgame quit if recording or playing back demo
+    if (demorecording || singledemo)
+	G_CheckDemoStatus();
+
     // [crispy] clear quicksave slot
     quickSaveSlot = -1;
     currentMenu->lastOn = itemOn;
@@ -1606,20 +1574,8 @@ void M_ReadThis(int choice)
 
 void M_ReadThis2(int choice)
 {
-    // Doom 1.9 had two menus when playing Doom 1
-    // All others had only one
-
-    if (gameversion <= exe_doom_1_9 && gamemode != commercial)
-    {
-        choice = 0;
-        M_SetupNextMenu(&ReadDef2);
-    }
-    else
-    {
-        // Close the menu
-
-        M_FinishReadThis(0);
-    }
+    choice = 0;
+    M_SetupNextMenu(&ReadDef2);
 }
 
 void M_FinishReadThis(int choice)
@@ -1758,6 +1714,7 @@ static void M_MouseLook(int choice)
     crispy_mouselook = !crispy_mouselook;
 
     players[consoleplayer].lookdir = 0;
+    R_InitSkyMap();
 }
 
 static void M_CrispyToggleAutomapstats(int choice)
@@ -1774,8 +1731,11 @@ static void M_CrispyToggleCenterweapon(int choice)
 
 static void M_CrispyToggleColoredblood(int choice)
 {
+    // [crispy] preserve coloredblood_fix value when switching colored blood and corpses
+    const int coloredblood_fix = crispy_coloredblood & COLOREDBLOOD_FIX;
     choice = 0;
     crispy_coloredblood = (crispy_coloredblood + 1) % NUM_COLOREDBLOOD;
+    crispy_coloredblood |= coloredblood_fix;
 }
 
 static void M_CrispyToggleColoredblood2(int choice)
@@ -1820,6 +1780,7 @@ static void M_CrispyToggleFreelook(int choice)
     crispy_freelook = (crispy_freelook + 1) % NUM_FREELOOKS;
 
     players[consoleplayer].lookdir = 0;
+    R_InitSkyMap();
 }
 
 static void M_CrispyToggleHighcolor(int choice)
@@ -1858,6 +1819,7 @@ static void M_CrispyTogglePitch(int choice)
 {
     choice = 0;
     crispy_pitch = !crispy_pitch;
+    R_InitSkyMap();
 }
 
 static void M_CrispyToggleRecoil(int choice)
@@ -1887,7 +1849,13 @@ static void M_CrispyToggleTranslucency(int choice)
 static void M_CrispyToggleUncapped(int choice)
 {
     choice = 0;
-    crispy_uncapped = !crispy_uncapped;
+    crispy_uncapped = (crispy_uncapped + 1) % NUM_UNCAPPED;
+}
+
+static void M_CrispyToggleFullsounds(int choice)
+{
+    choice = 0;
+    crispy_fullsounds = !crispy_fullsounds;
 }
 
 void M_ChangeDetail(int choice)
@@ -2011,6 +1979,11 @@ M_StartMessage
     messageRoutine = routine;
     messageNeedsInput = input;
     menuactive = true;
+    // [crispy] entering menus while recording demos pauses the game
+    if (demorecording && !paused)
+    {
+        sendpause = true;
+    }
     return;
 }
 
@@ -2034,6 +2007,13 @@ int M_StringWidth(char* string)
 	
     for (i = 0;i < strlen(string);i++)
     {
+	// [crispy] correctly center colorized strings
+	if (string[i] == '\x1b')
+	{
+	    i++;
+	    continue;
+	}
+
 	c = toupper(string[i]) - HU_FONTSTART;
 	if (c < 0 || c >= HU_FONTSIZE)
 	    w += 4;
@@ -2099,7 +2079,7 @@ M_WriteText
 	if (c == '\x1b')
 	{
 	    c = *ch++;
-	    dp_translation = (crispy_coloredhud & COLOREDHUD_TEXT) ? cr[(int) (c - '0')] : NULL;
+	    dp_translation = cr[(int) (c - '0')];
 	    continue;
 	}
 		
@@ -2530,7 +2510,7 @@ boolean M_Responder (event_t* ev)
         {
 	    M_StartControlPanel ();
 
-	    if ( gamemode == retail )
+	    if (gameversion >= exe_ultimate)
 	      currentMenu = &ReadDef2;
 	    else
 	      currentMenu = &ReadDef1;
@@ -2548,9 +2528,17 @@ boolean M_Responder (event_t* ev)
         }
         else if (key == key_menu_load)     // Load
         {
+	    // [crispy] forbid New Game and (Quick) Load while recording a demo
+	    if (demorecording)
+	    {
+		S_StartSound(NULL,sfx_oof);
+	    }
+	    else
+	    {
 	    M_StartControlPanel();
 	    S_StartSound(NULL,sfx_swtchn);
 	    M_LoadGame(0);
+	    }
 	    return true;
         }
         else if (key == key_menu_volume)   // Sound Volume
@@ -2587,8 +2575,16 @@ boolean M_Responder (event_t* ev)
         }
         else if (key == key_menu_qload)    // Quickload
         {
+	    // [crispy] forbid New Game and (Quick) Load while recording a demo
+	    if (demorecording)
+	    {
+		S_StartSound(NULL,sfx_oof);
+	    }
+	    else
+	    {
 	    S_StartSound(NULL,sfx_swtchn);
 	    M_QuickLoad();
+	    }
 	    return true;
         }
         else if (key == key_menu_quit)     // Quit DOOM
@@ -2901,9 +2897,10 @@ void M_Drawer (void)
 	if (name[0])
 	{
 	    // [crispy] shade unavailable menu items
-	    if ((currentMenu == &MainDef && i == savegame && !usergame) ||
-	        (currentMenu == &OptionsDef && i == endgame && !usergame) ||
-	        (currentMenu == &MainDef && i == loadgame && netgame))
+	    if ((currentMenu == &MainDef && i == savegame && (!usergame || gamestate != GS_LEVEL)) ||
+	        (currentMenu == &OptionsDef && i == endgame && (!usergame || netgame)) ||
+	        (currentMenu == &MainDef && i == loadgame && (netgame || demorecording)) ||
+	        (currentMenu == &MainDef && i == newgame && (demorecording || (netgame && !demoplayback))))
 	        dp_translation = cr[CR_DARK];
 
 	    if (currentMenu == &OptionsDef)
@@ -2997,25 +2994,29 @@ void M_Init (void)
     // Here we could catch other version dependencies,
     //  like HELP1/2, and four episodes.
 
-  
-    switch ( gamemode )
+    // The same hacks were used in the original Doom EXEs.
+
+    if (gameversion >= exe_ultimate)
     {
-      case commercial:
-        // Commercial has no "read this" entry.
-	MainMenu[readthis] = MainMenu[quitdoom];
-	MainDef.numitems--;
-	MainDef.y += 8;
-	NewDef.prevMenu = &MainDef;
-	break;
-      case shareware:
-	// Episode 2 and 3 are handled,
-	//  branching to an ad screen.
-      case registered:
-	break;
-      case retail:
-	// We are fine.
-      default:
-	break;
+        MainMenu[readthis].routine = M_ReadThis2;
+        ReadDef2.prevMenu = NULL;
+    }
+
+    if (gameversion >= exe_final && gameversion <= exe_final2)
+    {
+        ReadDef2.routine = M_DrawReadThisCommercial;
+    }
+
+    if (gamemode == commercial)
+    {
+        MainMenu[readthis] = MainMenu[quitdoom];
+        MainDef.numitems--;
+        MainDef.y += 8;
+        NewDef.prevMenu = &MainDef;
+        ReadDef1.routine = M_DrawReadThisCommercial;
+        ReadDef1.x = 330;
+        ReadDef1.y = 165;
+        ReadMenu1[rdthsempty1].routine = M_FinishReadThis;
     }
 
     // Versions of doom.exe before the Ultimate Doom release only had
@@ -3024,7 +3025,12 @@ void M_Init (void)
     // (should crash if missing).
     if (gameversion < exe_ultimate)
     {
-	EpiDef.numitems--;
+        EpiDef.numitems--;
+    }
+    // chex.exe shows only one episode.
+    else if (gameversion == exe_chex)
+    {
+        EpiDef.numitems = 1;
     }
 
     opldev = M_CheckParm("-opldev") > 0;

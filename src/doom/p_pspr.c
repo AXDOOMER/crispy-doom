@@ -162,6 +162,16 @@ void P_BringUpWeapon (player_t* player)
     if (player->pendingweapon == wp_chainsaw)
 	S_StartSound (player->mo, sfx_sawup);
 		
+    // [crispy] play "power up" sound when selecting berserk fist...
+    if (player->pendingweapon == wp_fist && player->powers[pw_strength])
+    {
+	// [crispy] ...only if not playing already
+	if (player == &players[consoleplayer] && !S_SoundIsPlaying(NULL, sfx_getpow))
+	{
+	    S_StartSound (NULL, sfx_getpow);
+	}
+    }
+
     newstate = weaponinfo[player->pendingweapon].upstate;
 
     player->pendingweapon = wp_nochange;
@@ -279,7 +289,13 @@ void P_FireWeapon (player_t* player)
 
     // [crispy] center the weapon sprite horizontally
     if (crispy_centerweapon)
-	player->psprites[ps_weapon].sx = FRACUNIT;
+    {
+	// [crispy] do not override state's misc1 if set
+	if (!player->psprites[ps_weapon].state->misc1)
+	{
+	    player->psprites[ps_weapon].sx = FRACUNIT;
+	}
+    }
 }
 
 
@@ -320,7 +336,9 @@ A_WeaponReady
     }
     
     if (player->readyweapon == wp_chainsaw
-	&& psp->state == &states[S_SAW])
+	&& psp->state == &states[S_SAW]
+	// [crispy] play the "saw up" sound to finish
+	&& (!crispy_fullsounds || !S_SoundIsPlaying(player->mo, sfx_sawup)))
     {
 	S_StartSound (player->mo, sfx_sawidl);
     }

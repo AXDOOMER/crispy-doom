@@ -18,9 +18,11 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <string.h> // [crispy] strcmp()
 
 #include "doomtype.h"
 #include "deh_str.h"
+#include "m_argv.h" // [crispy] M_ParmExists()
 #include "m_misc.h"
 #include "v_trans.h"
 
@@ -289,6 +291,11 @@ byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109)
 void CrispyReplaceColor (char *str, const int cr, const char *col)
 {
     char *str_replace, col_replace[16];
+
+    if (M_ParmExists("-nodeh") || strcmp(str, DEH_String(str)))
+    {
+	return;
+    }
 
     M_snprintf(col_replace, sizeof(col_replace),
                "%s%s%s", crstr[cr], col, crstr[CR_NONE]);

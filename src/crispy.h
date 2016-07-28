@@ -61,6 +61,7 @@ extern int crispy_flipcorpses;
 extern int crispy_freeaim;
 extern int crispy_freelook;
 extern int crispy_highcolor;
+extern int crispy_fullsounds;
 extern int crispy_jump;
 extern int crispy_mouselook;
 extern int crispy_overunder;
@@ -131,6 +132,15 @@ enum
     TRANSLUCENCY_ITEM,
     TRANSLUCENCY_BOTH,
     NUM_TRANSLUCENCY
+};
+
+enum
+{
+    UNCAPPED_OFF,
+    UNCAPPED_ON,
+    UNCAPPED_60FPS,
+    UNCAPPED_70FPS,
+    NUM_UNCAPPED
 };
 
 void *crispy_realloc (void *ptr, size_t size);

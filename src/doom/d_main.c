@@ -119,10 +119,6 @@ boolean		advancedemo;
 // Store demo, do not accept any inputs
 boolean         storedemo;
 
-// "BFG Edition" version of doom2.wad does not include TITLEPIC.
-boolean         bfgedition;
-char            *nervewadfile = NULL;
-
 // If true, the main game loop has started.
 boolean         main_loop_started = false;
 
@@ -130,6 +126,7 @@ char		wadfile[1024];		// primary wad file
 char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 0; // [crispy] disable
+int             show_diskicon = 1;
 
 // [crispy] "crispness" config variables
 int             crispy_automapstats = 0;
@@ -141,6 +138,7 @@ int             crispy_flipcorpses = 0;
 int             crispy_freeaim = 0;
 int             crispy_freelook = 0;
 int             crispy_highcolor = 0;
+int             crispy_fullsounds = 0;
 int             crispy_jump = 0;
 int             crispy_mouselook = 0;
 int             crispy_overunder = 0;
@@ -160,6 +158,7 @@ boolean         crispy_nwtmerge = false;
 boolean         crispy_redrawall = false;
 
 int             crispy_demowarp = 0;
+char            *nervewadfile = NULL;
 
 void D_ConnectNetGame(void);
 void D_CheckNetGame(void);
@@ -253,7 +252,7 @@ void D_Display (void)
 	    R_RenderPlayerView (&players[displayplayer]);
 	    AM_Drawer ();
 	}
-	if (wipe || (scaledviewheight != SCREENHEIGHT && fullscreen) || disk_indicator == disk_dirty)
+	if (wipe || (scaledviewheight != SCREENHEIGHT && fullscreen))
 	    redrawsbar = true;
 	if (inhelpscreensstate && !inhelpscreens)
 	    redrawsbar = true;              // just put away the help screen
@@ -433,6 +432,27 @@ void D_Display (void)
     } while (!done);
 }
 
+static void EnableLoadingDisk(void)
+{
+    char *disk_lump_name;
+
+    if (show_diskicon)
+    {
+        if (M_CheckParm("-cdrom") > 0)
+        {
+            disk_lump_name = DEH_String("STCDROM");
+        }
+        else
+        {
+            disk_lump_name = DEH_String("STDISK");
+        }
+
+        V_EnableLoadingDisk(disk_lump_name,
+                            SCREENWIDTH - LOADING_DISK_W,
+                            SCREENHEIGHT - LOADING_DISK_H);
+    }
+}
+
 //
 // Add configuration file variable bindings.
 //
@@ -496,6 +516,7 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_freeaim",         &crispy_freeaim);
     M_BindIntVariable("crispy_freelook",        &crispy_freelook);
     M_BindIntVariable("crispy_highcolor",       &crispy_highcolor);
+    M_BindIntVariable("crispy_fullsounds",      &crispy_fullsounds);
     M_BindIntVariable("crispy_jump",            &crispy_jump);
     M_BindIntVariable("crispy_mouselook",       &crispy_mouselook);
     M_BindIntVariable("crispy_overunder",       &crispy_overunder);
@@ -534,7 +555,7 @@ boolean D_GrabMouseCallback(void)
 //
 void D_DoomLoop (void)
 {
-    if (bfgedition &&
+    if (gamevariant == bfgedition &&
         (demorecording || (gameaction == ga_playdemo) || netgame))
     {
         printf(" WARNING: You are playing using one of the Doom Classic\n"
@@ -554,7 +575,7 @@ void D_DoomLoop (void)
     I_GraphicsCheckCommandLine();
     I_SetGrabMouseCallback(D_GrabMouseCallback);
     I_InitGraphics();
-    V_EnableLoadingDisk(ORIGWIDTH - LOADING_DISK_W, ORIGHEIGHT - LOADING_DISK_H);
+    EnableLoadingDisk();
 
     V_RestoreBuffer();
     R_ExecuteSetViewSize();
@@ -688,7 +709,7 @@ void D_DoAdvanceDemo (void)
 	{
 	    pagetic = 200;
 
-	    if ( gamemode == retail )
+	    if (gameversion >= exe_ultimate)
 	      pagename = DEH_String("CREDIT");
 	    else
 	      pagename = DEH_String("HELP2");
@@ -705,7 +726,7 @@ void D_DoAdvanceDemo (void)
 
     // The Doom 3: BFG Edition version of doom2.wad does not have a
     // TITLETPIC lump. Use INTERPIC instead as a workaround.
-    if (bfgedition && !strcasecmp(pagename, "TITLEPIC")
+    if (gamevariant == bfgedition && !strcasecmp(pagename, "TITLEPIC")
         && W_CheckNumForName("titlepic") < 0)
     {
         pagename = DEH_String("INTERPIC");
@@ -920,6 +941,7 @@ void D_IdentifyVersion(void)
         // with Freedoom and get the right level names.
 
         //!
+        // @category compat
         // @arg <pack>
         //
         // Explicitly specify a Doom II "mission pack" to run as, instead of
@@ -938,16 +960,13 @@ void D_IdentifyVersion(void)
 
 void D_SetGameDescription(void)
 {
-    boolean is_freedoom = W_CheckNumForName("FREEDOOM") >= 0,
-            is_freedm = W_CheckNumForName("FREEDM") >= 0;
-
     gamedescription = "Unknown";
 
     if (logical_gamemission == doom)
     {
         // Doom 1.  But which version?
 
-        if (is_freedoom)
+        if (gamevariant == freedoom)
         {
             gamedescription = GetGameName("Freedoom: Phase 1");
         }
@@ -970,16 +989,13 @@ void D_SetGameDescription(void)
     {
         // Doom 2 of some kind.  But which mission?
 
-        if (is_freedoom)
+        if (gamevariant == freedm)
         {
-            if (is_freedm)
-            {
-                gamedescription = GetGameName("FreeDM");
-            }
-            else
-            {
-                gamedescription = GetGameName("Freedoom: Phase 2");
-            }
+            gamedescription = GetGameName("FreeDM");
+        }
+        else if (gamevariant == freedoom)
+        {
+            gamedescription = GetGameName("Freedoom: Phase 2");
         }
         else if (logical_gamemission == doom2)
         {
@@ -1260,7 +1276,7 @@ static void D_Endoom(void)
 static void LoadIwadDeh(void)
 {
     // The Freedoom IWADs have DEHACKED lumps that must be loaded.
-    if (W_CheckNumForName("FREEDOOM") >= 0)
+    if (gamevariant == freedoom || gamevariant == freedm)
     {
         // Old versions of Freedoom (before 2014-09) did not have technically
         // valid DEHACKED lumps, so ignore errors and just continue if this
@@ -1329,14 +1345,31 @@ static void LoadIwadDeh(void)
 // [crispy] support loading NERVE.WAD alongside DOOM2.WAD
 static void LoadNerveWad(void)
 {
-    int i;
+    int i, j, k;
 
     if (gamemission != doom2)
         return;
 
-    if (bfgedition && !modifiedgame)
+    if ((i = W_GetNumForName("map01")) != -1 &&
+        (j = W_GetNumForName("map09")) != -1 &&
+        !strcasecmp(lumpinfo[i]->wad_file->name, "nerve.wad") &&
+        !strcasecmp(lumpinfo[j]->wad_file->name, "nerve.wad"))
     {
-
+	gamemission = pack_nerve;
+	DEH_AddStringReplacement ("TITLEPIC", "INTERPIC");
+    }
+    else
+    // [crispy] The "New Game -> Which Expansion" menu is only shown if the
+    // menu graphics lumps are available and (a) if they are from the IWAD
+    // and that is the BFG Edition DOOM2.WAD or (b) if they are from a PWAD.
+    if ((i = W_CheckNumForName("M_EPI1")) != -1 &&
+        (j = W_CheckNumForName("M_EPI2")) != -1 &&
+        (k = W_CheckNumForName("M_EPISOD")) != -1 &&
+        (gamevariant == bfgedition ||
+        (!lumpinfo[i]->wad_file->iwad &&
+         !lumpinfo[j]->wad_file->iwad &&
+         !lumpinfo[k]->wad_file->iwad)))
+    {
         if (strrchr(iwadfile, DIR_SEPARATOR) != NULL)
         {
             char *dir;
@@ -1371,31 +1404,22 @@ static void LoadNerveWad(void)
             lumpinfo[W_GetNumForName(lumpname)]->name[0] = 'N';
         }
     }
-    else
-    {
-	i = W_GetNumForName("map01");
-	if (!strcasecmp(lumpinfo[i]->wad_file->path, "nerve.wad"))
-	{
-	    gamemission = pack_nerve;
-	    DEH_AddStringReplacement ("TITLEPIC", "INTERPIC");
-	}
-    }
 }
 
 // [crispy] support loading MASTERLEVELS.WAD alongside DOOM2.WAD
 static void LoadMasterlevelsWad(void)
 {
-    if (gamemission == doom2 && modifiedgame)
-    {
-	int i, j;
+    int i;
 
-	i = W_GetNumForName("map01");
-	j = W_GetNumForName("map21");
-	if (!strcasecmp(lumpinfo[i]->wad_file->path, "masterlevels.wad") &&
-	    !strcasecmp(lumpinfo[j]->wad_file->path, "masterlevels.wad"))
-	{
-	    gamemission = pack_master;
-	}
+    if (gamemission != doom2)
+        return;
+
+    if ((i = W_GetNumForName("map01")),
+        !strcasecmp(lumpinfo[i]->wad_file->name, "masterlevels.wad") &&
+        (i = W_GetNumForName("map21")),
+        !strcasecmp(lumpinfo[i]->wad_file->name, "masterlevels.wad"))
+    {
+	gamemission = pack_master;
     }
 }
 
@@ -1644,6 +1668,24 @@ void D_DoomMain (void)
         LoadIwadDeh();
     }
 
+    // Check which IWAD variant we are using.
+
+    if (W_CheckNumForName("FREEDOOM") >= 0)
+    {
+        if (W_CheckNumForName("FREEDM") >= 0)
+        {
+            gamevariant = freedm;
+        }
+        else
+        {
+            gamevariant = freedoom;
+        }
+    }
+    else if (W_CheckNumForName("DMENUPIC") >= 0)
+    {
+        gamevariant = bfgedition;
+    }
+
     // Doom 3: BFG Edition includes modified versions of the classic
     // IWADs which can be identified by an additional DMENUPIC lump.
     // Furthermore, the M_GDHIGH lumps have been modified in a way that
@@ -1652,10 +1694,9 @@ void D_DoomMain (void)
     // We specifically check for DMENUPIC here, before PWADs have been
     // loaded which could probably include a lump of that name.
 
-    if (W_CheckNumForName("dmenupic") >= 0)
+    if (gamevariant == bfgedition)
     {
         printf("BFG Edition: Using workarounds as needed.\n");
-        bfgedition = true;
 
         // BFG Edition changes the names of the secret levels to
         // censor the Wolfenstein references. It also has an extra
@@ -1691,7 +1732,6 @@ void D_DoomMain (void)
     if (!M_ParmExists("-nodeh") && !M_ParmExists("-noload"))
     {
 	int i;
-	char file[16];
 
 	for (i = 0; i < 10; i++)
 	{
@@ -1724,7 +1764,6 @@ void D_DoomMain (void)
     if (!M_ParmExists("-noload") && gamemode != shareware)
     {
 	int i;
-	char file[16];
 	extern void W_MergeFile(char *filename);
 
 	for (i = 0; i < 10; i++)
@@ -1755,23 +1794,31 @@ void D_DoomMain (void)
     // merges PWADs into the main IWAD and writes the merged data into <file>
     //
 
-    p = M_CheckParmWithArgs ("-mergedump", 1);
+    p = M_CheckParm("-mergedump");
 
     if (p)
     {
-	if (M_StringEndsWith(myargv[p + 1], ".wad"))
+	p = M_CheckParmWithArgs("-mergedump", 1);
+
+	if (p)
 	{
-	    M_StringCopy(file, myargv[p + 1], sizeof(file));
+	    int merged;
+
+	    if (M_StringEndsWith(myargv[p+1], ".wad"))
+	    {
+		M_StringCopy(file, myargv[p+1], sizeof(file));
+	    }
+	    else
+	    {
+		DEH_snprintf(file, sizeof(file), "%s.wad", myargv[p+1]);
+	    }
+
+	    merged = W_MergeDump(file);
+	    I_Error("W_MergeDump: Merged %d lumps into file '%s'.", merged, file);
 	}
 	else
 	{
-	    DEH_snprintf(file, sizeof(file), "%s.wad", myargv[p+1]);
-	}
-
-	if (W_MergeDump(file))
-	{
-	    printf("Merging into file %s.\n", file);
-	    I_Quit();
+	    I_Error("W_MergeDump: The '-mergedump' parameter requires an argument.");
 	}
     }
 
@@ -1892,7 +1939,7 @@ void D_DoomMain (void)
     }
 
     // Check for -file in shareware
-    if (modifiedgame)
+    if (modifiedgame && (gamevariant != freedoom))
     {
 	// These are the lumps that will be checked in IWAD,
 	// if any one is not present, execution will be aborted.
@@ -1934,12 +1981,12 @@ void D_DoomMain (void)
     // Freedoom's IWADs are Boom-compatible, which means they usually
     // don't work in Vanilla (though FreeDM is okay). Show a warning
     // message and give a link to the website.
-    if (W_CheckNumForName("FREEDOOM") >= 0 && W_CheckNumForName("FREEDM") < 0)
+    if (gamevariant == freedoom)
     {
         printf(" WARNING: You are playing using one of the Freedoom IWAD\n"
                " files, which might not work in this port. See this page\n"
                " for more information on how to play using Freedoom:\n"
-               "   http://www.chocolate-doom.org/wiki/index.php/Freedoom\n");
+               "   https://www.chocolate-doom.org/wiki/index.php/Freedoom\n");
         I_PrintDivider();
     }
 

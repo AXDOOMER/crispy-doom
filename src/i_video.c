@@ -30,6 +30,8 @@
 
 #include "icon.c"
 
+#include "crispy.h"
+
 #include "config.h"
 #include "deh_str.h"
 #include "doomtype.h"
@@ -189,16 +191,6 @@ int novert = 1;
 // Save screenshots in PNG format.
 
 int png_screenshots = 1;
-
-// Display disk activity indicator.
-
-int show_diskicon = 1;
-
-// Only display the disk icon if more then this much bytes have been read
-// during the previous tic.
-
-static const int diskicon_threshold = 20*1024;
-int diskicon_readbytes = 0;
 
 // if true, I_VideoBuffer is screen->pixels
 
@@ -908,6 +900,7 @@ static boolean BlitArea(int x1, int y1, int x2, int y2)
 
 int crispy_fps = 0;
 boolean crispy_showfps = false;
+extern boolean singletics;
 
 //
 // I_FinishUpdate
@@ -954,6 +947,21 @@ void I_FinishUpdate (void)
         return;
 #endif
 
+    // [crispy] variable rendering framerate
+    if (crispy_uncapped > UNCAPPED_ON && !singletics)
+    {
+        static int halftics_old;
+        int halftics;
+        extern int GetAdjustedTimeN (const int N);
+
+        while ((halftics = GetAdjustedTimeN(40 + crispy_uncapped * 10)) == halftics_old)
+        {
+            I_Sleep(1);
+        }
+
+        halftics_old = halftics;
+    }
+
     // draws little dots on the bottom of the screen
 
     if (display_fps_dots)
@@ -990,18 +998,8 @@ void I_FinishUpdate (void)
 		}
 	}
 
-    if (show_diskicon && disk_indicator == disk_on)
-    {
-	if (diskicon_readbytes >= diskicon_threshold)
-	{
-	    V_BeginRead();
-	}
-    }
-    else if (disk_indicator == disk_dirty)
-    {
-	disk_indicator = disk_off;
-    }
-    diskicon_readbytes = 0;
+    // Draw disk icon before blit, if necessary.
+    V_DrawDiskIcon();
 
 #if 0 // obsolete software scaling routines
     // draw to screen
@@ -1057,9 +1055,13 @@ void I_FinishUpdate (void)
 	SDL_RenderCopy(renderer, curpane, NULL, NULL);
     }
 
+
     // Draw!
 
     SDL_RenderPresent(renderer);
+
+    // Restore background and undo the disk indicator, if it was drawn.
+    V_RestoreDiskBackground();
 }
 
 
@@ -1449,12 +1451,13 @@ void I_GraphicsCheckCommandLine(void)
     int i;
 
     //!
+    // @category video
     // @vanilla
     //
     // Disable blitting the screen.
     //
 
-    noblit = M_CheckParm ("-noblit"); 
+    noblit = M_CheckParm ("-noblit");
 
     //!
     // @category video 

@@ -26,6 +26,7 @@
 #include "i_system.h"
 #include "i_video.h"
 #include "z_zone.h"
+#include "m_argv.h" // [crispy] M_ParmExists()
 #include "m_misc.h"
 #include "m_random.h"
 #include "w_wad.h"
@@ -421,6 +422,7 @@ cheatseq_t cheat_notarget = CHEAT("notarget", 0);
 cheatseq_t cheat_spechits = CHEAT("spechits", 0);
 cheatseq_t cheat_nomomentum = CHEAT("nomomentum", 0);
 cheatseq_t cheat_showfps = CHEAT("showfps", 0);
+cheatseq_t cheat_goobers = CHEAT("goobers", 0);
 static char msg[ST_MSGWIDTH];
 
 //
@@ -489,7 +491,7 @@ static int ST_cheat_spechits()
     boolean origcards[NUMCARDS];
     line_t dummy;
 
-    // temporarily give all keys
+    // [crispy] temporarily give all keys
     for (i = 0; i < NUMCARDS; i++)
     {
 	origcards[i] = plyr->cards[i];
@@ -500,15 +502,26 @@ static int ST_cheat_spechits()
     {
 	if (lines[i].special)
 	{
-	    // do not trigger level exit switches/lines or teleporters
+	    // [crispy] do not trigger level exit switches/lines or teleporters
 	    if (lines[i].special == 11 || lines[i].special == 51 ||
 	        lines[i].special == 52 || lines[i].special == 124 ||
 	        lines[i].special == 39 || lines[i].special == 97)
+	    {
 	        continue;
+	    }
 
-	    P_CrossSpecialLine (i, 0, plyr->mo);
-	    P_ShootSpecialLine (plyr->mo, &lines[i]);
-	    P_UseSpecialLine (plyr->mo, &lines[i], 0);
+	    // [crispy] special without tag --> DR linedef type
+	    // do not change door direction if it is already moving
+	    if (lines[i].tag == 0 &&
+	        lines[i].sidenum[1] != NO_INDEX &&
+	        sides[lines[i].sidenum[1]].sector->specialdata)
+	    {
+	        continue;
+	    }
+
+	    P_CrossSpecialLine(i, 0, plyr->mo);
+	    P_ShootSpecialLine(plyr->mo, &lines[i]);
+	    P_UseSpecialLine(plyr->mo, &lines[i], 0);
 
 	    speciallines++;
 	}
@@ -797,6 +810,16 @@ ST_Responder (event_t* ev)
       else if (cht_CheckCheat(&cheat_showfps, ev->data2))
       {
 	crispy_showfps ^= 1;
+      }
+      // [crispy] implement Crispy Doom's "goobers" cheat, ne easter egg
+      else if (cht_CheckCheat(&cheat_goobers, ev->data2))
+      {
+	extern void EV_DoGoobers (void);
+
+	EV_DoGoobers();
+
+	M_snprintf(msg, sizeof(msg), "Get Psyched!");
+	plyr->message = msg;
       }
       // 'behold?' power-up cheats
       for (i=0;i<6;i++)
@@ -1911,8 +1934,6 @@ void ST_Start (void)
     {
 	char namebuf[8];
 
-	W_ReleaseLumpName("STFB0");
-
 	DEH_snprintf(namebuf, 7, "STFB%d", consoleplayer);
 	faceback = W_CacheLumpName(namebuf, PU_STATIC);
     }
@@ -1931,7 +1952,8 @@ void ST_Stop (void)
 void ST_Init (void)
 {
     // [crispy] colorize the confusing 'behold' power-up menu
-    if (!strcmp(STSTR_BEHOLD, DEH_String(STSTR_BEHOLD)))
+    if (!strcmp(STSTR_BEHOLD, DEH_String(STSTR_BEHOLD)) &&
+        !M_ParmExists("-nodeh"))
     {
 	char str_behold[80];
 	M_snprintf(str_behold, sizeof(str_behold),

@@ -260,7 +260,8 @@ R_FindPlane
 {
     visplane_t*	check;
 	
-    if (picnum == skyflatnum)
+    // [crispy] add support for MBF sky tranfers
+    if (picnum == skyflatnum || picnum & PL_SKYFLAT)
     {
 	height = 0;			// all skys map together
 	lightlevel = 0;
@@ -401,7 +402,67 @@ R_MakeSpans
     }
 }
 
+// [crispy] add support for SMMU swirling flats
+// adapted from smmu/r_ripple.c, by Simon Howard
+static char *R_DistortedFlat (int flatnum)
+{
+    const int swirlfactor = 8192 / 64;
+    const int swirlfactor2 = 8192 / 32;
+    const int amp = 2;
+    const int amp2 = 2;
+    const int speed = 40;
 
+    static int swirltic;
+    static int offset[4096];
+
+    static char distortedflat[4096];
+    char *normalflat;
+    int i;
+
+    if (swirltic != gametic)
+    {
+	int x, y;
+
+	for (x = 0; x < 64; x++)
+	{
+	    for (y = 0; y < 64; y++)
+	    {
+		int x1, y1;
+		int sinvalue, sinvalue2;
+
+		sinvalue = (y * swirlfactor + leveltime * speed * 5 + 900) & 8191;
+		sinvalue2 = (x * swirlfactor2 + leveltime * speed * 4 + 300) & 8191;
+		x1 = x + 128
+		   + ((finesine[sinvalue] * amp) >> FRACBITS)
+		   + ((finesine[sinvalue2] * amp2) >> FRACBITS);
+
+		sinvalue = (x * swirlfactor + leveltime * speed * 3 + 700) & 8191;
+		sinvalue2 = (y * swirlfactor2 + leveltime * speed * 4 + 1200) & 8191;
+		y1 = y + 128
+		   + ((finesine[sinvalue] * amp) >> FRACBITS)
+		   + ((finesine[sinvalue2] * amp2) >> FRACBITS);
+
+		x1 &= 63;
+		y1 &= 63;
+
+		offset[(y << 6) + x] = (y1 << 6) + x1;
+	    }
+	}
+
+	swirltic = gametic;
+    }
+
+    normalflat = W_CacheLumpNum(firstflat + flattranslation[flatnum], PU_STATIC);
+
+    for (i = 0; i < 4096; i++)
+    {
+	distortedflat[i] = normalflat[offset[i]];
+    }
+
+    Z_ChangeTag(normalflat, PU_CACHE);
+
+    return distortedflat;
+}
 
 //
 // R_DrawPlanes
@@ -437,8 +498,31 @@ void R_DrawPlanes (void)
 
 	
 	// sky flat
-	if (pl->picnum == skyflatnum)
+	// [crispy] add support for MBF sky tranfers
+	if (pl->picnum == skyflatnum || pl->picnum & PL_SKYFLAT)
 	{
+	    int texture;
+	    angle_t an = viewangle, flip;
+	    if (pl->picnum & PL_SKYFLAT)
+	    {
+		const line_t *l = &lines[pl->picnum & ~PL_SKYFLAT];
+		const side_t *s = *l->sidenum + sides;
+		texture = texturetranslation[s->toptexture];
+		dc_texturemid = s->rowoffset - 28*FRACUNIT;
+		// [crispy] stretch sky
+		if (crispy_stretchsky)
+		{
+		    dc_texturemid = dc_texturemid * (textureheight[texture]>>FRACBITS) / 228;
+		}
+		flip = (l->special == 272) ? 0u : ~0u;
+		an += s->textureoffset;
+	    }
+	    else
+	    {
+		texture = skytexture;
+		dc_texturemid = skytexturemid;
+		flip = 0;
+	    }
 	    dc_iscale = pspriteiscale>>(detailshift && !hires);
 	    // [crispy] stretch sky
 	    if (crispy_stretchsky)
@@ -449,8 +533,8 @@ void R_DrawPlanes (void)
 	    // Because of this hack, sky is not affected
 	    //  by INVUL inverse mapping.
 	    dc_colormap = colormaps;
-	    dc_texturemid = skytexturemid;
-	    dc_texheight = textureheight[skytexture]>>FRACBITS; // [crispy] Tutti-Frutti fix
+//	    dc_texturemid = skytexturemid;
+	    dc_texheight = textureheight[texture]>>FRACBITS; // [crispy] Tutti-Frutti fix
 	    for (x=pl->minx ; x <= pl->maxx ; x++)
 	    {
 		dc_yl = pl->top[x];
@@ -458,9 +542,9 @@ void R_DrawPlanes (void)
 
 		if ((unsigned) dc_yl <= dc_yh) // [crispy] 32-bit integer math
 		{
-		    angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+		    angle = ((an + xtoviewangle[x])^flip)>>ANGLETOSKYSHIFT;
 		    dc_x = x;
-		    dc_source = R_GetColumn(skytexture, angle, false);
+		    dc_source = R_GetColumn(texture, angle, false);
 		    colfunc ();
 		}
 	    }
@@ -469,7 +553,10 @@ void R_DrawPlanes (void)
 	
 	// regular flat
         lumpnum = firstflat + flattranslation[pl->picnum];
-	ds_source = W_CacheLumpNum(lumpnum, PU_STATIC);
+	// [crispy] add support for SMMU swirling flats
+	ds_source = (flattranslation[pl->picnum] == -1) ?
+	            R_DistortedFlat(pl->picnum) :
+	            W_CacheLumpNum(lumpnum, PU_STATIC);
 	
 	planeheight = abs(pl->height-viewz);
 	light = (pl->lightlevel >> LIGHTSEGSHIFT)+extralight;
@@ -495,6 +582,10 @@ void R_DrawPlanes (void)
 			pl->bottom[x]);
 	}
 	
+        // [crispy] add support for SMMU swirling flats
+        if (flattranslation[pl->picnum] != -1)
+        {
         W_ReleaseLumpNum(lumpnum);
+        }
     }
 }

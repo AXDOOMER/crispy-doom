@@ -111,6 +111,8 @@ wad_file_t *W_AddFile (char *filename)
     filelump_t *filerover;
     lumpinfo_t *filelumps;
     int numfilelumps;
+    // [crispy] indicate this is the IWAD
+    extern char* iwadfile;
 
     // If the filename begins with a ~, it indicates that we should use the
     // reload hack.
@@ -141,7 +143,9 @@ wad_file_t *W_AddFile (char *filename)
     }
 
     // [crispy] save the file name
-    wad_file->path = M_BaseName(filename);
+    wad_file->name = M_BaseName(filename);
+    // [crispy] indicate this is the IWAD
+    wad_file->iwad = (filename == iwadfile);
 
     if (strcasecmp(filename+strlen(filename)-3 , "wad" ) )
     {
@@ -172,6 +176,7 @@ wad_file_t *W_AddFile (char *filename)
 	    // Homebrew levels?
 	    if (strncmp(header.identification,"PWAD",4))
 	    {
+		W_CloseFile(wad_file);
 		I_Error ("Wad file %s doesn't have IWAD "
 			 "or PWAD id\n", filename);
 	    }
@@ -180,6 +185,17 @@ wad_file_t *W_AddFile (char *filename)
 	}
 
 	header.numlumps = LONG(header.numlumps);
+
+         // Vanilla Doom doesn't like WADs with more than 4046 lumps
+         // https://www.doomworld.com/vb/post/1010985
+         // [crispy] disable PWAD lump number limit
+         if (!strncmp(header.identification,"PWAD",4) && header.numlumps > 4046 && false)
+         {
+                 W_CloseFile(wad_file);
+                 I_Error ("Error: Vanilla limit for lumps in a WAD is 4046, "
+                          "PWAD %s has %d", filename, header.numlumps);
+         }
+
 	header.infotableofs = LONG(header.infotableofs);
 	length = header.numlumps*sizeof(filelump_t);
 	fileinfo = Z_Malloc(length, PU_STATIC, 0);
@@ -192,6 +208,7 @@ wad_file_t *W_AddFile (char *filename)
     filelumps = calloc(numfilelumps, sizeof(lumpinfo_t));
     if (filelumps == NULL)
     {
+        W_CloseFile(wad_file);
         I_Error("Failed to allocate array for lumps from new file.");
     }
 
@@ -200,6 +217,7 @@ wad_file_t *W_AddFile (char *filename)
     lumpinfo = realloc(lumpinfo, numlumps * sizeof(lumpinfo_t *));
     if (lumpinfo == NULL)
     {
+        W_CloseFile(wad_file);
         I_Error("Failed to increase lumpinfo[] array size.");
     }
 
@@ -367,9 +385,7 @@ void W_ReadLump(lumpindex_t lump, void *dest)
 
     l = lumpinfo[lump];
 
-    diskicon_readbytes += l->size;
-
-    disk_indicator = disk_on;
+    V_BeginRead(l->size);
 
     c = W_Read(l->wad_file, l->position, dest, l->size);
 

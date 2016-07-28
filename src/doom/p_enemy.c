@@ -185,6 +185,21 @@ boolean P_CheckMeleeRange (mobj_t*	actor)
     if (! P_CheckSight (actor, actor->target) )
 	return false;
 							
+    // [crispy] height check for melee attacks (from Hexen)
+    if (singleplayer && crispy_overunder && pl->player)
+    {
+	// [crispy] Target is higher than the attacker
+	if (pl->z > actor->z + actor->height)
+	{
+	    return false;
+	}
+	// [crispy] Attacker is higher
+	else if (actor->z > pl->z + pl->height)
+	{
+	    return false;
+	}
+    }
+
     return true;		
 }
 
@@ -1281,6 +1296,13 @@ void A_Fire (mobj_t* actor)
     actor->y = dest->y + FixedMul (24*FRACUNIT, finesine[an]);
     actor->z = dest->z;
     P_SetThingPosition (actor);
+    // [crispy] update the Archvile fire's floorz and ceilingz values
+    // to prevent it from jumping back and forth between the floor heights
+    // of its (faulty) spawn sector and the target's actual sector.
+    // Thanks to Quasar for his excellent analysis at
+    // https://www.doomworld.com/vb/post/1297952
+    actor->floorz = actor->subsector->sector->floorheight;
+    actor->ceilingz = actor->subsector->sector->ceilingheight;
 }
 
 

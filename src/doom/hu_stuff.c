@@ -32,7 +32,9 @@
 #include "m_controls.h"
 #include "m_misc.h"
 #include "w_wad.h"
+#include "m_argv.h" // [crispy] M_ParmExists()
 #include "st_stuff.h" // [crispy] ST_HEIGHT
+#include "p_local.h" // maplumpinfo
 
 #include "s_sound.h"
 
@@ -434,11 +436,75 @@ void HU_Stop(void)
     headsupactive = false;
 }
 
+// [crispy] display names of single special levels in Automap
+// These are single, non-consecutive, (semi-)official levels
+// without their own music or par times and thus do not need
+// to be handled as distinct pack_* game missions.
+typedef struct
+{
+    GameMission_t mission;
+    int episode;
+    int map;
+    const char *wad;
+    char *name;
+} speciallevel_t;
+
+static const speciallevel_t speciallevels[] = {
+    // [crispy] Romero's latest E1 additions
+    {doom, 1, 8, "e1m8b.wad", HUSTR_E1M8B},
+    {doom, 1, 4, "e1m4b.wad", HUSTR_E1M4B},
+    // [crispy] E1M10 "Sewers" (Xbox Doom)
+    {doom, 1, 10, NULL, HUSTR_E1M10},
+    // [crispy] The Master Levels for Doom 2
+    {doom2, 0, 1, "attack.wad", MHUSTR_1},
+    {doom2, 0, 1, "canyon.wad", MHUSTR_2},
+    {doom2, 0, 1, "catwalk.wad", MHUSTR_3},
+    {doom2, 0, 1, "combine.wad", MHUSTR_4},
+    {doom2, 0, 1, "fistula.wad", MHUSTR_5},
+    {doom2, 0, 1, "garrison.wad", MHUSTR_6},
+    {doom2, 0, 1, "manor.wad", MHUSTR_7},
+    {doom2, 0, 1, "paradox.wad", MHUSTR_8},
+    {doom2, 0, 1, "subspace.wad", MHUSTR_9},
+    {doom2, 0, 1, "subterra.wad", MHUSTR_10},
+    {doom2, 0, 1, "ttrap.wad", MHUSTR_11},
+    {doom2, 0, 3, "virgil.wad", MHUSTR_12},
+    {doom2, 0, 5, "minos.wad", MHUSTR_13},
+    {doom2, 0, 7, "bloodsea.wad", MHUSTR_14},
+    {doom2, 0, 7, "mephisto.wad", MHUSTR_15},
+    {doom2, 0, 7, "nessus.wad", MHUSTR_16},
+    {doom2, 0, 8, "geryon.wad", MHUSTR_17},
+    {doom2, 0, 9, "vesperas.wad", MHUSTR_18},
+    {doom2, 0, 25, "blacktwr.wad", MHUSTR_19},
+    {doom2, 0, 31, "teeth.wad", MHUSTR_20},
+    {doom2, 0, 32, "teeth.wad", MHUSTR_21},
+};
+
+static void HU_SetSpecialLevelName (const char *wad, char **name)
+{
+    int i;
+
+    for (i = 0; i < arrlen(speciallevels); i++)
+    {
+	const speciallevel_t speciallevel = speciallevels[i];
+
+	if (logical_gamemission == speciallevel.mission &&
+	    (!speciallevel.episode || gameepisode == speciallevel.episode) &&
+	    gamemap == speciallevel.map &&
+	    (!speciallevel.wad || !strcasecmp(wad, speciallevel.wad)))
+	{
+	    *name = speciallevel.name;
+	    break;
+	}
+    }
+}
+
 void HU_Start(void)
 {
 
     int		i;
     char*	s;
+    // [crispy] string buffers for map title and WAD file name
+    char	buf[8], *ptr;
 
     if (headsupactive)
 	HU_Stop();
@@ -552,45 +618,37 @@ void HU_Start(void)
         s = HU_TITLE_CHEX;
     }
 
-    // [crispy] special-casing for E1M10 "Sewers" support
-    if (crispy_havee1m10 && gameepisode == 1 && gamemap == 10)
-    {
-	s = HUSTR_E1M10;
-    }
+    // [crispy] display names of single special levels in Automap
+    HU_SetSpecialLevelName(maplumpinfo->wad_file->name, &s);
 
     // [crispy] explicitely display (episode and) map if the
     // map is from a PWAD or if the map title string has been dehacked
+    if (strcmp(s, DEH_String(s)) || (!maplumpinfo->wad_file->iwad && (!nervewadfile || gamemission != pack_nerve)))
     {
-	char map[6], *wad;
-	extern char *iwadfile;
+	char *m;
 
-	if (gamemode == commercial)
-	    M_snprintf(map, sizeof(map), "map%02d", gamemap);
-	else
-	    M_snprintf(map, sizeof(map), "e%dm%d", gameepisode, gamemap);
+	ptr = M_StringJoin(crstr[CR_GOLD], maplumpinfo->wad_file->name, ": ", crstr[CR_GRAY], maplumpinfo->name, NULL);
+	m = ptr;
 
-	wad = lumpinfo[W_GetNumForName(map)]->wad_file->path;
+	while (*m)
+	    HUlib_addCharToTextLine(&w_map, *(m++));
 
-	if (strcmp(s, DEH_String(s)) || (strcmp(wad, M_BaseName(iwadfile)) && !nervewadfile))
-	{
-	    char *m;
-
-	    m = M_StringJoin(wad, ": ", crstr[CR_GRAY], map, NULL);
-	    wad = m; // [crispy] free() that, else *m leaks memory
-
-	    while (*m)
-		HUlib_addCharToTextLine(&w_map, *(m++));
-
-	    free(wad);
-	}
+	free(ptr);
     }
 
     // dehacked substitution to get modified level name
 
     s = DEH_String(s);
     
+    // [crispy] print the map title in white from the first colon onward
+    M_snprintf(buf, sizeof(buf), "%s%s", ":", crstr[CR_GRAY]);
+    ptr = M_StringReplace(s, ":", buf);
+    s = ptr;
+
     while (*s)
 	HUlib_addCharToTextLine(&w_title, *(s++));
+
+    free(ptr);
 
     // create the chat widget
     HUlib_initIText(&w_chat,
@@ -665,13 +723,15 @@ void HU_Drawer(void)
     if (screenblocks > CRISPY_HUD && (!automapactive || crispy_automapoverlay))
 	dp_translucent = true;
 
+    dp_translation = cr[CR_GOLD];
+    HUlib_drawSText(&w_secret);
+
     V_ClearDPTranslation();
     HUlib_drawSText(&w_message);
     HUlib_drawIText(&w_chat);
 
     if (crispy_coloredhud & COLOREDHUD_TEXT)
 	dp_translation = cr[CR_GOLD];
-    HUlib_drawSText(&w_secret);
 
     if (automapactive)
     {

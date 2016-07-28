@@ -775,8 +775,8 @@ void R_InitTextures (void)
 	for (j = 0; j < numpnameslumps; j++)
 	{
 	    // [crispy] both point to the same WAD file name string?
-	    if (lumpinfo[texturelumps[i].lumpnum]->wad_file->path ==
-	        lumpinfo[pnameslumps[j].lumpnum]->wad_file->path)
+	    if (lumpinfo[texturelumps[i].lumpnum]->wad_file->name ==
+	        lumpinfo[pnameslumps[j].lumpnum]->wad_file->name)
 	    {
 		texturelumps[i].pnamesoffset = pnameslumps[j].summappatches;
 		break;
@@ -1036,13 +1036,11 @@ void R_InitColormaps (void)
     // [crispy] initialize color translation tables
     {
 	boolean keepgray = false;
-
-	extern char *iwadfile;
 	extern byte V_Colorize (byte *playpal, int cr, byte source, boolean keepgray109);
 
 	// [crispy] check for status bar graphics replacements
 	i = W_CheckNumForName(DEH_String("sttnum0")); // [crispy] Status Bar '0'
-	keepgray = (i >= 0 && !strcmp(lumpinfo[i]->wad_file->path, M_BaseName(iwadfile)));
+	keepgray = (i >= 0 && lumpinfo[i]->wad_file->iwad);
 
 	// [crispy] CRMAX - 2: don't override the original GREN and BLUE2 Boom tables
 	for (i = 0; i < CRMAX - 2; i++)

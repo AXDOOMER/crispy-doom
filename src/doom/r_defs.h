@@ -139,6 +139,9 @@ typedef	struct
     int		cachedheight;
     int		scaleindex;
 
+    // [crispy] add support for MBF sky tranfers
+    int		sky;
+
     // [AM] Previous position of floor and ceiling before
     //      think.  Used to interpolate between positions.
     fixed_t	oldfloorheight;
@@ -279,7 +282,7 @@ typedef struct
     sector_t*	frontsector;
     sector_t*	backsector;
     
-    fixed_t	length; // [crispy] fix long wall wobble
+    int64_t	length; // [crispy] fix long wall wobble
     angle_t	pangle; // [crispy] re-calculated angle used for rendering
 } seg_t;
 

@@ -704,7 +704,8 @@ void
 WI_drawTime
 ( int		x,
   int		y,
-  int		t )
+  int		t,
+  boolean	suck )
 {
 
     int		div;
@@ -713,7 +714,7 @@ WI_drawTime
     if (t<0)
 	return;
 
-    if (t <= 61*59)
+    if (t <= 61*59 || !suck)
     {
 	div = 1;
 
@@ -1481,14 +1482,23 @@ void WI_drawStats(void)
     WI_drawPercent(ORIGWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
 
     V_DrawPatch(SP_TIMEX, SP_TIMEY, timepatch);
-    WI_drawTime(ORIGWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time);
+    WI_drawTime(ORIGWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time, true);
 
     if (wbs->epsd < 4)
     {
 	V_DrawPatch(ORIGWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
-	WI_drawTime(ORIGWIDTH - SP_TIMEX, SP_TIMEY, cnt_par);
+	WI_drawTime(ORIGWIDTH - SP_TIMEX, SP_TIMEY, cnt_par, true);
     }
 
+    // [crispy] draw total time after level time and par time
+    if (sp_state > 8)
+    {
+	const int ttime = wbs->totaltimes / TICRATE;
+
+	V_DrawPatch(SP_TIMEX, SP_TIMEY + 16, total);
+	// [crispy] choose x-position depending on width of time string
+	WI_drawTime((ttime <= 61*59 ? ORIGWIDTH/2 : ORIGWIDTH) - SP_TIMEX, SP_TIMEY + 16, ttime, false);
+    }
 }
 
 void WI_checkForAccelerate(void)
@@ -1715,7 +1725,7 @@ static void WI_loadUnloadData(load_callback_t callback)
     {
         M_StringCopy(name, DEH_String("INTERPIC"), sizeof(name));
     }
-    else if (gamemode == retail && wbs->epsd == 3)
+    else if (gameversion >= exe_ultimate && wbs->epsd == 3)
     {
         M_StringCopy(name, DEH_String("INTERPIC"), sizeof(name));
     }
@@ -1811,7 +1821,7 @@ void WI_initVariables(wbstartstruct_t* wbstartstruct)
 #ifdef RANGECHECKING
     if (gamemode != commercial)
     {
-      if ( gamemode == retail )
+      if (gameversion >= exe_ultimate)
 	RNGCHECK(wbs->epsd, 0, 3);
       else
 	RNGCHECK(wbs->epsd, 0, 2);

@@ -998,6 +998,7 @@ boolean PTR_ShootTraverse (intercept_t* in)
 		
     if (in->isaline)
     {
+	boolean safe = false;
 	li = in->d.line;
 	
 	// [crispy] laser spot does not shoot any line
@@ -1062,9 +1063,13 @@ boolean PTR_ShootTraverse (intercept_t* in)
 	    
 	    // it's a sky hack wall
 	    if	(li->backsector && li->backsector->ceilingpic == skyflatnum)
-	      // [crispy] fix laser spot not appearing in outdoor areas
-	      if (la_damage > INT_MIN || li->backsector->ceilingheight < z)
+	    {
+	      // [crispy] fix bullet puffs and laser spot not appearing in outdoor areas
+	      if (li->backsector->ceilingheight < z)
 		return false;		
+	      else
+		safe = true;
+	    }
 	}
 
 	// [crispy] update laser spot position and return
@@ -1077,7 +1082,7 @@ boolean PTR_ShootTraverse (intercept_t* in)
 	}
 
 	// Spawn bullet puffs.
-	P_SpawnPuff (x,y,z);
+	P_SpawnPuffSafe (x, y, z, safe);
 	
 	// don't go any farther
 	return false;	
@@ -1196,19 +1201,22 @@ P_LineAttack
   fixed_t	slope,
   int		damage )
 {
+    // [crispy] smooth laser spot movement with uncapped framerate
+    const fixed_t t1x = (damage == INT_MIN) ? viewx : t1->x;
+    const fixed_t t1y = (damage == INT_MIN) ? viewy : t1->y;
     fixed_t	x2;
     fixed_t	y2;
 	
     angle >>= ANGLETOFINESHIFT;
     shootthing = t1;
     la_damage = damage;
-    x2 = t1->x + (distance>>FRACBITS)*finecosine[angle];
-    y2 = t1->y + (distance>>FRACBITS)*finesine[angle];
-    shootz = t1->z + (t1->height>>1) + 8*FRACUNIT;
+    x2 = t1x + (distance>>FRACBITS)*finecosine[angle];
+    y2 = t1y + (distance>>FRACBITS)*finesine[angle];
+    shootz = (damage == INT_MIN) ? viewz : t1->z + (t1->height>>1) + 8*FRACUNIT;
     attackrange = distance;
     aimslope = slope;
 		
-    P_PathTraverse ( t1->x, t1->y,
+    P_PathTraverse ( t1x, t1y,
 		     x2, y2,
 		     PT_ADDLINES|PT_ADDTHINGS,
 		     PTR_ShootTraverse );

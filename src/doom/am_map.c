@@ -66,17 +66,17 @@
 #define BACKGROUND	BLACK
 #define YOURCOLORS	WHITE
 #define YOURRANGE	0
-#define WALLCOLORS	(REDS + REDRANGE/2) // [crispy] a tad darker
+#define WALLCOLORS	23 // REDS // [crispy] red-brown
 #define WALLRANGE	REDRANGE
 #define TSWALLCOLORS	GRAYS
 #define TSWALLRANGE	GRAYSRANGE
-#define FDWALLCOLORS	BROWNS
+#define FDWALLCOLORS	55 // BROWNS // [crispy] lt brown
 #define FDWALLRANGE	BROWNRANGE
-#define CDWALLCOLORS	(YELLOWS + YELLOWRANGE) // [crispy] a tad darker
+#define CDWALLCOLORS	215 // YELLOWS // [crispy] orange
 #define CDWALLRANGE	YELLOWRANGE
 #define THINGCOLORS	GREENS
 #define THINGRANGE	GREENRANGE
-#define SECRETWALLCOLORS 252 // [crispy] purple
+#define SECRETWALLCOLORS 252 // WALLCOLORS // [crispy] purple
 #define SECRETWALLRANGE WALLRANGE
 #define GRIDCOLORS	(GRAYS + GRAYSRANGE/2)
 #define GRIDRANGE	0
@@ -764,11 +764,12 @@ AM_Responder
             rc = false;
         }
 
-	if (!deathmatch && cht_CheckCheat(&cheat_amap, ev->data2))
-	{
-	    rc = false;
-	    cheating = (cheating+1) % 3;
-	}
+        if ((!deathmatch || gameversion <= exe_doom_1_8)
+         && cht_CheckCheat(&cheat_amap, ev->data2))
+        {
+            rc = false;
+            cheating = (cheating + 1) % 3;
+        }
     }
     else if (ev->type == ev_keyup)
     {

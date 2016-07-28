@@ -613,9 +613,8 @@ static void NET_SV_ParseSYN(net_packet_t *packet,
         return;
     }
 
-    // [crispy] allow Chocolate Doom 2.2.1 clients to connect to Crispy Doom servers
-    if (strcmp(client_version, PACKAGE_STRING) != 0 &&
-        strcmp(client_version, "Chocolate Doom 2.2.1") != 0)
+    // [crispy] declare netcode-compatibility with Chocolate Doom
+    if (strcmp(client_version, NET_PACKAGE_STRING) != 0)
     {
         //!
         // @category net
@@ -1347,6 +1346,7 @@ void NET_SV_SendQueryResponse(net_addr_t *addr)
     querydata.gamemission = sv_gamemission;
 
     //!
+    // @category net
     // @arg <name>
     //
     // When starting a network server, specify a name for the server.
@@ -1787,10 +1787,10 @@ static void UpdateMasterServer(void)
 void NET_SV_RegisterWithMaster(void)
 {
     //!
+    // @category net
+    //
     // When running a server, don't register with the global master server.
     // Implies -server.
-    //
-    // @category net
     //
 
     if (!M_CheckParm("-privateserver"))

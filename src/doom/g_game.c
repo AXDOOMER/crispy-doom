@@ -128,6 +128,7 @@ int             displayplayer;          // view being displayed
 int             levelstarttic;          // gametic at level start 
 int             totalkills, totalitems, totalsecret;    // for intermission 
 int             extrakills;             // [crispy] count spawned monsters
+int             totalleveltimes;        // [crispy] CPhipps - total time for all completed levels
  
 char           *demoname;
 boolean         demorecording; 
@@ -396,10 +397,11 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     }
 
     // [crispy] add quick 180° reverse
-    if (gamekeydown[key_reverse])
+    if (gamekeydown[key_reverse] || mousebuttons[mousebreverse])
     {
         cmd->angleturn += ANG180 >> FRACBITS;
         gamekeydown[key_reverse] = false;
+        mousebuttons[mousebreverse] = false;
     }
 
     // [crispy] toggle "always run"
@@ -637,14 +639,7 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     if ((crispy_freelook && mousebuttons[mousebmouselook]) ||
          crispy_mouselook)
     {
-        players[consoleplayer].lookdir +=
-            mouse_y_invert ? -mousey : mousey;
-
-        if (players[consoleplayer].lookdir > LOOKDIRMAX * MLOOKUNIT)
-            players[consoleplayer].lookdir = LOOKDIRMAX * MLOOKUNIT;
-        else
-        if (players[consoleplayer].lookdir < -LOOKDIRMIN * MLOOKUNIT)
-            players[consoleplayer].lookdir = -LOOKDIRMIN * MLOOKUNIT;
+        cmd->lookdir = mouse_y_invert ? -mousey : mousey;
     }
     else
     if (!novert)
@@ -768,7 +763,7 @@ void G_DoLoadLevel (void)
     // the id Anthology version of doom2.exe for Final Doom.
     // [crispy] correct "Sky never changes in Doom II" bug
     if ((gamemode == commercial)
-    /* && (gameversion == exe_final2 || gameversion == exe_chex) */ )
+     && (gameversion == exe_final2 || gameversion == exe_chex || true))
     {
         char *skytexturename;
 
@@ -1630,22 +1625,22 @@ void G_DoCompleted (void)
     if ( gamemode == commercial)
     {
 	if (secretexit)
+	    if (gamemap == 2 && crispy_havemap33 && singleplayer)
+	      wminfo.next = 32;
+	    else
 	    switch(gamemap)
 	    {
 	      case 15: wminfo.next = 30; break;
 	      case 31: wminfo.next = 31; break;
-	      case  2:
-	          if (crispy_havemap33 && singleplayer)
-	               wminfo.next = 32; break;
 	    }
 	else
+	    if (gamemap == 33 && crispy_havemap33 && singleplayer)
+	      wminfo.next = 2;
+	    else
 	    switch(gamemap)
 	    {
 	      case 31:
 	      case 32: wminfo.next = 15; break;
-	      case 33:
-	          if (crispy_havemap33 && singleplayer)
-	               wminfo.next =  2; break;
 	      default: wminfo.next = gamemap;
 	    }
     }
@@ -1733,6 +1728,13 @@ void G_DoCompleted (void)
 		, sizeof(wminfo.plyr[i].frags)); 
     } 
  
+    // [crispy] CPhipps - total time for all completed levels
+    // cph - modified so that only whole seconds are added to the totalleveltimes
+    // value; so our total is compatible with the "naive" total of just adding
+    // the times in seconds shown for each level. Also means our total time
+    // will agree with Compet-n.
+    wminfo.totaltimes = (totalleveltimes += (leveltime - leveltime % TICRATE));
+
     gamestate = GS_INTERMISSION; 
     viewactive = false; 
     automapactive = false; 
@@ -1898,71 +1900,94 @@ void G_DoSaveGame (void)
 { 
     char *savegame_file;
     char *temp_savegame_file;
+    char *recovery_savegame_file;
 
+    recovery_savegame_file = NULL;
     temp_savegame_file = P_TempSaveGameFile();
     savegame_file = P_SaveGameFile(savegameslot);
 
     // Open the savegame file for writing.  We write to a temporary file
     // and then rename it at the end if it was successfully written.
-    // This prevents an existing savegame from being overwritten by 
+    // This prevents an existing savegame from being overwritten by
     // a corrupted one, or if a savegame buffer overrun occurs.
-
     save_stream = fopen(temp_savegame_file, "wb");
 
     if (save_stream == NULL)
     {
-        return;
+        // Failed to save the game, so we're going to have to abort. But
+        // to be nice, save to somewhere else before we call I_Error().
+        recovery_savegame_file = M_TempFile("recovery.dsg");
+        save_stream = fopen(recovery_savegame_file, "wb");
+        if (save_stream == NULL)
+        {
+            I_Error("Failed to open either '%s' or '%s' to write savegame.",
+                    temp_savegame_file, recovery_savegame_file);
+        }
     }
 
     savegame_error = false;
 
     P_WriteSaveGameHeader(savedescription);
- 
+
     // [crispy] some logging when saving
     {
-	const int time = leveltime / TICRATE;
+	const int ltime = leveltime / TICRATE,
+	          ttime = (totalleveltimes + leveltime) / TICRATE;
+	extern const char *skilltable[];
 
-	fprintf(stderr, "G_DoSaveGame: Episode %d, Map %d, Skill %d, Time %d:%02d.\n",
-	        gameepisode, gamemap, gameskill, time/60, time%60);
+	fprintf(stderr, "G_DoSaveGame: Episode %d, Map %d, %s, Time %d:%02d:%02d, Total %d:%02d:%02d.\n",
+	        gameepisode, gamemap, skilltable[BETWEEN(0,5,(int) gameskill+1)],
+	        ltime/3600, (ltime%3600)/60, ltime%60,
+	        ttime/3600, (ttime%3600)/60, ttime%60);
     }
 
-    P_ArchivePlayers (); 
-    P_ArchiveWorld (); 
-    P_ArchiveThinkers (); 
-    P_ArchiveSpecials (); 
-	 
+    P_ArchivePlayers ();
+    P_ArchiveWorld ();
+    P_ArchiveThinkers ();
+    P_ArchiveSpecials ();
+
     P_WriteSaveGameEOF();
-	 
+
     // [crispy] unconditionally disable savegame and demo limits
     /*
-    // Enforce the same savegame size limit as in Vanilla Doom, 
+    // Enforce the same savegame size limit as in Vanilla Doom,
     // except if the vanilla_savegame_limit setting is turned off.
 
     if (vanilla_savegame_limit && ftell(save_stream) > SAVEGAMESIZE)
     {
-        I_Error ("Savegame buffer overrun");
+        I_Error("Savegame buffer overrun");
     }
     */
-    
+
     // Finish up, close the savegame file.
 
     fclose(save_stream);
+
+    if (recovery_savegame_file != NULL)
+    {
+        // We failed to save to the normal location, but we wrote a
+        // recovery file to the temp directory. Now we can bomb out
+        // with an error.
+        I_Error("Failed to open savegame file '%s' for writing.\n"
+                "But your game has been saved to '%s' for recovery.",
+                temp_savegame_file, recovery_savegame_file);
+    }
 
     // Now rename the temporary savegame file to the actual savegame
     // file, overwriting the old savegame if there was one there.
 
     remove(savegame_file);
     rename(temp_savegame_file, savegame_file);
-    
-    gameaction = ga_nothing; 
+
+    gameaction = ga_nothing;
     M_StringCopy(savedescription, "", sizeof(savedescription));
     M_StringCopy(savename, savegame_file, sizeof(savename));
 
     players[consoleplayer].message = DEH_String(GGSAVED);
 
     // draw the pattern into the back screen
-    R_FillBackScreen ();	
-} 
+    R_FillBackScreen ();
+}
  
 
 //
@@ -2102,7 +2127,11 @@ G_InitNew
     if (fastparm || (skill == sk_nightmare && gameskill != sk_nightmare) )
     {
 	for (i=S_SARG_RUN1 ; i<=S_SARG_PAIN2 ; i++)
+	    // [crispy] Fix infinite loop caused by Demon speed bug
+	    if (states[i].tics != 1)
+	    {
 	    states[i].tics >>= 1;
+	    }
 	mobjinfo[MT_BRUISERSHOT].speed = 20*FRACUNIT;
 	mobjinfo[MT_HEADSHOT].speed = 20*FRACUNIT;
 	mobjinfo[MT_TROOPSHOT].speed = 20*FRACUNIT;
@@ -2128,6 +2157,9 @@ G_InitNew
     gameepisode = episode;
     gamemap = map;
     gameskill = skill;
+
+    // [crispy] CPhipps - total time for all completed levels
+    totalleveltimes = 0;
 
     viewactive = true;
 
@@ -2209,6 +2241,12 @@ void G_ReadDemoTiccmd (ticcmd_t* cmd)
     }
 
     cmd->buttons = (unsigned char)*demo_p++; 
+
+    if (crispy_fliplevels)
+    {
+	cmd->sidemove *= (const signed char) -1;
+	cmd->angleturn *= (const short) -1;
+    }
 } 
 
 // Increase the size of the demo buffer to allow unlimited demos
@@ -2246,6 +2284,12 @@ static void IncreaseDemoBuffer(void)
 void G_WriteDemoTiccmd (ticcmd_t* cmd) 
 { 
     byte *demo_start;
+
+    if (crispy_fliplevels)
+    {
+	cmd->sidemove *= (const signed char) -1;
+	cmd->angleturn *= (const short) -1;
+    }
 
     if (gamekeydown[key_demo_quit])           // press q to end demo recording 
 	G_CheckDemoStatus (); 
@@ -2468,13 +2512,13 @@ void G_DoPlayDemo (void)
     gameaction = ga_nothing; 
     demobuffer = demo_p = W_CacheLumpName (defdemoname, PU_STATIC); 
 
-    // [crispy] demo progress bar
-    defdemosize = 0;
-    while (*demo_p++ != DEMOMARKER)
+    // [crispy] ignore empty demo lumps
+    if (W_LumpLength(W_GetNumForName(defdemoname)) < 0xd)
     {
-	defdemosize++;
+	demoplayback = true;
+	G_CheckDemoStatus();
+	return;
     }
-    demo_p = demobuffer;
 
     demoversion = *demo_p++;
 
@@ -2494,7 +2538,8 @@ void G_DoPlayDemo (void)
                         "\n"
                         "*** You may need to upgrade your version "
                             "of Doom to v1.9. ***\n"
-                        "    See: http://doomworld.com/files/patches.shtml\n"
+                        "    See: https://www.doomworld.com/classicdoom"
+                                  "/info/patches.php\n"
                         "    This appears to be %s.";
 
         I_Error(message, demoversion, G_VanillaVersionCode(),
@@ -2528,6 +2573,28 @@ void G_DoPlayDemo (void)
 
     usergame = false; 
     demoplayback = true; 
+
+    // [crispy] demo progress bar
+    {
+	int i, numplayersingame = 0;
+	byte *demo_ptr = demo_p;
+	const int defdemolumpsize = lumpinfo[W_GetNumForName(defdemoname)]->size;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+	    if (playeringame[i])
+	    {
+		numplayersingame++;
+	    }
+	}
+
+	while (*demo_ptr != DEMOMARKER && (demo_ptr - demobuffer) < defdemolumpsize)
+	{
+	    demo_ptr += numplayersingame * (longtics ? 5 : 4);
+	}
+
+	defdemosize = demo_ptr - demo_p;
+    }
 } 
 
 //
@@ -2536,12 +2603,13 @@ void G_DoPlayDemo (void)
 void G_TimeDemo (char* name) 
 {
     //!
-    // @vanilla 
+    // @category video
+    // @vanilla
     //
     // Disable rendering the screen entirely.
     //
 
-    nodrawers = M_CheckParm ("-nodraw"); 
+    nodrawers = M_CheckParm ("-nodraw");
 
     timingdemo = true; 
     singletics = true; 

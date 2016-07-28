@@ -44,12 +44,19 @@ void P_SpawnMapThing (mapthing_t*	mthing);
 //
 int test;
 
+// Use a heuristic approach to detect infinite state cycles: Count the number
+// of times the loop in P_SetMobjState() executes and exit with an error once
+// an arbitrary very large limit is reached.
+
+#define MOBJ_CYCLE_LIMIT 1000000
+
 boolean
 P_SetMobjState
 ( mobj_t*	mobj,
   statenum_t	state )
 {
     state_t*	st;
+    int	cycle_counter = 0;
 
     do
     {
@@ -72,22 +79,45 @@ P_SetMobjState
 	    st->action.acp1(mobj);	
 	
 	state = st->nextstate;
+
+	if (cycle_counter++ > MOBJ_CYCLE_LIMIT)
+	{
+	    I_Error("P_SetMobjState: Infinite state cycle detected!");
+	}
     } while (!mobj->tics);
 				
     return true;
 }
 
+// [crispy] check if a given state is "safe", i.e. that no action pointer
+// is ever called for the duration of its sequence
+static boolean P_SafeState(statenum_t statenum)
+{
+    while (statenum != S_NULL)
+    {
+	const state_t *state = &states[statenum];
+
+	if (state->action.acp1)
+	{
+	    return false;
+	}
+
+	statenum = state->nextstate;
+    }
+
+    return true;
+}
 
 //
 // P_ExplodeMissile  
 //
-void P_ExplodeMissile (mobj_t* mo)
+void P_ExplodeMissileSafe (mobj_t* mo, boolean safe)
 {
     mo->momx = mo->momy = mo->momz = 0;
 
     P_SetMobjState (mo, mobjinfo[mo->type].deathstate);
 
-    mo->tics -= P_Random()&3;
+    mo->tics -= safe ? 0 : P_Random()&3;
 
     if (mo->tics < 1)
 	mo->tics = 1;
@@ -100,6 +130,10 @@ void P_ExplodeMissile (mobj_t* mo)
 	S_StartSound (mo, mo->info->deathsound);
 }
 
+void P_ExplodeMissile (mobj_t* mo)
+{
+    return P_ExplodeMissileSafe(mo, false);
+}
 
 //
 // P_XYMovement  
@@ -168,18 +202,27 @@ void P_XYMovement (mobj_t* mo)
 	    }
 	    else if (mo->flags & MF_MISSILE)
 	    {
+		boolean safe = false;
 		// explode a missile
 		if (ceilingline &&
 		    ceilingline->backsector &&
 		    ceilingline->backsector->ceilingpic == skyflatnum)
 		{
+		    if (mo->z > ceilingline->backsector->ceilingheight ||
+		        !P_SafeState(mobjinfo[mo->type].deathstate))
+		    {
 		    // Hack to prevent missiles exploding
 		    // against the sky.
 		    // Does not handle sky floors.
 		    P_RemoveMobj (mo);
 		    return;
+		    }
+		    else
+		    {
+			safe = true;
+		    }
 		}
-		P_ExplodeMissile (mo);
+		P_ExplodeMissileSafe (mo, safe);
 	    }
 	    else
 		mo->momx = mo->momy = 0;
@@ -534,6 +577,17 @@ P_SpawnMobj
   fixed_t	z,
   mobjtype_t	type )
 {
+	return P_SpawnMobjSafe(x, y, z, type, false);
+}
+
+mobj_t*
+P_SpawnMobjSafe
+( fixed_t	x,
+  fixed_t	y,
+  fixed_t	z,
+  mobjtype_t	type,
+  boolean safe )
+{
     mobj_t*	mobj;
     state_t*	st;
     mobjinfo_t*	info;
@@ -554,7 +608,7 @@ P_SpawnMobj
     if (gameskill != sk_nightmare)
 	mobj->reactiontime = info->reactiontime;
     
-    mobj->lastlook = P_Random () % MAXPLAYERS;
+    mobj->lastlook = safe ? 0 : P_Random () % MAXPLAYERS;
     // do not set the state with P_SetMobjState,
     // because action routines can not be called yet
     st = &states[info->spawnstate];
@@ -625,8 +679,16 @@ void P_RemoveMobj (mobj_t* mobj)
     // unlink from sector and block lists
     P_UnsetThingPosition (mobj);
     
+    // [crispy] removed map objects may finish their sounds
+    if (crispy_fullsounds)
+    {
+	S_UnlinkSound(mobj);
+    }
+    else
+    {
     // stop any playing sound
     S_StopSound (mobj);
+    }
     
     // free block
     P_RemoveThinker ((thinker_t*)mobj);
@@ -919,13 +981,23 @@ P_SpawnPuff
   fixed_t	y,
   fixed_t	z )
 {
+    return P_SpawnPuffSafe(x, y, z, false);
+}
+
+void
+P_SpawnPuffSafe
+( fixed_t	x,
+  fixed_t	y,
+  fixed_t	z,
+  boolean	safe )
+{
     mobj_t*	th;
 	
-    z += ((P_Random()-P_Random())<<10);
+    z += safe ? 0 : ((P_Random()-P_Random())<<10);
 
-    th = P_SpawnMobj (x,y,z, MT_PUFF);
+    th = P_SpawnMobjSafe (x,y,z, MT_PUFF, safe);
     th->momz = FRACUNIT;
-    th->tics -= P_Random()&3;
+    th->tics -= safe ? 0 : P_Random()&3;
 
     if (th->tics < 1)
 	th->tics = 1;

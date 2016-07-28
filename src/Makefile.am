@@ -1,20 +1,20 @@
 
-SUBDIRS = doom setup
+SUBDIRS = doom setup # heretic hexen strife
 
-execgamesdir = ${exec_prefix}/games
+execgamesdir = ${bindir}
 
 execgames_PROGRAMS = @PROGRAM_PREFIX@doom     \
-                     @PROGRAM_PREFIX@heretic  \
-                     @PROGRAM_PREFIX@hexen    \
-                     @PROGRAM_PREFIX@strife   \
                      @PROGRAM_PREFIX@server
+#                    @PROGRAM_PREFIX@heretic  \
+#                    @PROGRAM_PREFIX@hexen    \
+#                    @PROGRAM_PREFIX@strife
 
 noinst_PROGRAMS = @PROGRAM_PREFIX@setup
 
-SETUP_BINARIES = @PROGRAM_PREFIX@doom-setup$(EXEEXT)    \
-                 @PROGRAM_PREFIX@heretic-setup$(EXEEXT) \
-                 @PROGRAM_PREFIX@hexen-setup$(EXEEXT)   \
-                 @PROGRAM_PREFIX@strife-setup$(EXEEXT)
+SETUP_BINARIES = @PROGRAM_PREFIX@doom-setup$(EXEEXT)
+#                @PROGRAM_PREFIX@heretic-setup$(EXEEXT) \
+#                @PROGRAM_PREFIX@hexen-setup$(EXEEXT)   \
+#                @PROGRAM_PREFIX@strife-setup$(EXEEXT)
 
 execgames_SCRIPTS = $(SETUP_BINARIES)
 
@@ -162,32 +162,32 @@ endif
 
 @PROGRAM_PREFIX@doom_LDADD = doom/libdoom.a $(EXTRA_LIBS)
 
-if HAVE_WINDRES
-@PROGRAM_PREFIX@heretic_SOURCES=$(SOURCE_FILES_WITH_DEH) resource.rc
-else
-@PROGRAM_PREFIX@heretic_SOURCES=$(SOURCE_FILES_WITH_DEH)
-endif
+#if HAVE_WINDRES
+#@PROGRAM_PREFIX@heretic_SOURCES=$(SOURCE_FILES_WITH_DEH) resource.rc
+#else
+#@PROGRAM_PREFIX@heretic_SOURCES=$(SOURCE_FILES_WITH_DEH)
+#endif
 
-@PROGRAM_PREFIX@heretic_LDADD = heretic/libheretic.a $(EXTRA_LIBS)
+#@PROGRAM_PREFIX@heretic_LDADD = heretic/libheretic.a $(EXTRA_LIBS)
 
-if HAVE_WINDRES
-@PROGRAM_PREFIX@hexen_SOURCES=$(SOURCE_FILES) resource.rc
-else
-@PROGRAM_PREFIX@hexen_SOURCES=$(SOURCE_FILES)
-endif
+#if HAVE_WINDRES
+#@PROGRAM_PREFIX@hexen_SOURCES=$(SOURCE_FILES) resource.rc
+#else
+#@PROGRAM_PREFIX@hexen_SOURCES=$(SOURCE_FILES)
+#endif
 
-@PROGRAM_PREFIX@hexen_LDADD = hexen/libhexen.a $(EXTRA_LIBS)
+#@PROGRAM_PREFIX@hexen_LDADD = hexen/libhexen.a $(EXTRA_LIBS)
 
-if HAVE_WINDRES
-@PROGRAM_PREFIX@strife_SOURCES=$(SOURCE_FILES_WITH_DEH) resource.rc
-else
-@PROGRAM_PREFIX@strife_SOURCES=$(SOURCE_FILES_WITH_DEH)
-endif
+#if HAVE_WINDRES
+#@PROGRAM_PREFIX@strife_SOURCES=$(SOURCE_FILES_WITH_DEH) resource.rc
+#else
+#@PROGRAM_PREFIX@strife_SOURCES=$(SOURCE_FILES_WITH_DEH)
+#endif
 
-@PROGRAM_PREFIX@strife_LDADD = strife/libstrife.a $(EXTRA_LIBS)
+#@PROGRAM_PREFIX@strife_LDADD = strife/libstrife.a $(EXTRA_LIBS)
 
 $(SETUP_BINARIES): @PROGRAM_PREFIX@setup$(EXEEXT)
-	cp $< $@
+	cp @PROGRAM_PREFIX@setup$(EXEEXT) $@
 
 # Source files needed for chocolate-setup:
 
@@ -221,10 +221,10 @@ EXTRA_DIST =                        \
 
 appdatadir = $(prefix)/share/appdata
 appdata_DATA =                              \
-        @PROGRAM_PREFIX@doom.appdata.xml    \
-        @PROGRAM_PREFIX@heretic.appdata.xml \
-        @PROGRAM_PREFIX@hexen.appdata.xml   \
-        @PROGRAM_PREFIX@strife.appdata.xml
+        @PROGRAM_PREFIX@doom.appdata.xml
+#       @PROGRAM_PREFIX@heretic.appdata.xml \
+#       @PROGRAM_PREFIX@hexen.appdata.xml   \
+#       @PROGRAM_PREFIX@strife.appdata.xml
 
 @PROGRAM_PREFIX@doom.appdata.xml : doom.appdata.xml
 	cp doom.appdata.xml $@
@@ -240,10 +240,10 @@ appdata_DATA =                              \
 
 appdir = $(prefix)/share/applications
 app_DATA =                                 \
-           @PROGRAM_PREFIX@doom.desktop    \
-           @PROGRAM_PREFIX@heretic.desktop \
-           @PROGRAM_PREFIX@hexen.desktop   \
-           @PROGRAM_PREFIX@strife.desktop
+           @PROGRAM_PREFIX@doom.desktop
+#          @PROGRAM_PREFIX@heretic.desktop \
+#          @PROGRAM_PREFIX@hexen.desktop   \
+#          @PROGRAM_PREFIX@strife.desktop
 
 @PROGRAM_PREFIX@doom.desktop : doom.desktop
 	cp doom.desktop $@
@@ -272,14 +272,16 @@ CLEANFILES = $(execgames_SCRIPTS) $(app_DATA) $(screensaver_DATA)
 
 if HAVE_PYTHON
 
-icon.c : $(top_builddir)/data/doom.png
-	$(top_builddir)/data/convert-icon $< $@
+icon.c : $(top_builddir)/data/doom8.ico
+	$(top_builddir)/data/convert-icon $(top_builddir)/data/doom8.ico $@
 
 endif
 
 midiread : midifile.c
-	$(CC) -DTEST $(CFLAGS) @LDFLAGS@ $< -o $@
+	$(CC) -DTEST $(CFLAGS) @LDFLAGS@ midifile.c -o $@
 
-mus2mid : mus2mid.c memio.c z_native.c i_system.c m_argv.c m_misc.c
-	$(CC) -DSTANDALONE -I$(top_builddir) $(CFLAGS) @LDFLAGS@ $^ -o $@
+MUS2MID_SRC_FILES = mus2mid.c memio.c z_native.c i_system.c m_argv.c m_misc.c
+mus2mid : $(MUS2MID_SRC_FILES)
+	$(CC) -DSTANDALONE -I$(top_builddir) $(CFLAGS) @LDFLAGS@ \
+              $(MUS2MID_SRC_FILES) -o $@
 

@@ -123,13 +123,13 @@ void Z_Init (void)
 
     block->size = mainzone->size - sizeof(memzone_t);
 
-    //!
+    // [Deliberately undocumented]
     // Zone memory debugging flag. If set, memory is zeroed after it is freed
     // to deliberately break any code that attempts to use it after free.
     //
     zero_on_free = M_ParmExists("-zonezero");
 
-    //!
+    // [Deliberately undocumented]
     // Zone memory debugging flag. If set, each time memory is freed, the zone
     // heap is scanned to look for remaining pointers to the freed block.
     //
@@ -564,7 +564,7 @@ void *crispy_realloc(void *ptr, size_t size)
 
     newp = realloc(ptr, size);
 
-    if (!newp)
+    if (!newp && size)
     {
 	I_Error ("crispy_realloc: failed on (re-)allocation of %i bytes", size);
     }

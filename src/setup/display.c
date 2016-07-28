@@ -28,7 +28,7 @@
 #include "display.h"
 #include "config.h"
 
-#define WINDOW_HELP_URL "http://www.chocolate-doom.org/setup-display"
+#define WINDOW_HELP_URL "https://www.chocolate-doom.org/setup-display"
 
 extern void RestartTextscreen(void);
 
@@ -41,11 +41,12 @@ typedef struct
 
 static screen_mode_t screen_modes_unscaled[] = 
 {
-    { 320,  200 },
+//  { 320,  200 }, // hires
     { 640,  400 },
-    { 960,  600 },
+//  { 960,  600 }, // hires
     { 1280, 800 },
-    { 1600, 1000 },
+//  { 1600, 1000 }, // hires
+    { 1920, 1200 }, // hires
     { 0, 0},
 };
 
@@ -53,12 +54,12 @@ static screen_mode_t screen_modes_unscaled[] =
 
 static screen_mode_t screen_modes_scaled[] = 
 {
-    { 256,  200 },
-    { 320,  240 },
+//  { 256,  200 }, // hires
+//  { 320,  240 }, // hires
     { 512,  400 },
     { 640,  480 },
     { 800,  600 },
-    { 960,  720 },
+//  { 960,  720 }, // hires
     { 1024, 800 },
     { 1280, 960 },
     { 1600, 1200 },
@@ -354,13 +355,6 @@ static void AdvancedDisplayConfig(TXT_UNCAST_ARG(widget),
         TXT_AddWidget(window,
                       TXT_NewCheckBox("Show ENDOOM screen on exit",
                                       &show_endoom));
-    }
-
-    if (gamemission == doom || gamemission == strife)
-    {
-        TXT_AddWidget(window,
-                      TXT_NewCheckBox("Show disk activity indicator",
-                                      &show_diskicon));
     }
 
 #ifdef HAVE_LIBPNG
