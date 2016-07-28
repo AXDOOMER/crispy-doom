@@ -948,7 +948,7 @@ void I_FinishUpdate (void)
 #endif
 
     // [crispy] variable rendering framerate
-    if (crispy_uncapped > UNCAPPED_ON && !singletics)
+    if (crispy_uncapped > UNCAPPED_ON && !singletics && false)
     {
         static int halftics_old;
         int halftics;
@@ -1778,7 +1778,10 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
     // later anyway and leave the window position "undefined". If "flags"
     // contains the fullscreen flag (see above), then w and h are ignored.
 
-    SDL_CreateWindowAndRenderer(w, h, flags, &screen, &renderer);
+    screen = SDL_CreateWindow("",
+             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+             w, h, flags);
+    renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC);
 
     if (screen == NULL || renderer == NULL)
     {
