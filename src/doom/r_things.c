@@ -744,7 +744,10 @@ void R_ProjectSprite (mobj_t* thing)
     // [crispy] translucent sprites
     if (thing->flags & MF_TRANSLUCENT)
     {
+/*
 	if (thing->flags & (MF_NOGRAVITY | MF_COUNTITEM))
+*/
+	if (thing->frame & FF_FULLBRIGHT)
 	    vis->blendfunc = I_BlendAdd;
 	else
 	    vis->blendfunc = I_BlendOver;
@@ -1000,7 +1003,7 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
     if (psprnum == ps_flash)
     {
         vis->mobjflags |= MF_TRANSLUCENT;
-        vis->blendfunc = I_BlendOver;
+        vis->blendfunc = I_BlendAdd;
     }
 
     R_DrawVisSprite (vis, vis->x1, vis->x2);
