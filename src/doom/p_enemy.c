@@ -804,7 +804,7 @@ void A_FaceTarget (mobj_t* actor)
 				    actor->target->y);
     
     if (actor->target->flags & MF_SHADOW)
-	actor->angle += (P_Random()-P_Random())<<21;
+	actor->angle += P_SubRandom() << 21;
 }
 
 
@@ -825,7 +825,7 @@ void A_PosAttack (mobj_t* actor)
     slope = P_AimLineAttack (actor, angle, MISSILERANGE);
 
     S_StartSound (actor, sfx_pistol);
-    angle += (P_Random()-P_Random())<<20;
+    angle += P_SubRandom() << 20;
     damage = ((P_Random()%5)+1)*3;
     P_LineAttack (actor, angle, MISSILERANGE, slope, damage);
 }
@@ -848,7 +848,7 @@ void A_SPosAttack (mobj_t* actor)
 
     for (i=0 ; i<3 ; i++)
     {
-	angle = bangle + ((P_Random()-P_Random())<<20);
+	angle = bangle + (P_SubRandom() << 20);
 	damage = ((P_Random()%5)+1)*3;
 	P_LineAttack (actor, angle, MISSILERANGE, slope, damage);
     }
@@ -869,7 +869,7 @@ void A_CPosAttack (mobj_t* actor)
     bangle = actor->angle;
     slope = P_AimLineAttack (actor, bangle, MISSILERANGE);
 
-    angle = bangle + ((P_Random()-P_Random())<<20);
+    angle = bangle + (P_SubRandom() << 20);
     damage = ((P_Random()%5)+1)*3;
     P_LineAttack (actor, angle, MISSILERANGE, slope, damage);
 }
@@ -995,6 +995,8 @@ void A_BruisAttack (mobj_t* actor)
     if (!actor->target)
 	return;
 		
+    // [crispy] face the enemy
+//  A_FaceTarget (actor);
     if (P_CheckMeleeRange (actor))
     {
 	S_StartSound (actor, sfx_claw);
@@ -1855,7 +1857,7 @@ A_CloseShotgun2
 
 mobj_t**		braintargets = NULL;
 int		numbraintargets = 0; // [crispy] initialize
-int		braintargeton = 0;
+int		braintargeton = -1; // [crispy] initialize
 static int	maxbraintargets; // [crispy] remove braintargets limit
 
 void A_BrainAwake (mobj_t* mo)
@@ -1865,7 +1867,11 @@ void A_BrainAwake (mobj_t* mo)
 	
     // find all the target spots
     numbraintargets = 0;
+    // [crispy] initialize, but allow overriding from savegame
+    if (braintargeton == -1)
+    {
     braintargeton = 0;
+    }
 	
     thinker = thinkercap.next;
     for (thinker = thinkercap.next ;
@@ -1896,9 +1902,16 @@ void A_BrainAwake (mobj_t* mo)
 	
     S_StartSound (NULL,sfx_bossit);
 
+    // [crispy] prevent braintarget overflow
+    // (e.g. in two subsequent maps featuring a brain spitter)
+    if (braintargeton >= numbraintargets)
+    {
+	braintargeton = 0;
+    }
+
     // [crispy] no spawn spots available
     if (numbraintargets == 0)
-	numbraintargets = INT_MIN;
+	numbraintargets = -1;
 }
 
 
@@ -1941,7 +1954,7 @@ void A_BrainExplode (mobj_t* mo)
     int		z;
     mobj_t*	th;
 	
-    x = mo->x + (P_Random () - P_Random ())*2048;
+    x = mo->x +  P_SubRandom() * 2048;
     y = mo->y;
     z = 128 + P_Random()*2*FRACUNIT;
     th = P_SpawnMobj (x,y,z, MT_ROCKET);
@@ -1979,7 +1992,7 @@ void A_BrainSpit (mobj_t*	mo)
 	A_BrainAwake(NULL);
 
     // [crispy] still no spawn spots available
-    if (numbraintargets == INT_MIN)
+    if (numbraintargets == -1)
 	return;
 
     // shoot a cube at current target
@@ -2082,4 +2095,145 @@ void A_PlayerScream (mobj_t* mo)
     }
     
     S_StartSound (mo, sound);
+}
+
+// [crispy] additional BOOM and MBF states, sprites and code pointers
+
+// killough 11/98: kill an object
+void A_Die(mobj_t *actor)
+{
+  P_DamageMobj(actor, NULL, NULL, actor->health);
+}
+
+//
+// A_Detonate
+// killough 8/9/98: same as A_Explode, except that the damage is variable
+//
+
+void A_Detonate(mobj_t *mo)
+{
+  P_RadiusAttack(mo, mo->target, mo->info->damage);
+}
+
+//
+// killough 9/98: a mushroom explosion effect, sorta :)
+// Original idea: Linguica
+//
+
+void A_Mushroom(mobj_t *actor)
+{
+  int i, j, n = actor->info->damage;
+
+  // Mushroom parameters are part of code pointer's state
+  fixed_t misc1 = actor->state->misc1 ? actor->state->misc1 : FRACUNIT*4;
+  fixed_t misc2 = actor->state->misc2 ? actor->state->misc2 : FRACUNIT/2;
+
+  A_Explode(actor);               // make normal explosion
+
+  for (i = -n; i <= n; i += 8)    // launch mushroom cloud
+    for (j = -n; j <= n; j += 8)
+      {
+	mobj_t target = *actor, *mo;
+	target.x += i << FRACBITS;    // Aim in many directions from source
+	target.y += j << FRACBITS;
+	target.z += P_AproxDistance(i,j) * misc1;           // Aim fairly high
+	mo = P_SpawnMissile(actor, &target, MT_FATSHOT);    // Launch fireball
+	mo->momx = FixedMul(mo->momx, misc2);
+	mo->momy = FixedMul(mo->momy, misc2);               // Slow down a bit
+	mo->momz = FixedMul(mo->momz, misc2);
+	mo->flags &= ~MF_NOGRAVITY;   // Make debris fall under gravity
+      }
+}
+
+//
+// A_BetaSkullAttack()
+// killough 10/98: this emulates the beta version's lost soul attacks
+//
+
+void A_BetaSkullAttack(mobj_t *actor)
+{
+  int damage;
+  if (!actor->target || actor->target->type == MT_SKULL)
+    return;
+  S_StartSound(actor, actor->info->attacksound);
+  A_FaceTarget(actor);
+  damage = (P_Random(/* pr_skullfly */)%8+1)*actor->info->damage;
+  P_DamageMobj(actor->target, actor, actor, damage);
+}
+
+void A_Stop(mobj_t *actor)
+{
+  actor->momx = actor->momy = actor->momz = 0;
+}
+
+//
+// killough 11/98
+//
+// The following were inspired by Len Pitre
+//
+// A small set of highly-sought-after code pointers
+//
+
+void A_Spawn(mobj_t *mo)
+{
+  if (mo->state->misc1)
+    {
+/*    mobj_t *newmobj = */ P_SpawnMobj(mo->x, mo->y,
+				    (mo->state->misc2 << FRACBITS) + mo->z,
+				    mo->state->misc1 - 1);
+//    newmobj->flags = (newmobj->flags & ~MF_FRIEND) | (mo->flags & MF_FRIEND);
+
+    }
+}
+
+void A_Turn(mobj_t *mo)
+{
+  mo->angle += (angle_t)(((uint64_t) mo->state->misc1 << 32) / 360);
+}
+
+void A_Face(mobj_t *mo)
+{
+  mo->angle = (angle_t)(((uint64_t) mo->state->misc1 << 32) / 360);
+}
+
+void A_Scratch(mobj_t *mo)
+{
+  mo->target && (A_FaceTarget(mo), P_CheckMeleeRange(mo)) ?
+    mo->state->misc2 ? S_StartSound(mo, mo->state->misc2) : (void) 0,
+    P_DamageMobj(mo->target, mo, mo, mo->state->misc1) : (void) 0;
+}
+
+void A_PlaySound(mobj_t *mo)
+{
+  S_StartSound(mo->state->misc2 ? NULL : mo, mo->state->misc1);
+}
+
+void A_RandomJump(mobj_t *mo)
+{
+  if (Crispy_Random() /* P_Random(pr_randomjump) */ < mo->state->misc2)
+    P_SetMobjState(mo, mo->state->misc1);
+}
+
+//
+// This allows linedef effects to be activated inside deh frames.
+//
+
+void A_LineEffect(mobj_t *mo)
+{
+//if (!(mo->intflags & MIF_LINEDONE))                // Unless already used up
+    {
+      line_t junk = *lines;                          // Fake linedef set to 1st
+      if ((junk.special = (short)mo->state->misc1))  // Linedef type
+	{
+	  player_t player, *oldplayer = mo->player;  // Remember player status
+	  mo->player = &player;                      // Fake player
+	  player.health = 100;                       // Alive player
+	  junk.tag = (short)mo->state->misc2;        // Sector tag for linedef
+	  if (!P_UseSpecialLine(mo, &junk, 0))       // Try using it
+	    P_CrossSpecialLinePtr(&junk, 0, mo);     // Try crossing it
+//	  if (!junk.special)                         // If type cleared,
+//	    mo->intflags |= MIF_LINEDONE;            // no more for this thing
+	  mo->player = oldplayer;                    // Restore player status
+	}
+    }
 }

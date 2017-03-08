@@ -119,9 +119,9 @@ R_MapPlane
   int		x2 )
 {
 // [crispy] see below
-//    angle_t	angle;
+//  angle_t	angle;
     fixed_t	distance;
-//    fixed_t	length;
+//  fixed_t	length;
     unsigned	index;
     int dx, dy;
 	
@@ -139,24 +139,16 @@ R_MapPlane
 // adapted from prboom-plus/src/r_plane.c:191-239, translated to fixed-point math
 
     if (!(dy = abs(centery - y)))
+    {
 	return;
+    }
 
-    distance = FixedMul(planeheight, yslope[y]);
-    dx = x1 - centerx;
-
-    ds_xstep = FixedMul(viewsin, planeheight) / dy;
-    ds_ystep = FixedMul(viewcos, planeheight) / dy;
-
-    ds_xfrac =  viewx + FixedMul(viewcos, distance) + dx * ds_xstep;
-    ds_yfrac = -viewy - FixedMul(viewsin, distance) + dx * ds_ystep;
-
-/*
     if (planeheight != cachedheight[y])
     {
 	cachedheight[y] = planeheight;
 	distance = cacheddistance[y] = FixedMul (planeheight, yslope[y]);
-	ds_xstep = cachedxstep[y] = FixedMul (distance,basexscale);
-	ds_ystep = cachedystep[y] = FixedMul (distance,baseyscale);
+	ds_xstep = cachedxstep[y] = FixedMul (viewsin, planeheight) / dy;
+	ds_ystep = cachedystep[y] = FixedMul (viewcos, planeheight) / dy;
     }
     else
     {
@@ -164,12 +156,11 @@ R_MapPlane
 	ds_xstep = cachedxstep[y];
 	ds_ystep = cachedystep[y];
     }
-	
-    length = FixedMul (distance,distscale[x1]);
-    angle = (viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-    ds_xfrac = viewx + FixedMul(finecosine[angle], length);
-    ds_yfrac = -viewy - FixedMul(finesine[angle], length);
-*/
+
+    dx = x1 - centerx;
+
+    ds_xfrac = viewx + FixedMul(viewcos, distance) + dx * ds_xstep;
+    ds_yfrac = -viewy - FixedMul(viewsin, distance) + dx * ds_ystep;
 
     if (fixedcolormap)
 	ds_colormap = fixedcolormap;
@@ -452,7 +443,7 @@ static char *R_DistortedFlat (int flatnum)
 	swirltic = gametic;
     }
 
-    normalflat = W_CacheLumpNum(firstflat + flattranslation[flatnum], PU_STATIC);
+    normalflat = W_CacheLumpNum(flatnum, PU_STATIC);
 
     for (i = 0; i < 4096; i++)
     {
@@ -462,6 +453,18 @@ static char *R_DistortedFlat (int flatnum)
     Z_ChangeTag(normalflat, PU_CACHE);
 
     return distortedflat;
+}
+
+// [crispy] overflow guard for the flattranslation[] array
+static inline int R_FlatTranslation (unsigned int picnum)
+{
+	extern int numflats;
+
+	return (picnum < numflats) ? flattranslation[picnum] :
+	       (firstflat + picnum < numlumps) ? picnum :
+	       // [crispy] the most reasonable safe default,
+	       // it's already too late to return "skyflatnum" at this point
+	       0;
 }
 
 //
@@ -493,6 +496,8 @@ void R_DrawPlanes (void)
 
     for (pl = visplanes ; pl < lastvisplane ; pl++)
     {
+	boolean swirling;
+
 	if (pl->minx > pl->maxx)
 	    continue;
 
@@ -551,12 +556,11 @@ void R_DrawPlanes (void)
 	    continue;
 	}
 	
+	swirling = (R_FlatTranslation(pl->picnum) == -1);
 	// regular flat
-        lumpnum = firstflat + flattranslation[pl->picnum];
+        lumpnum = firstflat + (swirling ? pl->picnum : R_FlatTranslation(pl->picnum));
 	// [crispy] add support for SMMU swirling flats
-	ds_source = (flattranslation[pl->picnum] == -1) ?
-	            R_DistortedFlat(pl->picnum) :
-	            W_CacheLumpNum(lumpnum, PU_STATIC);
+	ds_source = swirling ? R_DistortedFlat(lumpnum) : W_CacheLumpNum(lumpnum, PU_STATIC);
 	
 	planeheight = abs(pl->height-viewz);
 	light = (pl->lightlevel >> LIGHTSEGSHIFT)+extralight;
@@ -582,10 +586,6 @@ void R_DrawPlanes (void)
 			pl->bottom[x]);
 	}
 	
-        // [crispy] add support for SMMU swirling flats
-        if (flattranslation[pl->picnum] != -1)
-        {
         W_ReleaseLumpNum(lumpnum);
-        }
     }
 }

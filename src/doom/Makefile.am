@@ -23,6 +23,7 @@ hu_stuff.c         hu_stuff.h   \
 info.c             info.h       \
 m_menu.c           m_menu.h     \
 m_random.c         m_random.h   \
+p_blockmap.c                    \
 p_ceilng.c                      \
 p_doors.c                       \
 p_enemy.c                       \
@@ -36,6 +37,7 @@ p_mobj.c           p_mobj.h     \
 p_plats.c                       \
 p_pspr.c           p_pspr.h     \
 p_saveg.c          p_saveg.h    \
+p_extsaveg.c       p_extsaveg.h \
 p_setup.c          p_setup.h    \
 p_sight.c                       \
 p_spec.c           p_spec.h     \

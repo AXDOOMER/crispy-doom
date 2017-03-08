@@ -191,9 +191,12 @@ void P_MovePlayer (player_t* player)
             cmd->lookdir = MLOOKUNIT * 5 * look;
         }
     }
-    player->lookdir = BETWEEN(-LOOKDIRMIN * MLOOKUNIT,
-                              LOOKDIRMAX * MLOOKUNIT,
-                              player->lookdir + cmd->lookdir);
+    if (!menuactive)
+    {
+	player->lookdir = BETWEEN(-LOOKDIRMIN * MLOOKUNIT,
+	                          LOOKDIRMAX * MLOOKUNIT,
+	                          player->lookdir + cmd->lookdir);
+    }
 }	
 
 
@@ -274,6 +277,8 @@ void P_PlayerThink (player_t* player)
     player->mo->oldz = player->mo->z;
     player->mo->oldangle = player->mo->angle;
     player->oldviewz = player->viewz;
+    player->oldlookdir = player->lookdir;
+    player->oldrecoilpitch = player->recoilpitch;
 
     // fixme: do this in the cheat code
     if (player->cheats & CF_NOCLIP)
@@ -451,7 +456,8 @@ void P_PlayerThink (player_t* player)
 	    || (player->powers[pw_invulnerability]&8) )
 	    player->fixedcolormap = INVERSECOLORMAP;
 	else
-	    player->fixedcolormap = 0;
+	    // [crispy] Visor effect when Invulnerability is fading out
+	    player->fixedcolormap = player->powers[pw_infrared] ? 1 : 0;
     }
     else if (player->powers[pw_infrared])	
     {

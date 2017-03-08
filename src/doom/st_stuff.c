@@ -452,36 +452,40 @@ void ST_refreshBackground(void)
 
 }
 
-// [crispy] from boom202s/M_CHEAT.C:467-498
-static int ST_cheat_massacre()    // jff 2/01/98 kill all monsters
+// [crispy] adapted from boom202s/M_CHEAT.C:467-498
+static int ST_cheat_massacre()
 {
-  // jff 02/01/98 'em' cheat - kill all monsters
-  // partially taken from Chi's .46 port
-  //
-  // killough 2/7/98: cleaned up code and changed to use dprintf;
-  // fixed lost soul bug (LSs left behind when PEs are killed)
+    int killcount = 0;
+    thinker_t *th;
+    extern int numbraintargets;
+    extern void A_PainDie(mobj_t *);
 
-  int killcount=0;
-  thinker_t *currentthinker=&thinkercap;
-  extern void A_PainDie(mobj_t *);
+    for (th = thinkercap.next; th != &thinkercap; th = th->next)
+    {
+	if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+	{
+	    mobj_t *mo = (mobj_t *)th;
 
-  while ((currentthinker=currentthinker->next)!=&thinkercap)
-    if (currentthinker->function.acp1 == (actionf_p1) P_MobjThinker &&
-        (((mobj_t *) currentthinker)->flags & MF_COUNTKILL ||
-         ((mobj_t *) currentthinker)->type == MT_SKULL))
-      { // killough 3/6/98: kill even if PE is dead
-        if (((mobj_t *) currentthinker)->health > 0)
-          {
-            killcount++;
-            P_DamageMobj((mobj_t *)currentthinker, NULL, NULL, 10000);
-          }
-        if (((mobj_t *) currentthinker)->type == MT_PAIN)
-          {
-            A_PainDie((mobj_t *) currentthinker);    // killough 2/8/98
-            P_SetMobjState ((mobj_t *) currentthinker, S_PAIN_DIE6);
-          }
-      }
-  return (killcount);
+	    if (mo->flags & MF_COUNTKILL || mo->type == MT_SKULL)
+	    {
+		if (mo->health > 0)
+		{
+		    P_DamageMobj(mo, NULL, NULL, 10000);
+		    killcount++;
+		}
+		if (mo->type == MT_PAIN)
+		{
+		    A_PainDie(mo);
+		    P_SetMobjState(mo, S_PAIN_DIE6);
+		}
+	    }
+	}
+    }
+
+    // [crispy] disable brain spitters
+    numbraintargets = -1;
+
+    return killcount;
 }
 
 // [crispy] trigger all special lines available on the map
@@ -693,8 +697,8 @@ ST_Responder (event_t* ev)
       else if (cht_CheckCheat(&cheat_massacre, ev->data2))
       {
 	int killcount = ST_cheat_massacre();
-	const char const *monster = (gameversion == exe_chex) ? "Flemoid" : "Monster";
-	const char const *killed = (gameversion == exe_chex) ? "returned" : "killed";
+	const char *const monster = (gameversion == exe_chex) ? "Flemoid" : "Monster";
+	const char *const killed = (gameversion == exe_chex) ? "returned" : "killed";
 
 	M_snprintf(msg, sizeof(msg), "%s%d %s%s%s %s",
 	           crstr[CR_GOLD],
@@ -1072,13 +1076,21 @@ void ST_updateFaceWidget(void)
     static int	priority = 0;
     boolean	doevilgrin;
 
+    // [crispy] fix status bar face hysteresis
+    int		painoffset;
+    static int	faceindex;
+
+    painoffset = ST_calcPainOffset();
+
     if (priority < 10)
     {
 	// dead
-	if (!plyr->health)
+	// [crispy] negative player health
+	if (plyr->health <= 0)
 	{
 	    priority = 9;
-	    st_faceindex = ST_DEADFACE;
+	    painoffset = 0;
+	    faceindex = ST_DEADFACE;
 	    st_facecount = 1;
 	}
     }
@@ -1103,7 +1115,7 @@ void ST_updateFaceWidget(void)
 		// evil grin if just picked up weapon
 		priority = 8;
 		st_facecount = ST_EVILGRINCOUNT;
-		st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
+		faceindex = ST_EVILGRINOFFSET;
 	    }
 	}
 
@@ -1122,7 +1134,7 @@ void ST_updateFaceWidget(void)
 	    if (st_oldhealth - plyr->health > ST_MUCHPAIN)
 	    {
 		st_facecount = ST_TURNCOUNT;
-		st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
+		faceindex = ST_OUCHOFFSET;
 	    }
 	    else
 	    {
@@ -1146,22 +1158,21 @@ void ST_updateFaceWidget(void)
 
 		
 		st_facecount = ST_TURNCOUNT;
-		st_faceindex = ST_calcPainOffset();
 		
 		if (diffang < ANG45)
 		{
 		    // head-on    
-		    st_faceindex += ST_RAMPAGEOFFSET;
+		    faceindex = ST_RAMPAGEOFFSET;
 		}
 		else if (i)
 		{
 		    // turn face right
-		    st_faceindex += ST_TURNOFFSET;
+		    faceindex = ST_TURNOFFSET;
 		}
 		else
 		{
 		    // turn face left
-		    st_faceindex += ST_TURNOFFSET+1;
+		    faceindex = ST_TURNOFFSET+1;
 		}
 	    }
 	}
@@ -1177,13 +1188,13 @@ void ST_updateFaceWidget(void)
 	    {
 		priority = 7;
 		st_facecount = ST_TURNCOUNT;
-		st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
+		faceindex = ST_OUCHOFFSET;
 	    }
 	    else
 	    {
 		priority = 6;
 		st_facecount = ST_TURNCOUNT;
-		st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
+		faceindex = ST_RAMPAGEOFFSET;
 	    }
 
 	}
@@ -1200,7 +1211,7 @@ void ST_updateFaceWidget(void)
 	    else if (!--lastattackdown)
 	    {
 		priority = 5;
-		st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
+		faceindex = ST_RAMPAGEOFFSET;
 		st_facecount = 1;
 		lastattackdown = 1;
 	    }
@@ -1218,7 +1229,8 @@ void ST_updateFaceWidget(void)
 	{
 	    priority = 4;
 
-	    st_faceindex = ST_GODFACE;
+	    painoffset = 0;
+	    faceindex = ST_GODFACE;
 	    st_facecount = 1;
 
 	}
@@ -1228,13 +1240,15 @@ void ST_updateFaceWidget(void)
     // look left or look right if the facecount has timed out
     if (!st_facecount)
     {
-	st_faceindex = ST_calcPainOffset() + (st_randomnumber % 3);
+	faceindex = st_randomnumber % 3;
 	st_facecount = ST_STRAIGHTFACECOUNT;
 	priority = 0;
     }
 
     st_facecount--;
 
+    // [crispy] fix status bar face hysteresis
+    st_faceindex = painoffset + faceindex;
 }
 
 void ST_updateWidgets(void)

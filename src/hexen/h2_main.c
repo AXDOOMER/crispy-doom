@@ -120,6 +120,7 @@ static int WarpMap;
 static int demosequence;
 static int pagetic;
 static char *pagename;
+static char *SavePathConfig;
 
 // CODE --------------------------------------------------------------------
 
@@ -150,6 +151,10 @@ void D_BindVariables(void)
     key_multi_msgplayer[6] = CT_KEY_PLAYER7;
     key_multi_msgplayer[7] = CT_KEY_PLAYER8;
 
+#ifdef FEATURE_MULTIPLAYER
+    NET_BindVariables();
+#endif
+
     M_BindIntVariable("graphical_startup",      &graphical_startup);
     M_BindIntVariable("mouse_sensitivity",      &mouseSensitivity);
     M_BindIntVariable("sfx_volume",             &snd_MaxVolume);
@@ -157,8 +162,10 @@ void D_BindVariables(void)
     M_BindIntVariable("messageson",             &messageson);
     M_BindIntVariable("screenblocks",           &screenblocks);
     M_BindIntVariable("snd_channels",           &snd_Channels);
+    M_BindIntVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
+    M_BindIntVariable("vanilla_demo_limit",     &vanilla_demo_limit);
 
-    M_BindStringVariable("savedir", &SavePath);
+    M_BindStringVariable("savedir", &SavePathConfig);
 
     // Multiplayer chat macros
 
@@ -177,14 +184,30 @@ static void D_SetDefaultSavePath(void)
 {
     SavePath = M_GetSaveGameDir("hexen.wad");
 
-    // If we are not using a savegame path (probably because we are on
-    // Windows and not using a config dir), behave like Vanilla Hexen
-    // and use hexndata/:
-
     if (!strcmp(SavePath, ""))
     {
-        SavePath = malloc(10);
-	M_snprintf(SavePath, 10, "hexndata%c", DIR_SEPARATOR);
+        // only get hexen.cfg path if one is not already found
+
+        if (SavePathConfig == NULL || !strcmp(SavePathConfig, ""))
+        {
+            // If we are not using a savegame path (probably because we are on
+            // Windows and not using a config dir), behave like Vanilla Hexen
+            // and use hexndata/:
+
+            SavePath = malloc(10);
+            M_snprintf(SavePath, 10, "hexndata%c", DIR_SEPARATOR);
+        }
+        else
+        {
+            SavePath = M_StringDuplicate(SavePathConfig);
+        }
+    }
+
+    // only set hexen.cfg path if using default handling
+
+    if (!M_ParmExists("-savedir") && !M_ParmExists("-cdrom"))
+    {
+        SavePathConfig = SavePath;
     }
 }
 
@@ -368,14 +391,14 @@ void D_DoomMain(void)
         M_SetConfigDir(NULL);
     }
 
-    D_SetDefaultSavePath();
     M_SetConfigFilenames("hexen.cfg", PROGRAM_PREFIX "hexen.cfg");
     M_LoadDefaults();
 
+    D_SetDefaultSavePath();
+
     I_AtExit(M_SaveDefaults, false);
 
-
-    // Now that the savedir is loaded from .CFG, make sure it exists
+    // Now that the savedir is loaded, make sure it exists
     CreateSavePath();
 
     ST_Message("Z_Init: Init zone memory allocation daemon.\n");
@@ -675,6 +698,15 @@ static void HandleArgs(void)
 
         ST_Message("Playing demo %s.\n", myargv[p+1]);
     }
+
+    //!
+    // @category demo
+    //
+    // Record or playback a demo without automatically quitting
+    // after either level exit or player respawn.
+    //
+
+    demoextend = M_ParmExists("-demoextend");
 
     if (M_ParmExists("-testcontrols"))
     {

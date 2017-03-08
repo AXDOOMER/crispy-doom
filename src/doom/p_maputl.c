@@ -470,7 +470,7 @@ P_BlockLinesIterator
   boolean(*func)(line_t*) )
 {
     int			offset;
-    int64_t*		list; // [crispy] BLOCKMAP limit
+    int32_t*		list; // [crispy] BLOCKMAP limit
     line_t*		ld;
 	
     if (x<0
@@ -611,7 +611,7 @@ PIT_AddLineIntercepts (line_t* ld)
 	    return false;
 	else
 	    // [crispy] print a warning
-	    fprintf(stderr, "PIT_AddLineIntercepts: Triggered INTERCEPTS overflow by thing %d!\n", shootthing->num);
+	    fprintf(stderr, "PIT_AddLineIntercepts: Triggered INTERCEPTS overflow!\n");
     }
     intercept_p++;
 
@@ -686,7 +686,7 @@ boolean PIT_AddThingIntercepts (mobj_t* thing)
 	    return false;
 	else
 	    // [crispy] print a warning
-	    fprintf(stderr, "PIT_AddThingIntercepts: Triggered INTERCEPTS overflow by thing %d!\n", shootthing->num);
+	    fprintf(stderr, "PIT_AddThingIntercepts: Triggered INTERCEPTS overflow!\n");
     }
     intercept_p++;
 

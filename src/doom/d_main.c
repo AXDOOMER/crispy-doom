@@ -134,6 +134,7 @@ int             crispy_centerweapon = 0;
 int             crispy_coloredblood = 0;
 int             crispy_coloredhud = 0;
 int             crispy_crosshair = 0;
+int             crispy_extsaveg = 1;
 int             crispy_flipcorpses = 0;
 int             crispy_freeaim = 0;
 int             crispy_freelook = 0;
@@ -141,6 +142,7 @@ int             crispy_highcolor = 0;
 int             crispy_fullsounds = 0;
 int             crispy_jump = 0;
 int             crispy_mouselook = 0;
+int             crispy_neghealth = 0;
 int             crispy_overunder = 0;
 int             crispy_pitch = 0;
 int             crispy_recoil = 0;
@@ -154,7 +156,6 @@ boolean         crispy_fliplevels = false;
 boolean         crispy_havee1m10 = false;
 boolean         crispy_havemap33 = false;
 boolean         crispy_havessg = false;
-boolean         crispy_nwtmerge = false;
 boolean         crispy_redrawall = false;
 
 int             crispy_demowarp = 0;
@@ -512,6 +513,7 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_coloredblood",    &crispy_coloredblood);
     M_BindIntVariable("crispy_coloredhud",      &crispy_coloredhud);
     M_BindIntVariable("crispy_crosshair",       &crispy_crosshair);
+    M_BindIntVariable("crispy_extsaveg",        &crispy_extsaveg);
     M_BindIntVariable("crispy_flipcorpses",     &crispy_flipcorpses);
     M_BindIntVariable("crispy_freeaim",         &crispy_freeaim);
     M_BindIntVariable("crispy_freelook",        &crispy_freelook);
@@ -519,6 +521,7 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_fullsounds",      &crispy_fullsounds);
     M_BindIntVariable("crispy_jump",            &crispy_jump);
     M_BindIntVariable("crispy_mouselook",       &crispy_mouselook);
+    M_BindIntVariable("crispy_neghealth",       &crispy_neghealth);
     M_BindIntVariable("crispy_overunder",       &crispy_overunder);
     M_BindIntVariable("crispy_pitch",           &crispy_pitch);
     M_BindIntVariable("crispy_recoil",          &crispy_recoil);
@@ -729,7 +732,8 @@ void D_DoAdvanceDemo (void)
     if (gamevariant == bfgedition && !strcasecmp(pagename, "TITLEPIC")
         && W_CheckNumForName("titlepic") < 0)
     {
-        pagename = DEH_String("INTERPIC");
+        // [crispy] use DMENUPIC instead of TITLEPIC, it's awesome
+        pagename = DEH_String("DMENUPIC");
     }
 }
 
@@ -1352,8 +1356,8 @@ static void LoadNerveWad(void)
 
     if ((i = W_GetNumForName("map01")) != -1 &&
         (j = W_GetNumForName("map09")) != -1 &&
-        !strcasecmp(lumpinfo[i]->wad_file->name, "nerve.wad") &&
-        !strcasecmp(lumpinfo[j]->wad_file->name, "nerve.wad"))
+        !strcasecmp(lumpinfo[i]->wad_file->basename, "nerve.wad") &&
+        !strcasecmp(lumpinfo[j]->wad_file->basename, "nerve.wad"))
     {
 	gamemission = pack_nerve;
 	DEH_AddStringReplacement ("TITLEPIC", "INTERPIC");
@@ -1415,9 +1419,9 @@ static void LoadMasterlevelsWad(void)
         return;
 
     if ((i = W_GetNumForName("map01")),
-        !strcasecmp(lumpinfo[i]->wad_file->name, "masterlevels.wad") &&
+        !strcasecmp(lumpinfo[i]->wad_file->basename, "masterlevels.wad") &&
         (i = W_GetNumForName("map21")),
-        !strcasecmp(lumpinfo[i]->wad_file->name, "masterlevels.wad"))
+        !strcasecmp(lumpinfo[i]->wad_file->basename, "masterlevels.wad"))
     {
 	gamemission = pack_master;
     }
@@ -1655,19 +1659,6 @@ void D_DoomMain (void)
     D_IdentifyVersion();
     InitGameVersion();
 
-    //!
-    // @category mod
-    //
-    // Disable automatic loading of Dehacked patches for certain
-    // IWAD files.
-    //
-    if (!M_ParmExists("-nodeh"))
-    {
-        // Some IWADs have dehacked patches that need to be loaded for
-        // them to be played properly.
-        LoadIwadDeh();
-    }
-
     // Check which IWAD variant we are using.
 
     if (W_CheckNumForName("FREEDOOM") >= 0)
@@ -1684,6 +1675,19 @@ void D_DoomMain (void)
     else if (W_CheckNumForName("DMENUPIC") >= 0)
     {
         gamevariant = bfgedition;
+    }
+
+    //!
+    // @category mod
+    //
+    // Disable automatic loading of Dehacked patches for certain
+    // IWAD files.
+    //
+    if (!M_ParmExists("-nodeh"))
+    {
+        // Some IWADs have dehacked patches that need to be loaded for
+        // them to be played properly.
+        LoadIwadDeh();
     }
 
     // Doom 3: BFG Edition includes modified versions of the classic
@@ -1926,17 +1930,7 @@ void D_DoomMain (void)
     // we've finished loading Dehacked patches.
     D_SetGameDescription();
 
-#ifdef _WIN32
-    // In -cdrom mode, we write savegames to c:\doomdata as well as configs.
-    if (M_ParmExists("-cdrom"))
-    {
-        savegamedir = configdir;
-    }
-    else
-#endif
-    {
-        savegamedir = M_GetSaveGameDir(D_SaveGameIWADName(gamemission));
-    }
+    savegamedir = M_GetSaveGameDir(D_SaveGameIWADName(gamemission));
 
     // Check for -file in shareware
     if (modifiedgame && (gamevariant != freedoom))
@@ -2025,12 +2019,6 @@ void D_DoomMain (void)
     {
         DEH_AddStringReplacement(PHUSTR_1, "level 33: betray");
     }
-
-    // [crispy] check for NWT-style merging
-    crispy_nwtmerge =
-	M_CheckParmWithArgs("-nwtmerge", 1) ||
-	M_CheckParmWithArgs("-af", 1) ||
-	M_CheckParmWithArgs("-aa", 1);
 
 #ifdef FEATURE_MULTIPLAYER
     printf ("NET_Init: Init network subsystem.\n");
@@ -2154,14 +2142,6 @@ void D_DoomMain (void)
         startmap = 1;
         autostart = true;
         testcontrols = true;
-    }
-
-    // [crispy] enable flashing HOM indicator
-    p = M_CheckParm("-flashinghom");
-
-    if (p > 0)
-    {
-        crispy_flashinghom = true;
     }
 
     // [crispy] port level flipping feature over from Strawberry Doom

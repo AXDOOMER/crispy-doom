@@ -32,6 +32,7 @@
 #include "m_controls.h"
 #include "m_misc.h"
 #include "i_system.h"
+#include "i_timer.h"
 
 // Needs access to LFB.
 #include "v_video.h"
@@ -596,10 +597,10 @@ void AM_Stop (void)
 //
 //
 //
+// [crispy] moved here for extended savegames
+static int lastlevel = -1, lastepisode = -1;
 void AM_Start (void)
 {
-    static int lastlevel = -1, lastepisode = -1;
-
     if (!stopped) AM_Stop();
     stopped = false;
     if (lastlevel != gamemap || lastepisode != gameepisode)
@@ -643,10 +644,31 @@ AM_Responder
 
     int rc;
     static int bigstate=0;
+    static int joywait = 0;
     static char buffer[20];
     int key;
 
     rc = false;
+
+    if (ev->type == ev_joystick && joybautomap >= 0
+        && (ev->data1 & (1 << joybautomap)) != 0 && joywait < I_GetTime())
+    {
+        joywait = I_GetTime() + 5;
+
+        if (!automapactive)
+        {
+            AM_Start ();
+            viewactive = false;
+        }
+        else
+        {
+            bigstate = 0;
+            viewactive = true;
+            AM_Stop ();
+        }
+
+        return true;
+    }
 
     if (!automapactive)
     {
@@ -1670,4 +1692,40 @@ void AM_Drawer (void)
 
     V_MarkRect(f_x, f_y, f_w, f_h);
 
+}
+
+// [crispy] extended savegames
+void AM_GetMarkPoints (int *n, long *p)
+{
+	int i;
+
+	*n = markpointnum;
+	*p = -1L;
+
+	// [crispy] prevent saving markpoints from previous map
+	if (lastlevel == gamemap && lastepisode == gameepisode)
+	{
+		for (i = 0; i < AM_NUMMARKPOINTS; i++)
+		{
+			*p++ = (long)markpoints[i].x;
+			*p++ = (markpoints[i].x == -1) ? 0L : (long)markpoints[i].y;
+		}
+	}
+}
+
+void AM_SetMarkPoints (int n, long *p)
+{
+	int i;
+
+	AM_LevelInit();
+	lastlevel = gamemap;
+	lastepisode = gameepisode;
+
+	markpointnum = n;
+
+	for (i = 0; i < AM_NUMMARKPOINTS; i++)
+	{
+		markpoints[i].x = (int64_t)*p++;
+		markpoints[i].y = (int64_t)*p++;
+	}
 }

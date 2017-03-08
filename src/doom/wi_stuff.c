@@ -428,7 +428,7 @@ void WI_drawLF(void)
 
         V_DrawPatch((ORIGWIDTH - SHORT(finished->width)) / 2, y, finished);
     }
-    else if (wbs->last == NUMCMAPS)
+    else if (wbs->last >= NUMCMAPS) // [crispy] prevent crashes with maps > 33
     {
         // MAP33 - nothing is displayed!
     }
@@ -452,6 +452,12 @@ void WI_drawLF(void)
 void WI_drawEL(void)
 {
     int y = WI_TITLEY;
+
+    // [crispy] prevent crashes with maps > 33
+    if (wbs->last >= NUMCMAPS)
+    {
+	return;
+    }
 
     // draw "Entering"
     V_DrawPatch((ORIGWIDTH - SHORT(entering->width))/2,
@@ -615,6 +621,13 @@ void WI_drawAnimatedBack(void)
 	    V_DrawPatch(a->loc.x, a->loc.y, a->p[a->ctr]);
     }
 
+    // [crispy] show Fortress of Mystery if it has been completed
+    if (wbs->epsd == 1 && wbs->didsecret)
+    {
+	a = &anims[wbs->epsd][7];
+
+	V_DrawPatch(a->loc.x, a->loc.y, a->p[a->nanims - 1]);
+    }
 }
 
 //
@@ -1494,10 +1507,11 @@ void WI_drawStats(void)
     if (sp_state > 8)
     {
 	const int ttime = wbs->totaltimes / TICRATE;
+	const boolean wide = (ttime > 61*59) || (SP_TIMEX + SHORT(total->width) >= ORIGWIDTH/4);
 
 	V_DrawPatch(SP_TIMEX, SP_TIMEY + 16, total);
 	// [crispy] choose x-position depending on width of time string
-	WI_drawTime((ttime <= 61*59 ? ORIGWIDTH/2 : ORIGWIDTH) - SP_TIMEX, SP_TIMEY + 16, ttime, false);
+	WI_drawTime((wide ? ORIGWIDTH : ORIGWIDTH/2) - SP_TIMEX, SP_TIMEY + 16, ttime, false);
     }
 }
 

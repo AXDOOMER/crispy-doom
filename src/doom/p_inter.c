@@ -733,8 +733,12 @@ P_KillMobj
 	P_SetMobjState (target, target->info->deathstate);
     target->tics -= P_Random()&3;
 
-    // [crispy] randomize corpse health
-    target->health -= target->tics & 1;
+    // [crispy] randomly flip corpse, blood and death animation sprites
+    // except for Cyberdemons and Barrels which are too asymmetrical
+    if (target->type != MT_CYBORG && target->type != MT_BARREL)
+    {
+	target->flipsprite = Crispy_Random() & 1;
+    }
 
     if (target->tics < 1)
 	target->tics = 1;
@@ -885,8 +889,14 @@ P_DamageMobj
 	    damage -= saved;
 	}
 	player->health -= damage; 	// mirror mobj health here for Dave
+	// [crispy] negative player health
+	if (player->health < -99)
+	    player->health = -99;
+	if (!(crispy_neghealth == NEGHEALTH_ON || (deathmatch && crispy_neghealth == NEGHEALTH_DM)))
+	{
 	if (player->health < 0)
 	    player->health = 0;
+	}
 	
 	player->attacker = source;
 	player->damagecount += damage;	// add damage after armor / invuln

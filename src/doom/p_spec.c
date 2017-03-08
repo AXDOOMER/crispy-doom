@@ -69,13 +69,13 @@ typedef struct
 //
 // [crispy] change istexture type from int to char and
 // add PACKEDATTR for reading ANIMATED lumps from memory
-typedef struct
+typedef PACKED_STRUCT (
 {
     signed char	istexture;	// if false, it is a flat
     char	endname[9];
     char	startname[9];
     int		speed;
-} PACKEDATTR animdef_t;
+}) animdef_t;
 
 
 
@@ -152,12 +152,10 @@ void P_InitPicAnims (void)
 {
     int		i;
 
-    
     // [crispy] add support for ANIMATED lumps
     animdef_t *animdefs;
-    boolean from_lump;
+    const boolean from_lump = (W_CheckNumForName("ANIMATED") != -1);
 
-    from_lump = (W_CheckNumForName("ANIMATED") != -1);
     if (from_lump)
     {
 	animdefs = W_CacheLumpName("ANIMATED", PU_STATIC);
@@ -166,7 +164,7 @@ void P_InitPicAnims (void)
     {
 	animdefs = animdefs_vanilla;
     }
-
+    
     //	Init animation
     lastanim = anims;
     for (i=0 ; animdefs[i].istexture != -1 ; i++)
@@ -403,9 +401,9 @@ P_FindNextHighestFloor
             }
             else if (h == MAX_ADJOINING_SECTORS + 2)
             {
-                // Fatal overflow: game crashes at 22 textures
-                   fprintf(stderr, "P_FindNextHighestFloor: Sector with more than 22 adjoining sectors. "
-                        "Vanilla will crash here");
+                // Fatal overflow: game crashes at 22 sectors
+                fprintf(stderr, "Sector with more than 22 adjoining sectors. "
+                        "Vanilla will crash here\n");
             }
 
             heightlist[h++] = other->floorheight;
@@ -494,6 +492,20 @@ P_FindSectorFromLineTag
 {
     int	i;
 	
+    // [crispy] linedefs without tags apply locally
+/*
+    if (singleplayer && !line->tag)
+    {
+    for (i=start+1;i<numsectors;i++)
+	if (&sectors[i] == line->backsector)
+	{
+	    const long linedef = line - lines;
+	    fprintf(stderr, "P_FindSectorFromLineTag: Linedef %ld without tag applied to sector %d\n", linedef, i);
+	    return i;
+	}
+    }
+    else
+*/
     for (i=start+1;i<numsectors;i++)
 	if (sectors[i].tag == line->tag)
 	    return i;
@@ -551,10 +563,20 @@ P_CrossSpecialLine
   int		side,
   mobj_t*	thing )
 {
-    line_t*	line;
+    return P_CrossSpecialLinePtr(&lines[linenum], side, thing);
+}
+
+// [crispy] more MBF code pointers
+void
+P_CrossSpecialLinePtr
+( line_t*	line,
+  int		side,
+  mobj_t*	thing )
+{
+//  line_t*	line;
     int		ok;
 
-    line = &lines[linenum];
+//  line = &lines[linenum];
     
     //	Triggers that other things can activate
     if (!thing->player)
@@ -1560,10 +1582,12 @@ void P_SpawnSpecials (void)
 	    {
 		int secnum;
 
-		secnum = -1;
-		while ((secnum = P_FindSectorFromLineTag(&lines[i],secnum)) >= 0)
+		for (secnum = 0; secnum < numsectors; secnum++)
 		{
-		    sectors[secnum].sky = i | PL_SKYFLAT;
+		    if (sectors[secnum].tag == lines[i].tag)
+		    {
+			sectors[secnum].sky = i | PL_SKYFLAT;
+		    }
 		}
 	    }
 	    break;

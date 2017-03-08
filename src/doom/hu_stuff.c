@@ -619,7 +619,7 @@ void HU_Start(void)
     }
 
     // [crispy] display names of single special levels in Automap
-    HU_SetSpecialLevelName(maplumpinfo->wad_file->name, &s);
+    HU_SetSpecialLevelName(maplumpinfo->wad_file->basename, &s);
 
     // [crispy] explicitely display (episode and) map if the
     // map is from a PWAD or if the map title string has been dehacked
@@ -627,7 +627,7 @@ void HU_Start(void)
     {
 	char *m;
 
-	ptr = M_StringJoin(crstr[CR_GOLD], maplumpinfo->wad_file->name, ": ", crstr[CR_GRAY], maplumpinfo->name, NULL);
+	ptr = M_StringJoin(crstr[CR_GOLD], maplumpinfo->wad_file->basename, ": ", crstr[CR_GRAY], maplumpinfo->name, NULL);
 	m = ptr;
 
 	while (*m)
@@ -747,8 +747,8 @@ void HU_Drawer(void)
     if (automapactive && crispy_automapstats)
     {
 	int time = leveltime / TICRATE;
-	const char const *cr_stat = (gameversion == exe_chex) ? crstr[CR_GREEN] : crstr[CR_RED];
-	const char const *kills = (gameversion == exe_chex) ? "Flemoids: " : "Kills: ";
+	const char *const cr_stat = (gameversion == exe_chex) ? crstr[CR_GREEN] : crstr[CR_RED];
+	const char *const kills = (gameversion == exe_chex) ? "Flemoids: " : "Kills: ";
 
 	// [crispy] move obtrusive line out of player view
 	if (!crispy_automapoverlay || screenblocks < CRISPY_HUD - 1)
@@ -813,7 +813,7 @@ void HU_Drawer(void)
 	HUlib_drawTextLine(&w_coordy, false);
 
 	M_snprintf(str, sizeof(str), "%sA: %s%-5d", crstr[CR_GREEN], crstr[CR_GRAY],
-	        (players[consoleplayer].mo->angle)*(uint64_t)360/UINT32_MAX);
+	        (players[consoleplayer].mo->angle)/ANG1);
 	HUlib_clearTextLine(&w_coorda);
 	s = str;
 	while (*s)

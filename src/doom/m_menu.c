@@ -48,6 +48,8 @@
 #include "m_argv.h"
 #include "m_controls.h"
 #include "p_saveg.h"
+#include "p_extsaveg.h" // [crispy] savewadfilename
+#include "p_local.h" // [crispy] struct maplumpinfo
 
 #include "s_sound.h"
 
@@ -243,12 +245,14 @@ static void M_CrispyToggleColoredblood(int choice);
 static void M_CrispyToggleColoredblood2(int choice);
 static void M_CrispyToggleColoredhud(int choice);
 static void M_CrispyToggleCrosshair(int choice);
+static void M_CrispyToggleExtsaveg(int choice);
 static void M_CrispyToggleFlipcorpses(int choice);
 static void M_CrispyToggleFreeaim(int choice);
 static void M_CrispyToggleFreelook(int choice);
 static void M_CrispyToggleHighcolor(int choice);
 static void M_CrispyToggleFullsounds(int choice);
 static void M_CrispyToggleJumping(int choice);
+static void M_CrispyToggleNeghealth(int choice);
 static void M_CrispyToggleOverunder(int choice);
 static void M_CrispyTogglePitch(int choice);
 static void M_CrispyToggleRecoil(int choice);
@@ -514,10 +518,12 @@ enum
     crispness_sep_tactical,
     crispness_crosshair,
     crispness_freelook,
+    crispness_neghealth,
     crispness_centerweapon,
     crispness_pitch,
     crispness_secretmessage,
     crispness_automapstats,
+    crispness_extsaveg,
     crispness2_sep_goto2,
     crispness2_goto1,
     crispness2_goto3,
@@ -529,10 +535,12 @@ static menuitem_t Crispness2Menu[]=
     {-1,"",0,'\0'},
     {1,"",	M_CrispyToggleCrosshair,'d'},
     {1,"",	M_CrispyToggleFreelook,'a'},
+    {1,"",	M_CrispyToggleNeghealth,'n'},
     {1,"",	M_CrispyToggleCenterweapon,'c'},
     {1,"",	M_CrispyTogglePitch,'w'},
     {1,"",	M_CrispyToggleSecretmessage,'s'},
     {1,"",	M_CrispyToggleAutomapstats,'s'},
+    {1,"",	M_CrispyToggleExtsaveg,'e'},
     {-1,"",0,'\0'},
     {1,"",	M_Crispness1,'p'},
     {1,"",	M_Crispness3,'n'},
@@ -751,11 +759,12 @@ void M_ReadSaveStrings(void)
 //
 // M_LoadGame & Cie.
 //
+static int LoadDef_x = 72, LoadDef_y = 28;
 void M_DrawLoad(void)
 {
     int             i;
 	
-    V_DrawPatchDirect(72, 28, 
+    V_DrawPatchDirect(LoadDef_x, LoadDef_y,
                       W_CacheLumpName(DEH_String("M_LOADG"), PU_CACHE));
 
     for (i = 0;i < load_end; i++)
@@ -763,7 +772,7 @@ void M_DrawLoad(void)
 	M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
 
 	// [crispy] shade empty savegame slots
-	if (!strncmp(savegamestrings[i], EMPTYSTRING, strlen(EMPTYSTRING)))
+	if (!LoadMenu[i].status)
 	    dp_translation = cr[CR_DARK];
 
 	M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
@@ -841,11 +850,12 @@ void M_LoadGame (int choice)
 //
 //  M_SaveGame & Cie.
 //
+static int SaveDef_x = 72, SaveDef_y = 28;
 void M_DrawSave(void)
 {
     int             i;
 	
-    V_DrawPatchDirect(72, 28, W_CacheLumpName(DEH_String("M_SAVEG"), PU_CACHE));
+    V_DrawPatchDirect(SaveDef_x, SaveDef_y, W_CacheLumpName(DEH_String("M_SAVEG"), PU_CACHE));
     for (i = 0;i < load_end; i++)
     {
 	M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
@@ -1356,6 +1366,13 @@ static multiitem_t multiitem_jump[NUM_JUMPS] =
     {JUMP_HIGH, "high"},
 };
 
+static multiitem_t multiitem_neghealth[NUM_NEGHEALTHS] =
+{
+    {NEGHEALTH_OFF, "off"},
+    {NEGHEALTH_DM, "deathmatch"},
+    {NEGHEALTH_ON, "always"},
+};
+
 static multiitem_t multiitem_translucency[NUM_TRANSLUCENCY] =
 {
     {TRANSLUCENCY_OFF, "off"},
@@ -1430,10 +1447,12 @@ static void M_DrawCrispness2(void)
 
     M_DrawCrispnessMultiItem(crispness_crosshair, "Draw Crosshair", multiitem_crosshair, crispy_crosshair, true);
     M_DrawCrispnessMultiItem(crispness_freelook, "Allow Free Look", multiitem_freelook, crispy_freelook, true);
+    M_DrawCrispnessMultiItem(crispness_neghealth, "Negative Player Health", multiitem_neghealth, crispy_neghealth, true);
     M_DrawCrispnessItem(crispness_centerweapon, "Center Weapon when Firing", crispy_centerweapon, true);
     M_DrawCrispnessItem(crispness_pitch, "Weapon Recoil Pitch", crispy_pitch, true);
     M_DrawCrispnessItem(crispness_secretmessage, "Show Revealed Secrets", crispy_secretmessage, true);
     M_DrawCrispnessItem(crispness_automapstats, "Show Level Stats in Automap", crispy_automapstats, true);
+    M_DrawCrispnessItem(crispness_extsaveg, "Extended Savegames", crispy_extsaveg, true);
 
     M_DrawCrispnessGoto(crispness2_goto3, "Next Page >");
     M_DrawCrispnessGoto(crispness2_goto1, "< Prev Page");
@@ -1723,6 +1742,12 @@ static void M_CrispyToggleAutomapstats(int choice)
     crispy_automapstats = !crispy_automapstats;
 }
 
+static void M_CrispyToggleExtsaveg(int choice)
+{
+    choice = 0;
+    crispy_extsaveg = !crispy_extsaveg;
+}
+
 static void M_CrispyToggleCenterweapon(int choice)
 {
     choice = 0;
@@ -1789,6 +1814,12 @@ static void M_CrispyToggleHighcolor(int choice)
     crispy_highcolor = !crispy_highcolor;
 
     R_InitColormaps();
+}
+
+static void M_CrispyToggleNeghealth(int choice)
+{
+    choice = 0;
+    crispy_neghealth = (crispy_neghealth + 1) % NUM_NEGHEALTHS;
 }
 
 static void M_CrispyToggleJumping(int choice)
@@ -2464,11 +2495,15 @@ boolean M_Responder (event_t* ev)
 	}
 
 	menuactive = messageLastMenuActive;
-	messageToPrint = 0;
 	if (messageRoutine)
 	    messageRoutine(key);
 
+	// [crispy] stay in menu
+	if (messageToPrint < 2)
+	{
 	menuactive = false;
+	}
+	messageToPrint = 0; // [crispy] moved here
 	S_StartSound(NULL,sfx_swtchx);
 	return true;
     }
@@ -2732,6 +2767,23 @@ boolean M_Responder (event_t* ev)
 	}
 	return true;
     }
+    // [crispy] delete a savegame
+    else if (key == key_menu_del)
+    {
+	if (currentMenu == &LoadDef || currentMenu == &SaveDef)
+	{
+	    if (LoadMenu[itemOn].status)
+	    {
+		currentMenu->lastOn = itemOn;
+		M_ConfirmDeleteGame();
+		return true;
+	    }
+	    else
+	    {
+		S_StartSound(NULL,sfx_oof);
+	    }
+	}
+    }
 
     // Keyboard shortcut?
     // Vanilla Doom has a weird behavior where it jumps to the scroll bars
@@ -2837,6 +2889,12 @@ void M_Drawer (void)
     // Horiz. & Vertically center string and print it.
     if (messageToPrint)
     {
+	// [crispy] draw a background for important questions
+	if (messageToPrint == 2)
+	{
+	    M_DrawCrispnessBackground();
+	}
+
 	start = 0;
 	y = ORIGHEIGHT/2 - M_StringHeight(messageString) / 2;
 	while (messageString[start] != '\0')
@@ -3005,6 +3063,8 @@ void M_Init (void)
     if (gameversion >= exe_final && gameversion <= exe_final2)
     {
         ReadDef2.routine = M_DrawReadThisCommercial;
+        // [crispy] rearrange Skull in Final Doom HELP screen
+        ReadDef2.y -= 10;
     }
 
     if (gamemode == commercial)
@@ -3033,6 +3093,97 @@ void M_Init (void)
         EpiDef.numitems = 1;
     }
 
+    // [crispy] rearrange Load Game and Save Game menus
+    {
+	const patch_t *patchl, *patchs, *patchm;
+	short captionheight, vstep;
+
+	patchl = W_CacheLumpName(DEH_String("M_LOADG"), PU_CACHE);
+	patchs = W_CacheLumpName(DEH_String("M_SAVEG"), PU_CACHE);
+	patchm = W_CacheLumpName(DEH_String("M_LSLEFT"), PU_CACHE);
+
+	LoadDef_x = (ORIGWIDTH - SHORT(patchl->width)) / 2 + SHORT(patchl->leftoffset);
+	SaveDef_x = (ORIGWIDTH - SHORT(patchs->width)) / 2 + SHORT(patchs->leftoffset);
+	LoadDef.x = SaveDef.x = (ORIGWIDTH - 24 * 8) / 2 + SHORT(patchm->leftoffset); // [crispy] see M_DrawSaveLoadBorder()
+
+	captionheight = MAX(SHORT(patchl->height), SHORT(patchs->height));
+
+	vstep = ORIGHEIGHT - 32; // [crispy] ST_HEIGHT
+	vstep -= captionheight;
+	vstep -= (load_end - 1) * LINEHEIGHT + SHORT(patchm->height);
+	vstep /= 3;
+
+	if (vstep > 0)
+	{
+		LoadDef_y = vstep + captionheight - SHORT(patchl->height) + SHORT(patchl->topoffset);
+		SaveDef_y = vstep + captionheight - SHORT(patchs->height) + SHORT(patchs->topoffset);
+		LoadDef.y = SaveDef.y = vstep + captionheight + vstep + SHORT(patchm->topoffset) - 7; // [crispy] see M_DrawSaveLoadBorder()
+	}
+    }
+
     opldev = M_CheckParm("-opldev") > 0;
 }
 
+// [crispy] extended savegames
+static char *savegwarning;
+static void M_ForceLoadGameResponse(int key)
+{
+	free(savegwarning);
+	free(savewadfilename);
+
+	if (key != key_menu_confirm)
+	{
+		M_EndGameResponse(key_menu_confirm);
+		savewadfilename = NULL;
+
+		// [crispy] reload Load Game menu
+		M_StartControlPanel();
+		M_LoadGame(0);
+		return;
+	}
+
+	savewadfilename = maplumpinfo->wad_file->basename;
+	gameaction = ga_loadgame;
+}
+
+void M_ForceLoadGame()
+{
+	savegwarning =
+	M_StringJoin("This savegame requires the file\n",
+	             crstr[CR_GOLD], savewadfilename, crstr[CR_NONE], "\n",
+	             "to restore ", crstr[CR_GOLD], maplumpinfo->name, crstr[CR_NONE], " .\n\n",
+	             "Continue to restore from\n",
+	             crstr[CR_GOLD], maplumpinfo->wad_file->basename, crstr[CR_NONE], " ?\n\n",
+	             PRESSYN, NULL);
+
+	M_StartMessage(savegwarning, M_ForceLoadGameResponse, true);
+	messageToPrint = 2;
+	S_StartSound(NULL,sfx_swtchn);
+}
+
+static void M_ConfirmDeleteGameResponse (int key)
+{
+	free(savegwarning);
+
+	if (key == key_menu_confirm)
+	{
+		char name[256];
+
+		M_StringCopy(name, P_SaveGameFile(itemOn), sizeof(name));
+		remove(name);
+
+		M_ReadSaveStrings();
+	}
+}
+
+void M_ConfirmDeleteGame ()
+{
+	savegwarning =
+	M_StringJoin("delete savegame\n\n",
+	             crstr[CR_GOLD], savegamestrings[itemOn], crstr[CR_NONE], " ?\n\n",
+	             PRESSYN, NULL);
+
+	M_StartMessage(savegwarning, M_ConfirmDeleteGameResponse, true);
+	messageToPrint = 2;
+	S_StartSound(NULL,sfx_swtchn);
+}

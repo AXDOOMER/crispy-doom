@@ -126,7 +126,6 @@ mobj_t* P_SpawnMissile (mobj_t* source, mobj_t* dest, mobjtype_t type);
 void	P_SpawnPlayerMissile (mobj_t* source, mobjtype_t type);
 
 void	P_SpawnPuffSafe (fixed_t x, fixed_t y, fixed_t z, boolean safe);
-mobj_t *P_SpawnMobjSafe (fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, boolean safe);
 
 //
 // P_ENEMY
@@ -266,8 +265,8 @@ P_RadiusAttack
 // P_SETUP
 //
 extern byte*		rejectmatrix;	// for fast sight rejection
-extern int64_t*	blockmaplump;	// offsets in blockmap are from here // [crispy] BLOCKMAP limit
-extern int64_t*	blockmap; // [crispy] BLOCKMAP limit
+extern int32_t*	blockmaplump;	// offsets in blockmap are from here // [crispy] BLOCKMAP limit
+extern int32_t*	blockmap; // [crispy] BLOCKMAP limit
 extern int		bmapwidth;
 extern int		bmapheight;	// in mapblocks
 extern fixed_t		bmaporgx;

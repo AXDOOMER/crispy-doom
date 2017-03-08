@@ -46,7 +46,6 @@ extern boolean crispy_fliplevels;
 extern boolean crispy_havee1m10;
 extern boolean crispy_havemap33;
 extern boolean crispy_havessg;
-extern boolean crispy_nwtmerge;
 extern boolean crispy_redrawall;
 extern boolean crispy_showfps;
 
@@ -57,6 +56,7 @@ extern int crispy_centerweapon;
 extern int crispy_coloredblood;
 extern int crispy_coloredhud;
 extern int crispy_crosshair;
+extern int crispy_extsaveg;
 extern int crispy_flipcorpses;
 extern int crispy_freeaim;
 extern int crispy_freelook;
@@ -64,6 +64,7 @@ extern int crispy_highcolor;
 extern int crispy_fullsounds;
 extern int crispy_jump;
 extern int crispy_mouselook;
+extern int crispy_neghealth;
 extern int crispy_overunder;
 extern int crispy_pitch;
 extern int crispy_recoil;
@@ -123,6 +124,14 @@ enum
     JUMP_LOW,
     JUMP_HIGH,
     NUM_JUMPS
+};
+
+enum
+{
+    NEGHEALTH_OFF,
+    NEGHEALTH_DM,
+    NEGHEALTH_ON,
+    NUM_NEGHEALTHS
 };
 
 enum

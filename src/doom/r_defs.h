@@ -282,8 +282,9 @@ typedef struct
     sector_t*	frontsector;
     sector_t*	backsector;
     
-    int64_t	length; // [crispy] fix long wall wobble
+    uint32_t	length; // [crispy] fix long wall wobble
     angle_t	pangle; // [crispy] re-calculated angle used for rendering
+    int	fakecontrast;
 } seg_t;
 
 
@@ -431,10 +432,10 @@ typedef struct
     boolean	rotate;
 
     // Lump to use for view angles 0-7.
-    short	lump[8];
+    short	lump[16]; // [crispy] support 16 sprite rotations
 
     // Flip bit (1 = flip) to use for view angles 0-7.
-    byte	flip[8];
+    byte	flip[16]; // [crispy] support 16 sprite rotations
     
 } spriteframe_t;
 

@@ -41,6 +41,7 @@
 
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "p_extsaveg.h"
 #include "p_tick.h"
 
 #include "d_main.h"
@@ -424,6 +425,7 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
             crstr[CR_GREEN],
             (joybspeed >= MAX_JOY_BUTTONS) ? "ON" : "OFF");
         players[consoleplayer].message = autorunmsg;
+        S_StartSound(NULL, sfx_swtchn);
 
         gamekeydown[key_toggleautorun] = false;
     }
@@ -1054,7 +1056,7 @@ void G_Ticker (void)
 	        D_Display();
 	        crispy_cleanscreenshot = false;
 	    }
-	    V_ScreenShot("DOOM%02i.%s"); 
+	    V_ScreenShot("DOOM%04i.%s"); // [crispy] increase screenshot filename limit
             players[consoleplayer].message = DEH_String("screen shot");
 	    gameaction = ga_nothing; 
 	    break; 
@@ -1823,9 +1825,6 @@ void G_LoadGame (char* name)
     M_StringCopy(savename, name, sizeof(savename));
     gameaction = ga_loadgame; 
 } 
- 
-#define VERSIONSIZE		16 
-
 
 int savedleveltime = 0; // [crispy] moved here for level time logging
 void G_DoLoadGame (void) 
@@ -1852,6 +1851,29 @@ void G_DoLoadGame (void)
     
     // load a base level 
     G_InitNew (gameskill, gameepisode, gamemap); 
+    // [crispy] read extended savegame data
+    if (crispy_extsaveg)
+    {
+        P_ReadExtendedSaveGameData(0);
+    }
+    // [crispy] check if WAD file is valid to restore saved map
+    if (savewadfilename)
+    {
+        // [crispy] strings are not equal
+        if (strcmp(savewadfilename, maplumpinfo->wad_file->basename))
+        {
+            M_ForceLoadGame();
+            fclose(save_stream);
+            return;
+        }
+        else
+        // [crispy] strings are equal, but not identical
+        if (savewadfilename != maplumpinfo->wad_file->basename)
+        {
+            free(savewadfilename);
+        }
+    }
+    savewadfilename = NULL;
  
     leveltime = savedleveltime;
     savedleveltime = 0;
@@ -1866,6 +1888,12 @@ void G_DoLoadGame (void)
     if (!P_ReadSaveGameEOF())
 	I_Error ("Bad savegame");
 
+    // [crispy] read more extended savegame data
+    if (crispy_extsaveg)
+    {
+        P_ReadExtendedSaveGameData(1);
+    }
+
     fclose(save_stream);
     
     if (setsizeneeded)
@@ -1876,7 +1904,7 @@ void G_DoLoadGame (void)
 
     // [crispy] if the player is dead in this savegame,
     // do not consider it for reload
-    if (!players[consoleplayer].health)
+    if (players[consoleplayer].health <= 0)
 	G_ClearSavename();
 } 
  
@@ -1947,6 +1975,11 @@ void G_DoSaveGame (void)
     P_ArchiveSpecials ();
 
     P_WriteSaveGameEOF();
+    // [crispy] write extended savegame data
+    if (crispy_extsaveg)
+    {
+        P_WriteExtendedSaveGameData();
+    }
 
     // [crispy] unconditionally disable savegame and demo limits
     /*
@@ -2021,11 +2054,9 @@ void G_DoNewGame (void)
     deathmatch = false;
     playeringame[1] = playeringame[2] = playeringame[3] = 0;
     // [crispy] do not reset -respawn, -fast and -nomonsters parameters
-    /*
-    respawnparm = false;
-    fastparm = false;
-    nomonsters = false;
-    */
+    respawnparm = M_CheckParm ("-respawn");
+    fastparm = M_CheckParm ("-fast");
+    nomonsters = M_CheckParm ("-nomonsters");
     consoleplayer = 0;
     G_InitNew (d_skill, d_episode, d_map); 
     gameaction = ga_nothing; 
@@ -2405,22 +2436,20 @@ void G_BeginRecording (void)
 { 
     int             i; 
 
+    demo_p = demobuffer;
+
     //!
     // @category demo
     //
     // Record a high resolution "Doom 1.91" demo.
     //
 
-    longtics = M_CheckParm("-longtics") != 0;
+    longtics = D_NonVanillaRecord(M_ParmExists("-longtics"),
+                                  "Doom 1.91 demo format");
 
     // If not recording a longtics demo, record in low res
-
     lowres_turn = !longtics;
-    
-    demo_p = demobuffer;
-	
-    // Save the right version code for this demo
- 
+
     if (longtics)
     {
         *demo_p++ = DOOM_191_VERSION;
@@ -2484,6 +2513,8 @@ static char *DemoVersionDescription(int version)
             return "v1.8";
         case 109:
             return "v1.9";
+        case 111:
+            return "v1.91 hack demo?";
         default:
             break;
     }
@@ -2503,17 +2534,21 @@ static char *DemoVersionDescription(int version)
     }
 }
 
-void G_DoPlayDemo (void) 
-{ 
-    skill_t skill; 
-    int             i, episode, map; 
+void G_DoPlayDemo (void)
+{
+    skill_t skill;
+    int i, lumpnum, episode, map;
     int demoversion;
-	 
-    gameaction = ga_nothing; 
-    demobuffer = demo_p = W_CacheLumpName (defdemoname, PU_STATIC); 
+    int lumplength; // [crispy]
+
+    lumpnum = W_GetNumForName(defdemoname);
+    gameaction = ga_nothing;
+    demobuffer = W_CacheLumpNum(lumpnum, PU_STATIC);
+    demo_p = demobuffer;
 
     // [crispy] ignore empty demo lumps
-    if (W_LumpLength(W_GetNumForName(defdemoname)) < 0xd)
+    lumplength = W_LumpLength(lumpnum);
+    if (lumplength < 0xd)
     {
 	demoplayback = true;
 	G_CheckDemoStatus();
@@ -2522,16 +2557,16 @@ void G_DoPlayDemo (void)
 
     demoversion = *demo_p++;
 
-    if (demoversion == G_VanillaVersionCode())
+    longtics = false;
+
+    // Longtics demos use the modified format that is generated by cph's
+    // hacked "v1.91" doom exe. This is a non-vanilla extension.
+    if (D_NonVanillaPlayback(demoversion == DOOM_191_VERSION, lumpnum,
+                             "Doom 1.91 demo format"))
     {
-        longtics = false;
-    }
-    else if (demoversion == DOOM_191_VERSION)
-    {
-        // demo recorded with cph's modified "v1.91" doom exe
         longtics = true;
     }
-    else
+    else if (demoversion != G_VanillaVersionCode())
     {
         char *message = "Demo is from a different game version!\n"
                         "(read %i, should be %i)\n"
@@ -2545,7 +2580,7 @@ void G_DoPlayDemo (void)
         I_Error(message, demoversion, G_VanillaVersionCode(),
                          DemoVersionDescription(demoversion));
     }
-    
+
     skill = *demo_p++; 
     episode = *demo_p++; 
     map = *demo_p++; 
@@ -2567,7 +2602,16 @@ void G_DoPlayDemo (void)
 
     // don't spend a lot of time in loadlevel 
     precache = false;
+    // [crispy] support playing demos from savegames
+    if (startloadgame >= 0)
+    {
+	M_StringCopy(savename, P_SaveGameFile(startloadgame), sizeof(savename));
+	G_DoLoadGame();
+    }
+    else
+    {
     G_InitNew (skill, episode, map); 
+    }
     precache = true; 
     starttime = I_GetTime (); 
 
@@ -2578,7 +2622,6 @@ void G_DoPlayDemo (void)
     {
 	int i, numplayersingame = 0;
 	byte *demo_ptr = demo_p;
-	const int defdemolumpsize = lumpinfo[W_GetNumForName(defdemoname)]->size;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2588,7 +2631,7 @@ void G_DoPlayDemo (void)
 	    }
 	}
 
-	while (*demo_ptr != DEMOMARKER && (demo_ptr - demobuffer) < defdemolumpsize)
+	while (*demo_ptr != DEMOMARKER && (demo_ptr - demobuffer) < lumplength)
 	{
 	    demo_ptr += numplayersingame * (longtics ? 5 : 4);
 	}

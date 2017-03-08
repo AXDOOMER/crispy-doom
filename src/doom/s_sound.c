@@ -242,10 +242,9 @@ void S_Start(void)
     // start new music for the level
     mus_paused = 0;
 
-    if (gamemode == commercial &&
-        (gameepisode == 2 || gamemission == pack_nerve))
+    if (gamemode == commercial)
     {
-        int nmus[]=
+        const int nmus[] =
         {
             mus_messag,
             mus_ddtblu,
@@ -258,11 +257,12 @@ void S_Start(void)
             mus_ddtbl2,
         };
 
-        mnum = nmus[gamemap-1];
-    }
-    else
-    if (gamemode == commercial)
-    {
+        if ((gameepisode == 2 || gamemission == pack_nerve) &&
+            gamemap <= arrlen(nmus))
+        {
+            mnum = nmus[gamemap - 1];
+        }
+        else
         mnum = mus_runnin + gamemap - 1;
     }
     else
@@ -450,7 +450,8 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source,
     // From _GG1_ p.428. Appox. eucledian distance fast.
     approx_dist = adx + ady - ((adx < ady ? adx : ady)>>1);
 
-    if (gamemap != 8 && approx_dist > S_CLIPPING_DIST)
+    // [crispy] proper sound clipping in non-Doom1 MAP08
+    if ((gamemap != 8 || gamemode == commercial) && approx_dist > S_CLIPPING_DIST)
     {
         return 0;
     }
@@ -534,6 +535,11 @@ void S_StartSound(void *origin_p, int sfx_id)
     origin = (mobj_t *) origin_p;
     volume = snd_SfxVolume;
 
+    // [crispy] make non-fatal
+    if (sfx_id == sfx_None)
+    {
+        return;
+    }
     // check for bogus sound #
     if (sfx_id < 1 || sfx_id > NUMSFX)
     {
@@ -768,6 +774,12 @@ void S_ChangeMusic(int musicnum, int looping)
                                || snd_musicdevice == SNDDEVICE_SB))
     {
         musicnum = mus_introa;
+    }
+
+    // [crispy] prevent music number overflows
+    if (musicnum >= NUMMUSIC)
+    {
+        musicnum = mus_runnin + (musicnum % (NUMMUSIC - mus_runnin));
     }
 
     if (musicnum <= mus_None || musicnum >= NUMMUSIC)

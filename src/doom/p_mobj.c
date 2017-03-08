@@ -89,35 +89,50 @@ P_SetMobjState
     return true;
 }
 
-// [crispy] check if a given state is "safe", i.e. that no action pointer
-// is ever called for the duration of its sequence
-static boolean P_SafeState(statenum_t statenum)
+// [crispy] return the latest "safe" state in a state sequence,
+// so that no action pointer is ever called
+static statenum_t P_LatestSafeState(statenum_t state)
 {
-    while (statenum != S_NULL)
+    statenum_t safestate = S_NULL;
+    static statenum_t laststate, lastsafestate;
+
+    if (state == laststate)
     {
-	const state_t *state = &states[statenum];
-
-	if (state->action.acp1)
-	{
-	    return false;
-	}
-
-	statenum = state->nextstate;
+	return lastsafestate;
     }
 
-    return true;
+    for (laststate = state; state != S_NULL; state = states[state].nextstate)
+    {
+	if (safestate == S_NULL)
+	{
+	    safestate = state;
+	}
+
+	if (states[state].action.acp1)
+	{
+	    safestate = S_NULL;
+	}
+
+	// [crispy] a state with -1 tics never changes
+	if (states[state].tics == -1)
+	{
+	    break;
+	}
+    }
+
+    return lastsafestate = safestate;
 }
 
 //
 // P_ExplodeMissile  
 //
-void P_ExplodeMissileSafe (mobj_t* mo, boolean safe)
+static void P_ExplodeMissileSafe (mobj_t* mo, boolean safe)
 {
     mo->momx = mo->momy = mo->momz = 0;
 
-    P_SetMobjState (mo, mobjinfo[mo->type].deathstate);
+    P_SetMobjState (mo, safe ? P_LatestSafeState(mobjinfo[mo->type].deathstate) : mobjinfo[mo->type].deathstate);
 
-    mo->tics -= safe ? 0 : P_Random()&3;
+    mo->tics -= safe ? Crispy_Random()&3 : P_Random()&3;
 
     if (mo->tics < 1)
 	mo->tics = 1;
@@ -208,8 +223,7 @@ void P_XYMovement (mobj_t* mo)
 		    ceilingline->backsector &&
 		    ceilingline->backsector->ceilingpic == skyflatnum)
 		{
-		    if (mo->z > ceilingline->backsector->ceilingheight ||
-		        !P_SafeState(mobjinfo[mo->type].deathstate))
+		    if (mo->z > ceilingline->backsector->ceilingheight)
 		    {
 		    // Hack to prevent missiles exploding
 		    // against the sky.
@@ -371,7 +385,11 @@ void P_ZMovement (mobj_t* mo)
 		// [crispy] center view if not using permanent mouselook
 		if (!crispy_mouselook)
 		    mo->player->centering = true;
+		// [crispy] dead men don't say "oof"
+		if (mo->health > 0)
+		{
 		S_StartSound (mo, sfx_oof);
+		}
 	    }
 	    mo->momz = 0;
 	}
@@ -570,17 +588,7 @@ void P_MobjThinker (mobj_t* mobj)
 //
 // P_SpawnMobj
 //
-mobj_t*
-P_SpawnMobj
-( fixed_t	x,
-  fixed_t	y,
-  fixed_t	z,
-  mobjtype_t	type )
-{
-	return P_SpawnMobjSafe(x, y, z, type, false);
-}
-
-mobj_t*
+static mobj_t*
 P_SpawnMobjSafe
 ( fixed_t	x,
   fixed_t	y,
@@ -608,10 +616,10 @@ P_SpawnMobjSafe
     if (gameskill != sk_nightmare)
 	mobj->reactiontime = info->reactiontime;
     
-    mobj->lastlook = safe ? 0 : P_Random () % MAXPLAYERS;
+    mobj->lastlook = safe ? Crispy_Random () % MAXPLAYERS : P_Random () % MAXPLAYERS;
     // do not set the state with P_SetMobjState,
     // because action routines can not be called yet
-    st = &states[info->spawnstate];
+    st = &states[safe ? P_LatestSafeState(info->spawnstate) : info->spawnstate];
 
     mobj->state = st;
     mobj->tics = st->tics;
@@ -631,9 +639,6 @@ P_SpawnMobjSafe
     else 
 	mobj->z = z;
 
-    // [crispy] count map things
-    mobj->num = -1;
-
     // [AM] Do not interpolate on spawn.
     mobj->interp = false;
 
@@ -650,6 +655,15 @@ P_SpawnMobjSafe
     return mobj;
 }
 
+mobj_t*
+P_SpawnMobj
+( fixed_t	x,
+  fixed_t	y,
+  fixed_t	z,
+  mobjtype_t	type )
+{
+	return P_SpawnMobjSafe(x, y, z, type, false);
+}
 
 //
 // P_RemoveMobj
@@ -757,8 +771,6 @@ void P_RespawnSpecials (void)
 
 
 
-// [crispy] count map things
-int mapthingcounter = -1;
 
 //
 // P_SpawnPlayer
@@ -804,9 +816,6 @@ void P_SpawnPlayer (mapthing_t* mthing)
     mobj->player = p;
     mobj->health = p->health;
 
-    // [crispy] count map things
-    mobj->num = mapthingcounter;
-
     p->mo = mobj;
     p->playerstate = PST_LIVE;	
     p->refire = 0;
@@ -849,9 +858,6 @@ void P_SpawnMapThing (mapthing_t* mthing)
     fixed_t		y;
     fixed_t		z;
 		
-    // [crispy] count map things
-    mapthingcounter++;
-
     // count deathmatch start positions
     if (mthing->type == 11)
     {
@@ -945,21 +951,21 @@ void P_SpawnMapThing (mapthing_t* mthing)
     if (mthing->options & MTF_AMBUSH)
 	mobj->flags |= MF_AMBUSH;
 
-    // [crispy] count map things
-    mobj->num = mapthingcounter;
-
     // [crispy] Lost Souls bleed Puffs
     if ((crispy_coloredblood & COLOREDBLOOD_FIX) && i == MT_SKULL)
         mobj->flags |= MF_NOBLOOD;
 
-    // [crispy] randomly colorize space marine corpse objects
-    if (!netgame &&
-        (crispy_coloredblood & COLOREDBLOOD_CORPSE) &&
-        (mobj->info->spawnstate == S_PLAY_DIE7 ||
-         mobj->info->spawnstate == S_PLAY_XDIE9))
+    // [crispy] randomly flip space marine corpse objects
+    if (mobj->info->spawnstate == S_PLAY_DIE7 ||
+        mobj->info->spawnstate == S_PLAY_XDIE9)
     {
-        mobj->flags |= (mobj->lastlook << MF_TRANSSHIFT);
-        mobj->health += (mobj->lastlook + mobj->num) & 1;
+	mobj->flipsprite = Crispy_Random() & 1;
+	// [crispy] randomly colorize space marine corpse objects
+	if (!netgame &&
+	    crispy_coloredblood & COLOREDBLOOD_CORPSE)
+	{
+	    mobj->flags |= (Crispy_Random() & 3) << MF_TRANSSHIFT;
+	}
     }
 }
 
@@ -993,18 +999,21 @@ P_SpawnPuffSafe
 {
     mobj_t*	th;
 	
-    z += safe ? 0 : ((P_Random()-P_Random())<<10);
+    z += safe ? (Crispy_SubRandom() << 10) : (P_SubRandom() << 10);
 
     th = P_SpawnMobjSafe (x,y,z, MT_PUFF, safe);
     th->momz = FRACUNIT;
-    th->tics -= safe ? 0 : P_Random()&3;
+    th->tics -= safe ? Crispy_Random()&3 : P_Random()&3;
 
     if (th->tics < 1)
 	th->tics = 1;
 	
     // don't make punches spark on the wall
     if (attackrange == MELEERANGE)
-	P_SetMobjState (th, S_PUFF3);
+	P_SetMobjState (th, safe ? P_LatestSafeState(S_PUFF3) : S_PUFF3);
+
+    // [crispy] randomly flip corpse, blood and death animation sprites
+    th->flipsprite = Crispy_Random() & 1;
 }
 
 
@@ -1022,16 +1031,10 @@ P_SpawnBlood
 {
     mobj_t*	th;
 	
-    z += ((P_Random()-P_Random())<<10);
+    z += (P_SubRandom() << 10);
     th = P_SpawnMobj (x,y,z, MT_BLOOD);
     th->momz = FRACUNIT*2;
     th->tics -= P_Random()&3;
-    // [crispy] connect blood object with the monster that bleeds it
-    th->target = target;
-
-    // [crispy] Spectres bleed spectre blood
-    if ((crispy_coloredblood & COLOREDBLOOD_FIX) && target->flags & MF_SHADOW)
-	th->flags |= MF_SHADOW;
 
     if (th->tics < 1)
 	th->tics = 1;
@@ -1040,6 +1043,16 @@ P_SpawnBlood
 	P_SetMobjState (th,S_BLOOD2);
     else if (damage < 9)
 	P_SetMobjState (th,S_BLOOD3);
+
+    // [crispy] connect blood object with the monster that bleeds it
+    th->target = target;
+
+    // [crispy] Spectres bleed spectre blood
+    if (crispy_coloredblood & COLOREDBLOOD_FIX)
+	th->flags |= (target->flags & MF_SHADOW);
+
+    // [crispy] randomly flip corpse, blood and death animation sprites
+    th->flipsprite = Crispy_Random() & 1;
 }
 
 
@@ -1113,7 +1126,7 @@ P_SpawnMissile
 
     // fuzzy player
     if (dest->flags & MF_SHADOW)
-	an += (P_Random()-P_Random())<<20;	
+	an += P_SubRandom() << 20;
 
     th->angle = an;
     an >>= ANGLETOFINESHIFT;

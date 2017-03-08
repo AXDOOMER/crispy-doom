@@ -26,7 +26,7 @@
 #include "dstrings.h"
 
 typedef struct {
-    char *macro;
+    const char *macro;
     char *string;
 } bex_string_t;
 
@@ -337,7 +337,7 @@ static void *DEH_BEXStrStart(deh_context_t *context, char *line)
 {
     char s[10];
 
-    if (sscanf(line, "%9s", s) == 0 || strncmp("[STRINGS]", s, sizeof(s)))
+    if (sscanf(line, "%9s", s) == 0 || strcmp("[STRINGS]", s))
     {
 	DEH_Warning(context, "Parse error on section start");
     }
@@ -358,7 +358,7 @@ static void DEH_BEXStrParseLine(deh_context_t *context, char *line, void *tag)
 
     for (i = 0; i < arrlen(bex_stringtable); i++)
     {
-	if (!strcmp(bex_stringtable[i].macro, variable_name))
+	if (!strcasecmp(bex_stringtable[i].macro, variable_name))
 	{
 	    DEH_AddStringReplacement(bex_stringtable[i].string, value);
 	}

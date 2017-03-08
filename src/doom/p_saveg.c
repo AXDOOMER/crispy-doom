@@ -33,9 +33,6 @@
 #include "m_misc.h"
 #include "r_state.h"
 
-#define SAVEGAME_EOF 0x1d
-#define VERSIONSIZE 16 
-
 FILE *save_stream;
 int savegamelength;
 boolean savegame_error;
@@ -81,7 +78,7 @@ char *P_SaveGameFile(int slot)
 
 static byte saveg_read8(void)
 {
-    byte result;
+    byte result = -1;
 
     if (fread(&result, 1, 1, save_stream) < 1)
     {
@@ -299,6 +296,18 @@ static void saveg_write_thinker_t(thinker_t *str)
 // mobj_t
 //
 
+// [crispy] encode sprite flipping in thing health value
+static inline boolean crispy_flippablesprite (mobj_t *thing)
+{
+	return ((thing->flags & MF_CORPSE &&
+	        thing->type != MT_CYBORG &&
+	        thing->type != MT_BARREL) ||
+	        thing->type == MT_BLOOD ||
+	        thing->type == MT_PUFF ||
+	        mobjinfo[thing->type].spawnstate == S_PLAY_DIE7 ||
+	        mobjinfo[thing->type].spawnstate == S_PLAY_XDIE9);
+}
+
 static void saveg_read_mobj_t(mobj_t *str)
 {
     int pl;
@@ -417,6 +426,9 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     // struct mobj_s* tracer;
     str->tracer = saveg_readp();
+
+    // [crispy] encode sprite flipping in thing health value
+    str->flipsprite = crispy_flippablesprite(str) && (str->health & 1);
 }
 
 // [crispy] enumerate all thinker pointers
@@ -542,6 +554,14 @@ static void saveg_write_mobj_t(mobj_t *str)
     // int flags;
     saveg_write32(str->flags);
 
+    // [crispy] encode sprite flipping in thing health value
+    if (crispy_flippablesprite(str))
+    {
+        if ((str->health & 1) ^ str->flipsprite)
+        {
+            str->health--;
+        }
+    }
     // int health;
     saveg_write32(str->health);
 
@@ -1795,6 +1815,17 @@ void P_ArchiveSpecials (void)
                 saveg_write8(tc_ceiling);
 		saveg_write_pad();
                 saveg_write_ceiling_t((ceiling_t *) th);
+	    }
+	    // [crispy] save plats in statis
+	    for (i = 0; i < MAXPLATS; i++)
+		if (activeplats[i] == (plat_t *)th)
+		    break;
+
+	    if (i < MAXPLATS)
+	    {
+		saveg_write8(tc_plat);
+		saveg_write_pad();
+		saveg_write_plat_t((plat_t *)th);
 	    }
 	    continue;
 	}

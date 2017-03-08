@@ -48,8 +48,6 @@
 #endif
 
 void	P_SpawnMapThing (mapthing_t*	mthing);
-// [crispy] count map things
-extern int mapthingcounter;
 
 
 //
@@ -89,15 +87,14 @@ static int      totallines;
 // Blockmap size.
 int		bmapwidth;
 int		bmapheight;	// size in mapblocks
-int64_t*	blockmap;	// int for larger maps // [crispy] BLOCKMAP limit
+int32_t*	blockmap;	// int for larger maps // [crispy] BLOCKMAP limit
 // offsets in blockmap are from here
-int64_t*	blockmaplump; // [crispy] BLOCKMAP limit
+int32_t*	blockmaplump; // [crispy] BLOCKMAP limit
 // origin of block map
 fixed_t		bmaporgx;
 fixed_t		bmaporgy;
 // for thing chains
 mobj_t**	blocklinks;		
-boolean		crispy_createblockmap = false;
 
 
 // REJECT
@@ -377,20 +374,30 @@ static void P_LoadSegs_DeePBSP (int lump)
 void P_SegLengths (void)
 {
     int i;
-    seg_t *li;
-    int64_t dx, dy;
+    const int rightangle = abs(finesine[(ANG60/2) >> ANGLETOFINESHIFT]);
 
     for (i = 0; i < numsegs; i++)
     {
-	li = &segs[i];
+	seg_t *const li = &segs[i];
+	int64_t dx, dy;
+
 	dx = li->v2->px - li->v1->px;
 	dy = li->v2->py - li->v1->py;
-	li->length = (int64_t)sqrt((double)dx*dx + (double)dy*dy);
+	li->length = (uint32_t)(sqrt((double)dx*dx + (double)dy*dy)/2);
 
 	// [crispy] re-calculate angle used for rendering
 	viewx = li->v1->px;
 	viewy = li->v1->py;
 	li->pangle = R_PointToAngleCrispy(li->v2->px, li->v2->py);
+
+	// [crispy] smoother fake contrast
+	if (abs(finesine[li->pangle >> ANGLETOFINESHIFT]) < rightangle)
+	    li->fakecontrast = -1;
+	else
+	if (abs(finecosine[li->pangle >> ANGLETOFINESHIFT]) < rightangle)
+	    li->fakecontrast = 1;
+	else
+	    li->fakecontrast = 0;
     }
 }
 
@@ -652,7 +659,6 @@ static void P_LoadNodes_ZDBSP (int lump, boolean compressed)
 {
     byte *data;
     unsigned int i;
-    int len;
 #ifdef HAVE_LIBZ
     byte *output;
 #endif
@@ -664,13 +670,13 @@ static void P_LoadNodes_ZDBSP (int lump, boolean compressed)
     vertex_t *newvertarray = NULL;
 
     data = W_CacheLumpNum(lump, PU_LEVEL);
-    len =  W_LumpLength(lump);
 
     // 0. Uncompress nodes lump (or simply skip header)
 
     if (compressed)
     {
 #ifdef HAVE_LIBZ
+	const int len =  W_LumpLength(lump);
 	int outlen, err;
 	z_stream *zstream;
 
@@ -935,8 +941,6 @@ void P_LoadThings (int lump)
 
     data = W_CacheLumpNum (lump,PU_STATIC);
     numthings = W_LumpLength (lump) / sizeof(mapthing_t);
-    // [crispy] reset map thing counter
-    mapthingcounter = -1;
 	
     mt = (mapthing_t *)data;
     for (i=0 ; i<numthings ; i++, mt++)
@@ -962,19 +966,23 @@ void P_LoadThings (int lump)
 		break;
 	    }
 	}
-	// [crispy] do not spawn Wolf SS in BFG Edition
-	else
-	{
-	    // [crispy] BFG Edition MAP33 "Betray" still has Wolf SS
-	    if (gamevariant == bfgedition && singleplayer && mt->type == 84)
-	    {
-	        // [crispy] spawn Former Human instead
-	        mt->type = 3004;
-	    }
-	}
-
 	if (spawn == false)
 	    break;
+
+	// [crispy] minor fixes to prevent users from getting stuck in levels with mapping errors
+	if (singleplayer)
+	{
+	    // [crispy] spawn Former Human instead of Wolf SS in BFG Edition
+	    if (gamevariant == bfgedition && mt->type == 84)
+	    {
+	        mt->type = 3004;
+	    }
+	    // [crispy] TNT MAP31 has a yellow key that is erroneously marked as multi-player only
+	    if (gamemission == pack_tnt && gamemap == 31 && mt->type == 6)
+	    {
+	        mt->options &= ~16;
+	    }
+	}
 
 	// Do spawn all other stuff. 
 	spawnthing.x = SHORT(mt->x);
@@ -1050,7 +1058,7 @@ void P_LoadLineDefs (int lump)
     line_t*		ld;
     vertex_t*		v1;
     vertex_t*		v2;
-    int warn; // [crispy] warn about unknown linedef types
+    int warn, warn2; // [crispy] warn about invalid linedefs
 	
     numlines = W_LumpLength (lump) / sizeof(maplinedef_t);
     lines = Z_Malloc (numlines*sizeof(line_t),PU_LEVEL,0);	
@@ -1059,7 +1067,7 @@ void P_LoadLineDefs (int lump)
 	
     mld = (maplinedef_t *)data;
     ld = lines;
-    warn = 0; // [crispy] warn about unknown linedef types
+    warn = warn2 = 0; // [crispy] warn about invalid linedefs
     for (i=0 ; i<numlines ; i++, mld++, ld++)
     {
 	ld->flags = (unsigned short)SHORT(mld->flags); // [crispy] extended nodes
@@ -1067,10 +1075,39 @@ void P_LoadLineDefs (int lump)
 	// [crispy] warn about unknown linedef types
 	if ((unsigned short) ld->special > 141)
 	{
-	    fprintf(stderr, "P_LoadLineDefs: Unknown special %d at line %d\n", ld->special, i);
+	    fprintf(stderr, "P_LoadLineDefs: Unknown special %d at line %d.\n", ld->special, i);
 	    warn++;
 	}
 	ld->tag = SHORT(mld->tag);
+	// [crispy] warn about special linedefs without tag
+	if (ld->special && !ld->tag)
+	{
+	    switch (ld->special)
+	    {
+		case 1:	// Vertical Door
+		case 26:	// Blue Door/Locked
+		case 27:	// Yellow Door /Locked
+		case 28:	// Red Door /Locked
+		case 31:	// Manual door open
+		case 32:	// Blue locked door open
+		case 33:	// Red locked door open
+		case 34:	// Yellow locked door open
+		case 117:	// Blazing door raise
+		case 118:	// Blazing door open
+		case 271:	// MBF sky transfers
+		case 272:
+		case 48:	// Scroll Wall Left
+		case 11:	// s1 Exit level
+		case 51:	// s1 Secret exit
+		case 52:	// w1 Exit level
+		case 124:	// w1 Secret exit
+		    break;
+		default:
+		    fprintf(stderr, "P_LoadLineDefs: Special linedef %d without tag.\n", i);
+		    warn2++;
+		    break;
+	    }
+	}
 	if (crispy_fliplevels)
 	{
 	    v1 = ld->v2 = &vertexes[(unsigned short)SHORT(mld->v2)]; // [crispy] extended nodes
@@ -1142,8 +1179,16 @@ void P_LoadLineDefs (int lump)
     // [crispy] warn about unknown linedef types
     if (warn)
     {
-	fprintf(stderr, "P_LoadLineDefs: Found %d line%s with unknown linedef type.\n"
-	                "THIS MAP MAY NOT WORK AS EXPECTED!\n", warn, (warn > 1) ? "s" : "");
+	fprintf(stderr, "P_LoadLineDefs: Found %d line%s with unknown linedef type.\n", warn, (warn > 1) ? "s" : "");
+    }
+    // [crispy] warn about special linedefs without tag
+    if (warn2)
+    {
+	fprintf(stderr, "P_LoadLineDefs: Found %d special linedef%s without tag.\n", warn2, (warn2 > 1) ? "s" : "");
+    }
+    if (warn || warn2)
+    {
+	fprintf(stderr, "THIS MAP MAY NOT WORK AS EXPECTED!\n");
     }
 
     W_ReleaseLumpNum(lump);
@@ -1290,187 +1335,11 @@ void P_LoadSideDefs (int lump)
     W_ReleaseLumpNum(lump);
 }
 
-// [crispy] taken from mbfsrc/P_SETUP.C:547-707, slightly adapted
-static void P_CreateBlockMap(void)
-{
-  register int i;
-  fixed_t minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
-
-  // First find limits of map
-
-  for (i=0; i<numvertexes; i++)
-    {
-      if (vertexes[i].x >> FRACBITS < minx)
-	minx = vertexes[i].x >> FRACBITS;
-      else
-	if (vertexes[i].x >> FRACBITS > maxx)
-	  maxx = vertexes[i].x >> FRACBITS;
-      if (vertexes[i].y >> FRACBITS < miny)
-	miny = vertexes[i].y >> FRACBITS;
-      else
-	if (vertexes[i].y >> FRACBITS > maxy)
-	  maxy = vertexes[i].y >> FRACBITS;
-    }
-
-  // Save blockmap parameters
-
-  bmaporgx = minx << FRACBITS;
-  bmaporgy = miny << FRACBITS;
-  bmapwidth  = ((maxx-minx) >> MAPBTOFRAC) + 1;
-  bmapheight = ((maxy-miny) >> MAPBTOFRAC) + 1;
-
-  // Compute blockmap, which is stored as a 2d array of variable-sized lists.
-  //
-  // Pseudocode:
-  //
-  // For each linedef:
-  //
-  //   Map the starting and ending vertices to blocks.
-  //
-  //   Starting in the starting vertex's block, do:
-  //
-  //     Add linedef to current block's list, dynamically resizing it.
-  //
-  //     If current block is the same as the ending vertex's block, exit loop.
-  //
-  //     Move to an adjacent block by moving towards the ending block in
-  //     either the x or y direction, to the block which contains the linedef.
-
-  {
-    typedef struct { int n, nalloc, *list; } bmap_t;  // blocklist structure
-    unsigned tot = bmapwidth * bmapheight;            // size of blockmap
-    bmap_t *bmap = calloc(sizeof *bmap, tot);         // array of blocklists
-    int x, y, adx, ady, bend;
-
-    for (i=0; i < numlines; i++)
-      {
-	int dx, dy, diff, b;
-
-	// starting coordinates
-	if (crispy_fliplevels)
-	{
-	    x = (lines[i].v2->x >> FRACBITS) - minx;
-	    y = (lines[i].v2->y >> FRACBITS) - miny;
-	}
-	else
-	{
-	    x = (lines[i].v1->x >> FRACBITS) - minx;
-	    y = (lines[i].v1->y >> FRACBITS) - miny;
-	}
-
-	// x-y deltas
-	adx = lines[i].dx >> FRACBITS, dx = adx < 0 ? -1 : 1;
-	ady = lines[i].dy >> FRACBITS, dy = ady < 0 ? -1 : 1;
-
-	// difference in preferring to move across y (>0) instead of x (<0)
-	diff = !adx ? 1 : !ady ? -1 :
-	  (((x >> MAPBTOFRAC) << MAPBTOFRAC) +
-	   (dx > 0 ? MAPBLOCKUNITS-1 : 0) - x) * (ady = abs(ady)) * dx -
-	  (((y >> MAPBTOFRAC) << MAPBTOFRAC) +
-	   (dy > 0 ? MAPBLOCKUNITS-1 : 0) - y) * (adx = abs(adx)) * dy;
-
-	// starting block, and pointer to its blocklist structure
-	b = (y >> MAPBTOFRAC)*bmapwidth + (x >> MAPBTOFRAC);
-
-	// ending block
-	if (crispy_fliplevels)
-	{
-	    bend = (((lines[i].v1->y >> FRACBITS) - miny) >> MAPBTOFRAC) *
-	        bmapwidth + (((lines[i].v1->x >> FRACBITS) - minx) >> MAPBTOFRAC);
-	}
-	else
-	{
-	    bend = (((lines[i].v2->y >> FRACBITS) - miny) >> MAPBTOFRAC) *
-	        bmapwidth + (((lines[i].v2->x >> FRACBITS) - minx) >> MAPBTOFRAC);
-	}
-
-	// delta for pointer when moving across y
-	dy *= bmapwidth;
-
-	// deltas for diff inside the loop
-	adx <<= MAPBTOFRAC;
-	ady <<= MAPBTOFRAC;
-
-	// Now we simply iterate block-by-block until we reach the end block.
-	while ((unsigned) b < tot)    // failsafe -- should ALWAYS be true
-	  {
-	    // Increase size of allocated list if necessary
-	    if (bmap[b].n >= bmap[b].nalloc)
-	      bmap[b].list = crispy_realloc(bmap[b].list,
-				     (bmap[b].nalloc = bmap[b].nalloc ?
-				      bmap[b].nalloc*2 : 8)*sizeof*bmap->list);
-
-	    // Add linedef to end of list
-	    bmap[b].list[bmap[b].n++] = i;
-
-	    // If we have reached the last block, exit
-	    if (b == bend)
-	      break;
-
-	    // Move in either the x or y direction to the next block
-	    if (diff < 0)
-	      diff += ady, b += dx;
-	    else
-	      diff -= adx, b += dy;
-	  }
-      }
-
-    // Compute the total size of the blockmap.
-    //
-    // Compression of empty blocks is performed by reserving two offset words
-    // at tot and tot+1.
-    //
-    // 4 words, unused if this routine is called, are reserved at the start.
-
-    {
-      int count = tot+6;  // we need at least 1 word per block, plus reserved's
-
-      for (i = 0; i < tot; i++)
-	if (bmap[i].n)
-	  count += bmap[i].n + 2; // 1 header word + 1 trailer word + blocklist
-
-      // Allocate blockmap lump with computed count
-      blockmaplump = Z_Malloc(sizeof(*blockmaplump) * count, PU_LEVEL, 0);
-    }
-
-    // Now compress the blockmap.
-    {
-      int ndx = tot += 4;         // Advance index to start of linedef lists
-      bmap_t *bp = bmap;          // Start of uncompressed blockmap
-
-      blockmaplump[ndx++] = 0;    // Store an empty blockmap list at start
-      blockmaplump[ndx++] = -1;   // (Used for compression)
-
-      for (i = 4; i < tot; i++, bp++)
-	if (bp->n)                                      // Non-empty blocklist
-	  {
-	    blockmaplump[blockmaplump[i] = ndx++] = 0;  // Store index & header
-	    do
-	      blockmaplump[ndx++] = bp->list[--bp->n];  // Copy linedef list
-	    while (bp->n);
-	    blockmaplump[ndx++] = -1;                   // Store trailer
-	    free(bp->list);                             // Free linedef list
-	  }
-	else            // Empty blocklist: point to reserved empty blocklist
-	  blockmaplump[i] = tot;
-
-      free(bmap);    // Free uncompressed blockmap
-    }
-  }
-
-  // [crispy] copied over from P_LoadBlockMap()
-  {
-    int count = sizeof(*blocklinks) * bmapwidth * bmapheight;
-    blocklinks = Z_Malloc(count, PU_LEVEL, 0);
-    memset(blocklinks, 0, count);
-    blockmap = blockmaplump+4;
-  }
-}
 
 //
 // P_LoadBlockMap
 //
-void P_LoadBlockMap (int lump)
+boolean P_LoadBlockMap (int lump)
 {
     int i;
     int count;
@@ -1483,9 +1352,7 @@ void P_LoadBlockMap (int lump)
         (lumplen = W_LumpLength(lump)) < 8 ||
         (count = lumplen / 2) >= 0x10000)
     {
-	crispy_createblockmap = true;
-	fprintf(stderr, "P_LoadBlockMap: (Re-)creating BLOCKMAP.\n");
-	return;
+	return false;
     }
 	
     // [crispy] remove BLOCKMAP limit
@@ -1497,15 +1364,15 @@ void P_LoadBlockMap (int lump)
 
     blockmaplump[0] = SHORT(wadblockmaplump[0]);
     blockmaplump[1] = SHORT(wadblockmaplump[1]);
-    blockmaplump[2] = (int64_t)(SHORT(wadblockmaplump[2])) & 0xffff;
-    blockmaplump[3] = (int64_t)(SHORT(wadblockmaplump[3])) & 0xffff;
+    blockmaplump[2] = (int32_t)(SHORT(wadblockmaplump[2])) & 0xffff;
+    blockmaplump[3] = (int32_t)(SHORT(wadblockmaplump[3])) & 0xffff;
 
     // Swap all short integers to native byte ordering.
   
     for (i=4; i<count; i++)
     {
 	short t = SHORT(wadblockmaplump[i]);
-	blockmaplump[i] = (t == -1) ? -1l : (int64_t) t & 0xffff;
+	blockmaplump[i] = (t == -1) ? -1l : (int32_t) t & 0xffff;
     }
 
     Z_Free(wadblockmaplump);
@@ -1520,7 +1387,7 @@ void P_LoadBlockMap (int lump)
     if (crispy_fliplevels)
     {
 	int x, y;
-	int64_t* rowoffset; // [crispy] BLOCKMAP limit
+	int32_t* rowoffset; // [crispy] BLOCKMAP limit
 
 	bmaporgx += bmapwidth * 128 * FRACUNIT;
 	bmaporgx = -bmaporgx;
@@ -1531,7 +1398,7 @@ void P_LoadBlockMap (int lump)
 
 	    for (x = 0; x < bmapwidth / 2; x++)
 	    {
-	        int64_t tmp; // [crispy] BLOCKMAP limit
+	        int32_t tmp; // [crispy] BLOCKMAP limit
 
 	        tmp = rowoffset[x];
 	        rowoffset[x] = rowoffset[bmapwidth-1-x];
@@ -1545,6 +1412,9 @@ void P_LoadBlockMap (int lump)
     count = sizeof(*blocklinks) * bmapwidth * bmapheight;
     blocklinks = Z_Malloc(count, PU_LEVEL, 0);
     memset(blocklinks, 0, count);
+
+    // [crispy] (re-)create BLOCKMAP if necessary
+    return true;
 }
 
 
@@ -1734,11 +1604,13 @@ static void PadRejectArray(byte *array, unsigned int len)
 
     unsigned int rejectpad[4] =
     {
-        ((totallines * 4 + 3) & ~3) + 24,     // Size
+        0,                                    // Size
         0,                                    // Part of z_zone block header
         50,                                   // PU_LEVEL
         0x1d4a11                              // DOOM_CONST_ZONEID
     };
+
+    rejectpad[0] = ((totallines * 4 + 3) & ~3) + 24;
 
     // Copy values from rejectpad into the destination array.
 
@@ -1877,6 +1749,7 @@ P_SetupLevel
     int		i;
     char	lumpname[9];
     int		lumpnum;
+    boolean	crispy_validblockmap;
     mapformat_t	crispy_mapformat;
 	
     totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
@@ -1887,6 +1760,26 @@ P_SetupLevel
     {
 	players[i].killcount = players[i].secretcount 
 	    = players[i].itemcount = 0;
+    }
+
+    // [crispy] No Rest for the Living ...
+    if (nervewadfile)
+    {
+        if (episode == 2)
+        {
+            gamemission = pack_nerve;
+        }
+        else
+        {
+            gamemission = doom2;
+        }
+    }
+    else
+    {
+        if (gamemission == pack_nerve)
+        {
+            gameepisode = 2;
+        }
     }
 
     // Initial height of PointOfView
@@ -1927,26 +1820,7 @@ P_SetupLevel
 
     lumpnum = W_GetNumForName (lumpname);
 	
-    if (nervewadfile)
-    {
-        if (episode == 2)
-        {
-            gamemission = pack_nerve;
-        }
-        else
-        {
-            gamemission = doom2;
-        }
-    }
-    else
-    {
-        if (gamemission == pack_nerve)
-        {
-            gameepisode = 2;
-        }
-    }
-
-    if (nervewadfile && gamemission != pack_nerve)
+    if (nervewadfile && gamemission != pack_nerve && map <= 9)
     {
         lumpnum = W_GetSecondNumForName (lumpname);
     }
@@ -1958,7 +1832,7 @@ P_SetupLevel
 	
     // [crispy] better logging
     {
-	extern int savedleveltime, totalleveltimes;
+	extern int savedleveltime;
 	const int ltime = savedleveltime / TICRATE,
 	          ttime = (totalleveltimes + savedleveltime) / TICRATE;
 	char *rfn_str;
@@ -1970,7 +1844,7 @@ P_SetupLevel
 	    NULL);
 
 	fprintf(stderr, "P_SetupLevel: %s (%s), %s%s, Time %d:%02d:%02d, Total %d:%02d:%02d, ",
-	    maplumpinfo->name, maplumpinfo->wad_file->name,
+	    maplumpinfo->name, maplumpinfo->wad_file->basename,
 	    skilltable[BETWEEN(0,5,(int) skill+1)], rfn_str,
 	    ltime/3600, (ltime%3600)/60, ltime%60,
 	    ttime/3600, (ttime%3600)/60, ttime%60);
@@ -1979,10 +1853,9 @@ P_SetupLevel
     }
     // [crispy] check and log map and nodes format
     crispy_mapformat = P_CheckMapFormat(lumpnum);
-    crispy_createblockmap = false;
 
     // note: most of this ordering is important	
-    P_LoadBlockMap (lumpnum+ML_BLOCKMAP);
+    crispy_validblockmap = P_LoadBlockMap (lumpnum+ML_BLOCKMAP); // [crispy] (re-)create BLOCKMAP if necessary
     P_LoadVertexes (lumpnum+ML_VERTEXES);
     P_LoadSectors (lumpnum+ML_SECTORS);
     P_LoadSideDefs (lumpnum+ML_SIDEDEFS);
@@ -1992,8 +1865,11 @@ P_SetupLevel
     else
     P_LoadLineDefs (lumpnum+ML_LINEDEFS);
     // [crispy] (re-)create BLOCKMAP if necessary
-    if (crispy_createblockmap)
+    if (!crispy_validblockmap)
+    {
+	extern void P_CreateBlockMap (void);
 	P_CreateBlockMap();
+    }
     if (crispy_mapformat & (MFMT_ZDBSPX | MFMT_ZDBSPZ))
 	P_LoadNodes_ZDBSP (lumpnum+ML_NODES, crispy_mapformat & MFMT_ZDBSPZ);
     else

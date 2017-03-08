@@ -57,14 +57,14 @@
 // into the rectangular texture space using origin
 // and possibly other attributes.
 //
-typedef struct
+typedef PACKED_STRUCT (
 {
     short	originx;
     short	originy;
     short	patch;
     short	stepdir;
     short	colormap;
-} PACKEDATTR mappatch_t;
+}) mappatch_t;
 
 
 //
@@ -72,7 +72,7 @@ typedef struct
 // A DOOM wall texture is a list of patches
 // which are to be combined in a predefined order.
 //
-typedef struct
+typedef PACKED_STRUCT (
 {
     char		name[8];
     int			masked;	
@@ -81,7 +81,7 @@ typedef struct
     int                 obsolete;
     short		patchcount;
     mappatch_t	patches[1];
-} PACKEDATTR maptexture_t;
+}) maptexture_t;
 
 
 // A single patch from a texture definition,
@@ -775,8 +775,8 @@ void R_InitTextures (void)
 	for (j = 0; j < numpnameslumps; j++)
 	{
 	    // [crispy] both point to the same WAD file name string?
-	    if (lumpinfo[texturelumps[i].lumpnum]->wad_file->name ==
-	        lumpinfo[pnameslumps[j].lumpnum]->wad_file->name)
+	    if (lumpinfo[texturelumps[i].lumpnum]->wad_file->basename ==
+	        lumpinfo[pnameslumps[j].lumpnum]->wad_file->basename)
 	    {
 		texturelumps[i].pnamesoffset = pnameslumps[j].summappatches;
 		break;
@@ -1101,23 +1101,6 @@ int R_FlatNumForName (char* name)
 
     i = W_CheckNumForName (name);
 
-    // [crispy] do slow linear search only if the returned
-    // lump number is not within the "flats" range
-    if (!crispy_nwtmerge && (i < firstflat || i > lastflat))
-    {
-	int j;
-	// [crispy] restrict lump numbers returned by
-	// R_FlatNumForName() into the "flats" range
-	for (i = -1, j = lastflat; j >= firstflat; j--)
-	{
-	    if (!strncasecmp(lumpinfo[j]->name, name, 8))
-	    {
-		i = j;
-		break;
-	    }
-	}
-    }
-
     if (i == -1)
     {
 	namet[8] = 0;
@@ -1225,8 +1208,15 @@ void R_PrecacheLevel (void)
 
     for (i=0 ; i<numsectors ; i++)
     {
+	// [crispy] add overflow guard for the flatpresent[] array
+	if (sectors[i].floorpic < numflats)
+	{
 	flatpresent[sectors[i].floorpic] = 1;
+	}
+	if (sectors[i].ceilingpic < numflats)
+	{
 	flatpresent[sectors[i].ceilingpic] = 1;
+	}
     }
 	
     flatmemory = 0;

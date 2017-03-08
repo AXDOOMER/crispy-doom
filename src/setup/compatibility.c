@@ -33,6 +33,7 @@ int crispy_centerweapon = 0;
 int crispy_coloredblood = 0;
 int crispy_coloredhud = 0;
 int crispy_crosshair = 0;
+int crispy_extsaveg = 1;
 int crispy_flipcorpses = 0;
 int crispy_freeaim = 0;
 int crispy_freelook = 0;
@@ -40,6 +41,7 @@ int crispy_highcolor = 0;
 int crispy_fullsounds = 0;
 int crispy_jump = 0;
 int crispy_mouselook = 0;
+int crispy_neghealth = 0;
 int crispy_overunder = 0;
 int crispy_pitch = 0;
 int crispy_recoil = 0;
@@ -54,47 +56,7 @@ void CompatibilitySettings(void)
     // [crispy]
     if (gamemission == doom)
     {
-    window = TXT_NewWindow("Crispness");
-
-    TXT_AddWidgets(window,
-                   TXT_NewSeparator("Visual"),
-                   TXT_NewCheckBox("High-Color Rendering",
-                                   &crispy_highcolor),
-                   TXT_NewCheckBox("Uncapped Framerate",
-                                   &crispy_uncapped),
-                   TXT_NewCheckBox("Colorize Status Bar",
-                                   &crispy_coloredhud),
-                   TXT_NewCheckBox("Enable Translucency",
-                                   &crispy_translucency),
-                   TXT_NewCheckBox("Colored Blood and Corpses",
-                                   &crispy_coloredblood),
-                   TXT_NewCheckBox("Randomly Mirrored Corpses",
-                                   &crispy_flipcorpses),
-                   TXT_NewSeparator("Tactical"),
-                   TXT_NewCheckBox("Allow Free Look [*]",
-                                   &crispy_freelook),
-                   TXT_NewCheckBox("Permanent Mouse Look",
-                                   &crispy_mouselook),
-                   TXT_NewCheckBox("Draw Crosshair",
-                                   &crispy_crosshair),
-//                   TXT_NewCheckBox("Center Weapon when Firing",
-//                                   &crispy_centerweapon),
-//                   TXT_NewCheckBox("Enable Weapon Recoil Pitch",
-//                                   &crispy_pitch),
-                   TXT_NewCheckBox("Show Revealed Secrets",
-                                   &crispy_secretmessage),
-                   TXT_NewCheckBox("Show Level Stats in Automap",
-                                   &crispy_automapstats),
-                   TXT_NewSeparator("Physical"),
-                   TXT_NewCheckBox("Allow Jumping [*]",
-                                   &crispy_jump),
-                   TXT_NewCheckBox("Enable Vertical Aiming",
-                                   &crispy_freeaim),
-                   TXT_NewCheckBox("Walk over/under Monsters",
-                                   &crispy_overunder),
-                   TXT_NewCheckBox("Enable Weapon Recoil Thrust",
-                                   &crispy_recoil),
-                   NULL);
+        TXT_MessageBox(NULL, "Please refer to the in-game Crispness menu.");
     }
     else
     {
@@ -113,18 +75,15 @@ void CompatibilitySettings(void)
 
 void BindCompatibilityVariables(void)
 {
-    if (gamemission == doom || gamemission == strife)
+    // [crispy]
+    if (gamemission == doom)
     {
-        M_BindIntVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
-        M_BindIntVariable("vanilla_demo_limit",     &vanilla_demo_limit);
-        // [crispy]
-        if (gamemission == doom)
-        {
         M_BindIntVariable("crispy_automapstats",    &crispy_automapstats);
         M_BindIntVariable("crispy_centerweapon",    &crispy_centerweapon);
         M_BindIntVariable("crispy_coloredblood",    &crispy_coloredblood);
         M_BindIntVariable("crispy_coloredhud",      &crispy_coloredhud);
         M_BindIntVariable("crispy_crosshair",       &crispy_crosshair);
+        M_BindIntVariable("crispy_extsaveg",        &crispy_extsaveg);
         M_BindIntVariable("crispy_flipcorpses",     &crispy_flipcorpses);
         M_BindIntVariable("crispy_freeaim",         &crispy_freeaim);
         M_BindIntVariable("crispy_freelook",        &crispy_freelook);
@@ -132,13 +91,18 @@ void BindCompatibilityVariables(void)
         M_BindIntVariable("crispy_fullsounds",      &crispy_fullsounds);
         M_BindIntVariable("crispy_jump",            &crispy_jump);
         M_BindIntVariable("crispy_mouselook",       &crispy_mouselook);
+        M_BindIntVariable("crispy_neghealth",       &crispy_neghealth);
         M_BindIntVariable("crispy_overunder",       &crispy_overunder);
         M_BindIntVariable("crispy_pitch",           &crispy_pitch);
         M_BindIntVariable("crispy_recoil",          &crispy_recoil);
         M_BindIntVariable("crispy_secretmessage",   &crispy_secretmessage);
         M_BindIntVariable("crispy_translucency",    &crispy_translucency);
         M_BindIntVariable("crispy_uncapped",        &crispy_uncapped);
-        }
+    }
+    else
+    {
+    M_BindIntVariable("vanilla_savegame_limit", &vanilla_savegame_limit);
+    M_BindIntVariable("vanilla_demo_limit",     &vanilla_demo_limit);
     }
 }
 

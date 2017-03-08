@@ -104,12 +104,14 @@ void
 R_InstallSpriteLump
 ( int		lump,
   unsigned	frame,
-  unsigned	rotation,
+  char		rot,
   boolean	flipped )
 {
     int		r;
+    // [crispy] support 16 sprite rotations
+    unsigned rotation = (rot >= 'A') ? rot - 'A' + 10 : (rot >= '0') ? rot - '0' : 17;
 	
-    if (frame >= 29 || rotation > 8)
+    if (frame >= 29 || rotation > 16) // [crispy] support 16 sprite rotations
 	I_Error("R_InstallSpriteLump: "
 		"Bad frame characters in lump %i", lump);
 	
@@ -128,7 +130,7 @@ R_InstallSpriteLump
 		     "and a rot=0 lump", spritename, 'A'+frame);
 			
 	sprtemp[frame].rotate = false;
-	for (r=0 ; r<8 ; r++)
+	for (r=0 ; r<16 ; r++) // [crispy] support 16 sprite rotations
 	{
 	    sprtemp[frame].lump[r] = lump - firstspritelump;
 	    sprtemp[frame].flip[r] = (byte)flipped;
@@ -215,7 +217,7 @@ void R_InitSpriteDefs (char** namelist)
 	    if (!strncasecmp(lumpinfo[l]->name, spritename, 4))
 	    {
 		frame = lumpinfo[l]->name[4] - 'A';
-		rotation = lumpinfo[l]->name[5] - '0';
+		rotation = lumpinfo[l]->name[5];
 
 		if (modifiedgame)
 		    patched = W_GetNumForName (lumpinfo[l]->name);
@@ -227,7 +229,7 @@ void R_InitSpriteDefs (char** namelist)
 		if (lumpinfo[l]->name[6])
 		{
 		    frame = lumpinfo[l]->name[6] - 'A';
-		    rotation = lumpinfo[l]->name[7] - '0';
+		    rotation = lumpinfo[l]->name[7];
 		    R_InstallSpriteLump (l, frame, rotation, true);
 		}
 	    }
@@ -248,8 +250,9 @@ void R_InitSpriteDefs (char** namelist)
 	    {
 	      case -1:
 		// no rotations were found for that frame at all
-		I_Error ("R_InitSprites: No patches found "
-			 "for %s frame %c", spritename, frame+'A');
+		// [crispy] make non-fatal
+		fprintf (stderr, "R_InitSprites: No patches found "
+			 "for %s frame %c\n", spritename, frame+'A');
 		break;
 		
 	      case 0:
@@ -263,6 +266,16 @@ void R_InitSpriteDefs (char** namelist)
 			I_Error ("R_InitSprites: Sprite %s frame %c "
 				 "is missing rotations",
 				 spritename, frame+'A');
+
+		// [crispy] support 16 sprite rotations
+		sprtemp[frame].rotate = 2;
+		for ( ; rotation<16 ; rotation++)
+		    if (sprtemp[frame].lump[rotation] == -1)
+		    {
+			sprtemp[frame].rotate = 1;
+			break;
+		    }
+
 		break;
 	    }
 	}
@@ -584,6 +597,11 @@ void R_ProjectSprite (mobj_t* thing)
 		 thing->sprite);
 #endif
     sprdef = &sprites[thing->sprite];
+    // [crispy] the TNT1 sprite is not supposed to be rendered anyway
+    if (!sprdef->numframes && thing->sprite == SPR_TNT1)
+    {
+	return;
+    }
 #ifdef RANGECHECK
     if ( (thing->frame&FF_FRAMEMASK) >= sprdef->numframes )
 	I_Error ("R_ProjectSprite: invalid sprite frame %i : %i ",
@@ -595,7 +613,16 @@ void R_ProjectSprite (mobj_t* thing)
     {
 	// choose a different rotation based on player view
 	ang = R_PointToAngle (interpx, interpy);
+	// [crispy] support 16 sprite rotations
+	if (sprframe->rotate == 2)
+	{
+	rot = (ang-interpangle+(unsigned)(ANG45/4)*17);
+	rot = (rot>>29) + ((rot>>25)&8);
+	}
+	else
+	{
 	rot = (ang-interpangle+(unsigned)(ANG45/2)*9)>>29;
+	}
 	lump = sprframe->lump[rot];
 	flip = (boolean)sprframe->flip[rot];
     }
@@ -605,9 +632,16 @@ void R_ProjectSprite (mobj_t* thing)
 	lump = sprframe->lump[0];
 	flip = (boolean)sprframe->flip[0];
     }
+
+    // [crispy] randomly flip corpse, blood and death animation sprites
+    if (crispy_flipcorpses)
+    {
+	flip = flip ^ thing->flipsprite;
+    }
     
     // calculate edges of the shape
-    tx -= spriteoffset[lump];	
+    // [crispy] fix sprite offsets for mirrored sprites
+    tx -= flip ? spritewidth[lump] - spriteoffset[lump] : spriteoffset[lump];
     x1 = (centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS;
 
     // off the right side?
@@ -634,16 +668,6 @@ void R_ProjectSprite (mobj_t* thing)
     vis->x1 = x1 < 0 ? 0 : x1;
     vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;	
     iscale = FixedDiv (FRACUNIT, xscale);
-
-    // [crispy] flip death sprites and corpses randomly
-    // except for Cyberdemons and Barrels which are too asymmetrical
-    if (((thing->type != MT_CYBORG && thing->type != MT_BARREL &&
-        thing->flags & MF_CORPSE) || (thing->info->spawnstate == S_PLAY_DIE7 ||
-         thing->info->spawnstate == S_PLAY_XDIE9)) &&
-        thing->health & 1)
-    {
-        flip = !!crispy_flipcorpses;
-    }
 
     if (flip)
     {
@@ -878,6 +902,7 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
     boolean		flip;
     vissprite_t*	vis;
     vissprite_t		avis;
+    fixed_t		psp_sx;
     
     // decide which patch to use
 #ifdef RANGECHECK
@@ -886,6 +911,11 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 		 psp->state->sprite);
 #endif
     sprdef = &sprites[psp->state->sprite];
+    // [crispy] the TNT1 sprite is not supposed to be rendered anyway
+    if (!sprdef->numframes && psp->state->sprite == SPR_TNT1)
+    {
+	return;
+    }
 #ifdef RANGECHECK
     if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
 	I_Error ("R_ProjectSprite: invalid sprite frame %i : %i ",
@@ -895,9 +925,11 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 
     lump = sprframe->lump[0];
     flip = (boolean)sprframe->flip[0];
+    // [crispy] center the weapon sprite horizontally
+    psp_sx = (crispy_centerweapon && viewplayer->attackdown && !psp->state->misc1) ? FRACUNIT : psp->sx;
     
     // calculate edges of the shape
-    tx = psp->sx-(ORIGWIDTH/2)*FRACUNIT;
+    tx = psp_sx-(ORIGWIDTH/2)*FRACUNIT;
 	
     tx -= spriteoffset[lump];	
     x1 = (centerxfrac + FixedMul (tx,pspritescale) ) >>FRACBITS;

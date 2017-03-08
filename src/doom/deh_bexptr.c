@@ -99,10 +99,25 @@ extern void A_BrainSpit();
 extern void A_SpawnSound();
 extern void A_SpawnFly();
 extern void A_BrainExplode();
+// [crispy] additional BOOM and MBF states, sprites and code pointers
+extern void A_Stop();
+extern void A_Die();
+extern void A_FireOldBFG();
+extern void A_Detonate();
+extern void A_Mushroom();
+extern void A_BetaSkullAttack();
+// [crispy] more MBF code pointers
+extern void A_Spawn();
+extern void A_Turn();
+extern void A_Face();
+extern void A_Scratch();
+extern void A_PlaySound();
+extern void A_RandomJump();
+extern void A_LineEffect();
 
 typedef struct {
-    char *mnemonic;
-    actionf_t pointer;
+    const char *mnemonic;
+    const actionf_t pointer;
 } bex_codeptr_t;
 
 static const bex_codeptr_t bex_codeptrtable[] = {
@@ -180,6 +195,21 @@ static const bex_codeptr_t bex_codeptrtable[] = {
     {"SpawnSound", {A_SpawnSound}},
     {"SpawnFly", {A_SpawnFly}},
     {"BrainExplode", {A_BrainExplode}},
+    // [crispy] additional BOOM and MBF states, sprites and code pointers
+    {"Stop", {A_Stop}},
+    {"Die", {A_Die}},
+    {"FireOldBFG", {A_FireOldBFG}},
+    {"Detonate", {A_Detonate}},
+    {"Mushroom", {A_Mushroom}},
+    {"BetaSkullAttack", {A_BetaSkullAttack}},
+    // [crispy] more MBF code pointers
+    {"Spawn", {A_Spawn}},
+    {"Turn", {A_Turn}},
+    {"Face", {A_Face}},
+    {"Scratch", {A_Scratch}},
+    {"PlaySound", {A_PlaySound}},
+    {"RandomJump", {A_RandomJump}},
+    {"LineEffect", {A_LineEffect}},
     {"NULL", {NULL}},
 };
 
@@ -189,7 +219,7 @@ static void *DEH_BEXPtrStart(deh_context_t *context, char *line)
 {
     char s[10];
 
-    if (sscanf(line, "%9s", s) == 0 || strncmp("[CODEPTR]", s, sizeof(s)))
+    if (sscanf(line, "%9s", s) == 0 || strcmp("[CODEPTR]", s))
     {
 	DEH_Warning(context, "Parse error on section start");
     }
@@ -229,7 +259,7 @@ static void DEH_BEXPtrParseLine(deh_context_t *context, char *line, void *tag)
 
     for (i = 0; i < arrlen(bex_codeptrtable); i++)
     {
-	if (!strcmp(bex_codeptrtable[i].mnemonic, value))
+	if (!strcasecmp(bex_codeptrtable[i].mnemonic, value))
 	{
 	    state->action = bex_codeptrtable[i].pointer;
 	    return;
